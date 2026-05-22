@@ -1,0 +1,73 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Class-based dark mode — next-themes toggluje class `dark` na <html>.
+   Tailwind 4 wymaga explicit @custom-variant (TW4 usunęło darkMode:'class' z JS config). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* === Colors — port z archive/v4/styles/blog.css :root (light) === */
+  --color-bg-primary: #FAF7F2;
+  --color-bg-secondary: #F2EFE8;
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #6B6B6B;
+  --color-text-tertiary: #9A9A9A;
+  --color-burgundy: #8B2635;
+  --color-burgundy-soft: #F4E8E9;
+  --color-green: #3B6E47;
+  --color-green-soft: #E8F0EA;
+  --color-border: #E5E0D8;
+  --color-border-strong: #C9C0B0;
+  --color-surface-elevated: rgba(0, 0, 0, 0.02);
+
+  /* === Fonts (next/font CSS variables wstrzykiwane na <html> w layout.tsx) === */
+  --font-display: var(--font-instrument-serif), Georgia, serif;
+  --font-sans: var(--font-geist), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), Menlo, Consolas, monospace;
+}
+
+/* Dark mode override — class `dark` na <html> (toggled by next-themes) */
+.dark {
+  --color-bg-primary: #1A1816;
+  --color-bg-secondary: #221F1C;
+  --color-text-primary: #F5F2EC;
+  --color-text-secondary: #B5B0A6;
+  --color-text-tertiary: #6E6A62;
+  --color-burgundy: #D97785;
+  --color-burgundy-soft: #2F1518;
+  --color-green: #7BA887;
+  --color-green-soft: #16221A;
+  --color-border: #383330;
+  --color-border-strong: #524C47;
+  --color-surface-elevated: rgba(255, 255, 255, 0.04);
+}
+
+/* Baseline body styling. `html.dark` matchuje gdy next-themes ustawia class="dark" na <html>. */
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: 16px;
+}
+
+/* rehype-autolink-headings (append behavior) — subtle "#" visible on heading hover. */
+.heading-anchor {
+  opacity: 0;
+  margin-left: 0.5rem;
+  color: var(--color-text-tertiary);
+  text-decoration: none;
+  font-size: 0.85em;
+}
+.heading-anchor::after { content: "#"; }
+h2:hover .heading-anchor,
+h3:hover .heading-anchor,
+h4:hover .heading-anchor { opacity: 1; }
+
+/* `prose` overrides — refinement w Prompt 05 razem z BayesAnalyzer styling. */

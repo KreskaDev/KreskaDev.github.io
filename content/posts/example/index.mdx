@@ -1,0 +1,50 @@
+---
+title: Example Post
+subtitle: Testing the MDX pipeline end-to-end
+date: 2026-05-22
+author: KreskaDev
+slug: example
+summary: Verify że MDX pipeline parsuje markdown, math, headings, links i KaTeX.
+tags: [Example]
+language: en
+---
+
+## Plain heading
+
+Plain paragraph w angielskim. Test inline math: $\pi = 3.14159$.
+Test bold **Tailwind 4** + italic _Geist_ + link external [Next.js docs](https://nextjs.org/) + internal [home](/).
+
+## Heading drugi poziom
+
+Sprawdź `view-source` że ten heading ma auto-gen id (`rehype-slug` z tekstu).
+Dla manualnych anchorów w przyszłych postach: użyj HTML syntax `<h2 id="...">` (remark-heading-id
+nie działa z MDX 3 — patrz `lib/mdx-options.ts`).
+
+### Trzeci poziom
+
+Block math:
+
+$$
+P(H \mid E) = \frac{P(E \mid H) \cdot P(H)}{P(E)}
+$$
+
+Test polskich diakrytyków (verify Geist latin-ext): zażółć gęślą jaźń, ąćęłńóśźż.
+
+### Code
+
+```ts
+const greeting: string = 'Hello, world.'
+```
+
+> Blockquote test — refined editorial italic styling z left border burgundy.
+
+GFM table:
+
+| Col A | Col B |
+|-------|-------|
+| 1     | 2     |
+
+Task list:
+
+- [x] Tailwind 4
+- [ ] BayesAnalyzer (Prompt 05)

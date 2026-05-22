@@ -1,0 +1,7 @@
+out/
+.next/
+node_modules/
+public/og-image.png
+*.lock
+*.lockb
+package-lock.json
