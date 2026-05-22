@@ -71,3 +71,23 @@ h3:hover .heading-anchor,
 h4:hover .heading-anchor { opacity: 1; }
 
 /* `prose` overrides — refinement w Prompt 05 razem z BayesAnalyzer styling. */
+
+/* SearchModal native <dialog> reset. Padding/bg/border żyją w inner <div> wrapperze,
+   żeby backdrop click pattern (`e.target === dialogRef.current`) działał — bez resetu
+   padding area liczy się jako click na dialog. Load-bearing dla a11y/UX, nie cosmetic. */
+.search-dialog {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  max-width: none;
+  max-height: 90vh;
+  overflow: visible;
+}
+.search-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+.search-dialog .search-results {
+  max-height: 60vh;
+  overflow-y: auto;
+}
