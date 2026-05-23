@@ -1,0 +1,395 @@
+---
+title: Pozytywny wynik. 11% prawdy.
+subtitle: Test mówi tak. Intuicja krzyczy 85%. Bayes — gdy doliczy presję oszustwa — szepcze 7.8%, 17%, 26%, 30%. Ktoś bardzo chciał, żebyś uwierzył.
+date: 2026-05-18
+author: KreskaDev
+slug: pozytywny-wynik
+summary: Naiwna ocena pozytywnej diagnozy systematycznie zawyża pewność. Cztery scenariusze (ADHD, AI-detection, whiplash, niepoczytalność) pokazują rozjazd 30-50 pp między intuicją a rzeczywistym posteriori, gdy testowana osoba ma motyw uzyskania konkretnego wyniku.
+tags:
+  - Probability
+  - Reasoning
+language: pl
+---
+
+## Wprowadzenie
+
+Wyobraź sobie test diagnostyczny z dwoma reklamowanymi liczbami:
+
+- **Czułość 85%** — zdolność testu medycznego lub diagnostycznego do prawidłowego rozpoznawania osób chorych. Z każdych 100 osób chorych test zakwalifikuje 15 chorych błędnie jako wynik negatywny.
+- **Swoistość 90%** — zdolność testu medycznego lub diagnostycznego do prawidłowego rozpoznawania osób zdrowych. Z każdych 100 osób zdrowych test zakwalifikuje 10 zdrowych błędnie jako wynik pozytywny.
+
+Wydaje się solidnie. Lekarz — albo inny ekspert — uruchamia test, dostaje wynik pozytywny i komunikuje diagnozę. Naturalna reakcja obserwatora to przyznać tej diagnozie wysoką pewność. Może 80%, może 85% — w okolicach reklamowanej "dokładności" testu.
+
+Ten post pokazuje, że **w bardzo wielu realistycznych sytuacjach ta intuicja jest dramatycznie zawyżona** — często o 30, 40, nawet 50 punktów procentowych. Powód nie leży w błędach klinicystów ani w niesumienności pacjentów. Leży w **strukturalnej własności matematyki**, która zaczyna działać przeciwko obserwatorowi w momencie, gdy testowana osoba ma motyw, by uzyskać konkretny wynik.
+
+## Hipoteza
+
+Wyobraź sobie trzy strony jednego problemu diagnostycznego:
+
+- **Osoba X** — testowana, dostaje **nagrodę** jeśli diagnoza wyjdzie pozytywna. Racjonalna, dobrze poinformowana o naturze testu, **nic jej nie grozi za próbę kłamstwa**, subiektywnie przekonana że nagroda jej się należy. Próbuje wpłynąć na wynik tam, gdzie to możliwe.
+- **Obserwator** — czytelnik diagnozy (sąd, ubezpieczyciel, kolega, rodzina, opinia publiczna). Nie ma własnej nagrody w grze — ma tylko zadanie *poprawnie oszacować pewność* diagnozy. Post śledzi rozjazd między naiwną oceną obserwatora, [kotwiczącą](#glos-kotwica) na reklamowanej swoistości testu, a realną — uwzględniającą presję oszustwa.
+- **System diagnostyczny** — klinika (kompozytowy test: narzędzia + opinia klinicysty). Wyrok binarny: pozytyw / negatyw.
+
+**Centralna teza:** *naiwny obserwator*, traktujący reklamowane parametry testu (czułość X%, swoistość Y%) jako prawdę o realnej sytuacji, **systematycznie zawyża pewność pozytywnej diagnozy**. Powód: reklamowane parametry walidowano na *uczciwych* respondentach. Pod presją oszustwa współczynnik fałszywych alarmów — [FPR](#glos-fpr) — rośnie wielokrotnie — i to nie dlatego, że klinicysta jest słaby, tylko dlatego że *narzędzie* opiera się na zaufaniu do treści odpowiedzi.
+
+### Co znaczą te liczby
+
+Cały model siedzi w **pięciu liczbach**, każda od 0 do 1 (procent w przebraniu). Zanim wejdziemy w symbole, każda po polsku — bo czytelnik bez statystycznego background'u nie zatrzyma się na cudzych literach greckich.
+
+**$\pi$ *(priori)* — jak częste jest zaburzenie w grupie, która się po taki test zgłasza.**
+Nie w populacji ogólnej. W *grupie, która trafia do gabinetu*. Jeśli zgłasza się głównie osoba, która sama siebie podejrzewa, ta liczba bywa wyższa niż "1% populacji". Ale często wciąż jest niska — 5%, 10%, 15%. Niskie priori bezlitośnie obniża pewność diagnozy, **niezależnie od tego, jak dobry jest test**.
+
+**$s_0$ *(czułość reklamowana)* — jak często test wykrywa rzeczywistą chorobę u osoby, która nie próbuje wpływać na wynik.**
+To liczba z broszury producenta lub paperu walidacyjnego. Typowo 0.80–0.95. „Test wykrywa 85% przypadków" — to $s_0$.
+
+**$s_1$ *(czułość pod presją)* — jak często test wykrywa chorobę u osoby chorej, która *chce* tej diagnozy.**
+Zwykle nieco wyższa niż $s_0$ — chora osoba, która chce diagnozy, odpowiada w sposób który jeszcze bardziej potwierdza chorobę. W praktyce 0.90–0.97.
+
+**$f_0$ *(FPR reklamowana, false positive rate)* — jak często test daje fałszywy alarm u zdrowej osoby, która nie próbuje wpływać na wynik.**
+Typowo 0.05–0.15. Mała liczba — bo na niej opiera się zaufanie do testu. *„90% swoistości"* znaczy $f_0 = 0.10$.
+
+**$f_1$ *(skuteczność oszustwa)* — jak często zdrowa osoba przekonuje test, że jest chora, gdy świadomie próbuje.**
+**To kluczowa liczba w prawie każdym realnym przypadku.** Im łatwiej zmanipulować test, tym wyżej $f_1$. Self-report psychometria (kwestionariusze ADHD, depresji, lęku): $f_1$ rzędu 0.6–0.9 — kandydat zna wzorzec oczekiwanych odpowiedzi ("jeśli zaznaczę 'często gubię przedmioty', to punkt na rzecz ADHD") i może odpowiadać strategicznie, pytanie po pytaniu. Testy z silnymi skalami walidacyjnymi: 0.15–0.30 — narzędzie wbudowuje pytania-pułapki, których strategiczna odpowiedź zdradza. Testy obiektywne (pomiary fizyczne lub neurokognitywne, nie self-report): 0.05–0.15 — manipulacja wymaga kontroli reakcji których kandydat zwykle nie zna.
+
+Te pięć liczb wystarczy do reszty.
+
+### Wzór
+
+W *wariancie lekkim* modelu (uproszczenie: zakładamy że każda testowana osoba próbuje wpłynąć na wynik — nie wszystkie kompetentnie, ale każda *próbuje*):
+
+$$P(\text{naprawdę chory} \mid \text{test pozytywny}) = \frac{\pi \cdot s_1}{\pi \cdot s_1 + (1-\pi) \cdot f_1}$$
+
+W liczniku: *ile osób chorych i z pozytywem*. W mianowniku: *wszyscy z pozytywem*. Naiwny obserwator natomiast — taki, który nie wie o presji oszustwa — używa reklamowanych $s_0$ i $f_0$ zamiast $s_1$ i $f_1$:
+
+$$P_{\text{naiwny}} = \frac{\pi \cdot s_0}{\pi \cdot s_0 + (1-\pi) \cdot f_0}$$
+
+To ten sam wzór. Różnica jest tylko w tym, której pary parametrów się używa.
+
+### Co naiwny Bayes pomija
+
+Test nie jest "dobry" lub "zły" abstrakcyjnie. Jest dobry dla *uczciwych respondentów* i potencjalnie zły dla *adversarialnych*. Klasyczny wzór Bayesa nie zna tej różnicy — używa jednej pary liczb (s, f) bez pytania "u kogo". Pod presją oszustwa ten pominięty rozróżnik staje się największym źródłem błędu.
+
+### Iloraz wiarygodności — mnożnik informacji
+
+W sekcjach niżej operuję wartością ilorazu wiarygodności pozytywu — **[LR⁺](#glos-lr)**. To wygodny *mnożnik szans*: $LR^+ = s_1 / f_1$ w wariancie lekkim. Intuicja: LR⁺ = 1 znaczy "test nie wnosi informacji" (posteriori = priori). LR⁺ = 5 znaczy "test jest 5× mocniejszy dowodem za diagnozą niż przeciwko". W zapisie szans posteriori = priori × LR⁺. Dlatego ten sam pozytywny wynik z różnych klinik (różne LR⁺) zmienia pewność diagnozy z różną siłą — zobaczymy to w sekwencjach niżej.
+
+Symetrycznie dla wyniku negatywnego: $LR^- = (1-s_1)/(1-f_1)$ — mnożnik szans **przeciwko** diagnozie. $LR^- < 1$ obniża posteriori; $LR^- \approx 0.3$ to "umiarkowanie silny negatyw".
+
+Pełne wyprowadzenie wzoru, włącznie z wariantem ogólnym (gdzie zakładamy, że tylko *część* osób próbuje oszukać), skalą walidacyjną dla wykrywania prób manipulacji, analizą wrażliwości (które parametry mają największy wpływ), oraz **źródłami kalibracji parametrów dla każdego scenariusza** (Sibley 2012 dla ADHD, Liang 2023 dla AI-detection, Carroll 2008 dla whiplash, Rogers & Bender 2018 dla niepoczytalności) — patrz **[strona z pełną matematyką →](./math)**.
+
+## Cztery scenariusze
+
+Cztery realia różniące się prawie wszystkim — innym priori, inną odpornością testu, inną stawką dla osoby testowanej. Cztery domeny: psychiatria dorosłych, akademicka detekcja AI, ortopedia powypadkowa, psychiatria sądowa. Wszędzie ten sam wzór, te same liczby, ta sama lekcja. Przeczytaj wszystkie po kolei — albo skacz przez kotwice [ADHD](#adhd) · [AI-detection](#ai-detection) · [Whiplash](#whiplash) · [Niepoczytalność](#niepoczytalnosc).
+
+<h3 id="adhd" className="font-display text-2xl text-text-primary mt-8! mb-3! scroll-mt-24">1. ADHD u dorosłych<a href="#adhd" className="heading-anchor" aria-hidden="true" tabIndex={-1} /></h3>
+
+*Psychiatria samoopisowa, codzienna gra* — dorośli 25-40, kultura produktywności.
+
+#### Scena
+
+Ania, 32 lata, programistka backend. Od dwóch lat ma narastający problem: zaczyna projekty, kończy mało; w pracy "buja się" w sieci między tickets; wieczorem nie pamięta, co właściwie zrobiła. Nie śpi dobrze. Czyta artykuły o ADHD u dorosłych, ogląda TikToka z hashtagiem `#adhdtok`, dołącza do polskiej grupy "Dorosłe ADHD" na Facebooku. Każdy post tam mówi: *"jeśli rozpoznajesz się w 7 z 18 objawów — masz ADHD i powinnaś dostać leczenie"*. Ania rozpoznaje się w 14.
+
+Idzie do psychiatry. Godzinna wizyta, ASRS-v1.1, krótki wywiad o dzieciństwie. Diagnoza: ADHD, podtyp mieszany. Recepta: Concerta 18 mg, do zwiększenia. Po dwóch tygodniach Ania pisze do mamy: *"działa, pierwszy raz od miesięcy mogłam się skupić na ośmiogodzinnym sprincie"*. Mama, która wcześniej była sceptyczna, gratuluje.
+
+Czy diagnoza była trafna? Może. **Stymulanty pomagają każdemu — z ADHD lub bez** — bo metylofenidat zwiększa dostępność dopaminy w korze przedczołowej u każdego mózgu. Ania mogła być chora, mogła też być zwyczajnie wyczerpana po dwóch latach pandemicznego remote'u i samodzielnego mieszkania. Test nie odróżnia tych dwóch sytuacji, a Ania — która naprawdę chciała diagnozy — odpowiadała w sposób, który ją uprawdopodobniał.
+
+#### Setup
+
+Dorosły (typowo 25-40 lat) zgłasza się do psychiatry z prośbą o ocenę pod kątem ADHD. Przed wizytą czyta opisy kryteriów [DSM-5](#glos-dsm) w internecie, śledzi `#adhdtok` na TikToku, dyskutuje na r/ADHD. **Test = klinika kompozytowa** złożona z: kwestionariuszy samoopisowych ([ASRS-v1.1, BAARS-IV, CAARS](#glos-adhd-kwestionariusze)), wywiadu klinicznego, opcjonalnie testów ciągłej uwagi.
+
+Diagnoza pozytywna → recepta na stymulanty (metylofenidat, lisdeksamfetamin) + opcjonalne akomodacje na uczelni/w pracy.
+
+<BayesAnalyzer preset="adhd" view="single" editable={false} />
+
+**Profil X i nagroda.** Racjonalny, dobrze poinformowany, bez konsekwencji za próbę. Często autentycznie przekonany "coś jest ze mną nie tak" — granica między *świadomą symulacją* a *szukaniem potwierdzenia własnej autodiagnozy* jest płynna. Nagroda jest podwójna: farmakologiczna (stymulanty subiektywnie poprawiają koncentrację) i tożsamościowa (przynależność do społeczności neurodywergentnej, wytłumaczenie dotychczasowych trudności).
+
+**Co naiwny obserwator zakłada:** "Psychiatra to specjalista — postawił diagnozę = jest." Pewność intuicyjna po jednej pozytywnej ocenie rzędu **70-85%** — kotwica przy reklamowanej swoistości 0,90 testu ([BRN](#glos-brn), Casscells 1978).
+
+**Realnie** — posteriori po jednej pozytywnej ocenie psychiatrycznej z parametrami preseta:
+
+$$P(H=1 \mid E=1)_{\text{realny}} = \frac{0.07 \cdot 0.95}{0.07 \cdot 0.95 + 0.93 \cdot 0.85} \approx 7.8\%$$
+
+Naiwny model (używając advertised $s_0=0.80$, $f_0=0.10$): $\approx 37.6\%$. **Różnica ~30 pp.** Naiwny myśli „37% pewności że to ADHD" — realnie tylko 7.8%.
+
+#### Sekwencja: powtarzanie tego samego typu testu
+
+<BayesAnalyzer preset="adhd" view="sequential" editable={false} clinics={[{s1:0.95,f1:0.85,result:1,name:'Psychiatra'},{s1:0.90,f1:0.75,result:1,name:'Drugi psychiatra'},{s1:0.80,f1:0.30,result:1,name:'Neuropsycholog'}]} />
+
+Trzy ekspertyzy: dwa kolejne wywiady psychiatryczne, potem bateria neuropsychologiczna. Trajektoria posteriori pokazuje: priori 7% → 7.8% po pierwszym wywiadzie psychiatrycznym → 9.2% po drugim — *każdy wywiad porusza pewność dosłownie o ułamek punktu procentowego*. Dopiero test obiektywny ([CPT, TOVA](#glos-uwaga)) z niskim $f_1$ podnosi do ~21%.
+
+**Lekcja.** Powtarzanie tego samego typu testu jest *informacyjnie redundantne*. Druga opinia psychiatryczna od *innego psychiatry* daje iluzję pewności bez wzrostu informacji. Realny wzrost wymaga *innego typu* narzędzia.
+
+<h3 id="ai-detection" className="font-display text-2xl text-text-primary mt-8! mb-3! scroll-mt-24">2. AI-detection esejów studenckich<a href="#ai-detection" className="heading-anchor" aria-hidden="true" tabIndex={-1} /></h3>
+
+*Algorytm vs autor, kierunek odwrócony* — studenci Gen Z, post-GPT era.
+
+#### Scena
+
+Marek, trzeci rok ekonomii, anglista z kursów rozszerzonych. Pisze sam — to dla niego forma myślenia, nie tylko produkcja tekstu. Polski tekst polerouje 4-5 razy zanim odda, każdy paragraf ma swoją rolę, frazowanie świadome. Wykładowczyni od historii gospodarczej zadała 4000 znaków o kryzysie 2008. Marek pisał trzy wieczory. Ostatecznie zadowolony, oddaje.
+
+Cztery dni później email: *"Twoja praca uzyskała 87% w teście AI-detection (Turnitin AI). Proszę o wyjaśnienie."* Marek nigdy nie używał ChatGPT do tej pracy. Nigdy. Wyjaśnia, wykładowczyni nie wierzy. *"Test jest jednoznaczny."* Marek dostaje wpis na konto akademickie i przepisanie pracy pod nadzorem.
+
+Czy detektor się pomylił? Pewnie tak. **Detektory AI mają udokumentowaną stronniczość przeciwko autorom o konsekwentnym formalnym stylu** (osoby z dysleksją, native speakers po wielu draftach, autorzy techniczni). Ale system nie zakłada możliwości fałszywego pozytywu — komunikat *"87% AI-probability"* jest traktowany jako liczba, której można zaufać. Marek nie ma jak udowodnić swojego procesu pisania, a 87% brzmi jak twardy dowód.
+
+#### Setup
+
+Student oddaje esej. Uczelnia uruchamia AI-detector (Turnitin AI, GPTZero, Originality.ai). Wynik pozytywny → konsekwencje akademickie: w łagodnym scenariuszu obniżenie oceny, w surowym dyscyplinarka.
+
+**[Podmiana etykiet](#glos-podmiana).** Tu kierunek motywacji jest odwrócony — X chce wyniku negatywnego (uniknąć "AI-generated" klasyfikacji), nie pozytywnego.
+
+W wariancie lekkim:
+
+- $H$ = esej jest AI-generated (faktycznie napisany przez GPT-4/Claude/Gemini, bez manualnych edycji)
+- $D$ = autor aktywnie edytuje styl tekstu — to dotyczy *wszystkich* autorów. Uczciwy native-speaker poleruje akademicki ton; AI-user humanizuje output LLM-a. W obu przypadkach następuje aktywna stylizacja.
+- $E$ = wynik klasyfikatora (pozytyw = "AI-generated")
+
+Konsekwencja: $p_0 = p_1 = 1$ ma realistyczną interpretację — *każdy* student edytuje pracę zanim odda. Wariant lekki obowiązuje, choć ze zmienionym znaczeniem $D$.
+
+<BayesAnalyzer preset="ai-detection" view="single" editable={false} />
+
+**Co naiwny obserwator zakłada.** Wykładowca: "Detector pokazał 87% AI-probability = praca jest z AI." Pewność intuicyjna rzędu **75-90%** — framing typu „87% AI-probability" działa jako *kotwica liczbowa* (anchoring heuristic, Tversky & Kahneman 1974), pokrewny ale odrębny od BRN: czytelnik anchoruje na podanej liczbie zamiast obliczać posteriori. W praktyce oba efekty współgrają — anchoring podaje wartość startową, BRN tłumaczy dlaczego korekta w stronę poprawnego ~25% nie następuje.
+
+**Realnie** — posteriori przy baseline $\pi=0.15$:
+
+$$P(H=1 \mid E=1) = \frac{0.15 \cdot 0.50}{0.15 \cdot 0.50 + 0.85 \cdot 0.25} \approx 26\%$$
+
+Naiwny model: $\frac{0.15 \cdot 0.70}{0.15 \cdot 0.70 + 0.85 \cdot 0.05} \approx 71\%$. **Różnica ~45 pp.** Naiwny myśli „71% pewności że to AI" — realnie 26%.
+
+W środowisku niskiego zaufania ($\pi=0.40$, uczelnia ze znaną kulturą używania GPT): realnie ~57%, naiwnie ~90%. **Wciąż daleko od progu sankcji akademickich** w żadnym scenariuszu.
+
+#### Sekwencja: trzy niezależne detektory
+
+<BayesAnalyzer preset="ai-detection" view="sequential" editable={false} clinics={[{s1:0.50,f1:0.25,result:1,name:'Turnitin AI'},{s1:0.55,f1:0.20,result:0,name:'GPTZero'},{s1:0.65,f1:0.10,result:1,name:'Ocena ręczna'}]} />
+
+Trzy niezależne ewaluacje przy startowym $\pi=0.15$: Turnitin AI (+), GPTZero (−), ocena ręczna (+). Trajektoria: 15% → **26%** → **17%** → **56%**. Pierwsze dwa automatyczne detektory dają sprzeczne wyniki, więc po drugim posteriori wraca prawie do startowego priori. Dopiero **silniejszy test** (ocena ręczna z niskim $f_1$) podnosi do ~56% — wciąż daleko od pewności wymaganej do konsekwencji akademickich.
+
+**Lekcja.** Model jest *elastyczny* — podmiana etykiet pozwala stosować go w domenach które na pierwszy rzut oka wyglądają "odwrotnie". Nie wymaga "chorego oszusta motywowanego do diagnozy" — wymaga jakiejkolwiek asymetrii między motywacją kandydata a kierunkiem wyniku testu. Polityka uczciwości akademickiej opierana wyłącznie na pojedynczym wyniku AI-detektora jest **matematycznie nieuzasadniona**.
+
+<h3 id="whiplash" className="font-display text-2xl text-text-primary mt-8! mb-3! scroll-mt-24">3. Whiplash powypadkowy<a href="#whiplash" className="heading-anchor" aria-hidden="true" tabIndex={-1} /></h3>
+
+*Multi-klinika natywnie, konflikt opinii* — dorośli poszkodowani w kolizjach komunikacyjnych.
+
+#### Scena
+
+Tomasz, 38 lat, przedstawiciel handlowy, jeździ po Polsce ~3000 km miesięcznie. Marzec, autostrada A1, jedzie z dziećmi z weekendu u dziadków. Na zwężeniu robót — czerwone światło. Tomasz hamuje. Za nim SUV nie hamuje wystarczająco szybko, uderza w tył z ~40 km/h. Pas bezpieczeństwa robi swoje, ale głowa Tomasza wykonuje znajomy ruch hyperextensji-flexji. Dzieci na tylnych fotelikach krzyczą ze strachu, ale fizycznie OK.
+
+Pogotowie, izba przyjęć. [RTG](#glos-rtg) kręgosłupa szyjnego — bez złamania. [CT](#glos-ct) — bez krwawienia. *"Wraca pan do domu, jutro może być sztywno."* Następnego dnia Tomasz nie może obrócić głowy w lewo bez bólu. Trzeciego dnia ból promieniuje do prawego barku. Po tygodniu nie może prowadzić — co znaczy że nie może pracować. Kancelaria odszkodowawcza składa wniosek o odszkodowanie, kierując Tomasza do ortopedy współpracującego.
+
+Ortopeda po 15 minutach: *"klasyczny whiplash, WAD II, niezdolność do pracy 60 dni, zalecam ocenę funkcjonalną."* Biegły wezwany przez ubezpieczyciela tydzień później: *"brak obiektywnych objawów neurologicznych, [MRI](#glos-mri) bez zmian, ocena negatywna dla trwałego uszczerbku."* Sprawa idzie do sądu. Trzeci biegły, sądowy, neutralny: *"obraz niejednoznaczny, objawy subiektywne, czas naprawienia spodziewany 4-12 tygodni."*
+
+Czy Tomasz naprawdę cierpi? **Nikt nie wie**. Whiplash WAD II to syndrom diagnozowany na podstawie self-reported pain bez obiektywnych markerów obrazowych. Tomasz mógł być rzeczywiście kontuzjowany. Mógł też nieświadomie wzmacniać symptomy w obliczu 25 000 zł odszkodowania na stole. Mógł świadomie blefować. **Test medyczny nie odróżnia tych trzech.**
+
+#### Setup
+
+Po stłuczce komunikacyjnej (rear-end collision, 30-50 km/h) poszkodowany zgłasza ubezpieczycielowi roszczenie z tytułu **whiplash** (uraz przyspieszeniowo-opóźnieniowy kręgosłupa szyjnego). **Test = ocena medyczna**: badanie ortopedyczne, obrazowanie (RTG, MRI), ocena funkcjonalna ([NDI](#glos-ndi), [VAS](#glos-vas)), dokumentacja długoterminowa.
+
+**Profil X i nagroda.** Klasyczny profil z literatury o [motywowanym oszustwie](#glos-oszustwo). Brak konsekwencji za próbę (ubezpieczyciel w razie odmowy nie ściga karnie). Stawka pieniężna realna: w Polsce typowe odszkodowanie [WAD II/III](#glos-wad) stopnia 10-50 tys. zł.
+
+**Multi-klinika natywnie wpisana w proces:** ortopeda poszkodowanego (kierowany przez kancelarię odszkodowawczą), biegły powołany przez ubezpieczyciela, biegły sądowy "neutralny". Trzy opinie, **różne strukturalne odporności na faking**:
+
+- *Ortopeda poszkodowanego* — wybierany przez kancelarię odszkodowawczą, badanie krótkie, bez baterii testów walidacyjnych; rzetelność ograniczona przez konflikt interesów. $f_1 \approx 0{,}80$.
+- *Biegły ubezpieczyciela* — ma dostęp do **testów walidacyjności objawu** ([SVT](#glos-svt) — Symptom Validity Tests) i pełnego obrazowania; szuka aktywnie inkonsekwencji. $f_1 \approx 0{,}20$.
+- *Biegły sądowy* — pozycja pośrednia: pełen wywiad i analiza dokumentacji, ale rzadziej [SVT](#glos-svt). $f_1 \approx 0{,}50$.
+
+<BayesAnalyzer preset="whiplash" view="single" editable={false} />
+
+**Co naiwny obserwator zakłada.** Sąd / ubezpieczyciel patrząc na opinię ortopedy: „Lekarz potwierdził bóle = osoba cierpi." Pewność intuicyjna **70-85%** — kotwica przy reklamowanej swoistości badania ortopedycznego ~0,85. Dodatkowo: Mittenberg et al. 2002 — w ankiecie wśród neuropsychologów — szacuje base rate [symulacji objawów](#glos-symulacja) w [sprawach odszkodowawczych](#glos-odszkodowanie) na **~29%** (mediana). To proxy dla parametru $p_0$ (odsetek oszukujących), nie dla $f_1$ (skuteczność oszustwa). Wartość znacznie powyżej zera, ale poniżej skrajnego założenia wariantu lekkiego ($p_0=1$).
+
+**Realnie** — posteriori po jednej typowej ocenie ortopedycznej (baseline whiplash, $f_1=0.70$ — kalibracja dla **typowej oceny ortopedycznej w sprawie roszczeniowej**, dominowanej przez ortopedów wybieranych przez kancelarie odszkodowawcze; sekwencja niżej rozbije ten baseline na konkretne typy klinik z ich indywidualnymi $f_1$):
+
+$$P(H=1 \mid E=1) = \frac{0.25 \cdot 0.92}{0.25 \cdot 0.92 + 0.75 \cdot 0.70} \approx 30\%$$
+
+Naiwny model: ~63%. **Różnica 33 pp.** W sekwencji poniżej zobaczymy konkretne wartości per typ kliniki — ortopeda poszkodowanego ma wyższe $f_1$ niż baseline, biegły ubezpieczyciela znacznie niższe.
+
+#### Sekwencja: klasyczny konflikt opinii
+
+<BayesAnalyzer preset="whiplash" view="sequential" editable={false} clinics={[{s1:0.92,f1:0.80,result:1,name:'Ortopeda poszkodowanego'},{s1:0.75,f1:0.20,result:0,name:'Biegły ubezpieczyciela'},{s1:0.85,f1:0.50,result:1,name:'Biegły sądowy'}]} />
+
+Trzy ekspertyzy z różną instytucjonalną odpornością:
+
+- Ortopeda poszkodowanego ($s_1=0.92$, $f_1=0.80$): $LR^+ \approx 1.15$ — niemal nieinformatywny
+- Biegły ubezpieczyciela ($s_1=0.75$, $f_1=0.20$): $LR^- \approx 0.31$ — silny negatyw
+- Biegły sądowy ($s_1=0.85$, $f_1=0.50$): $LR^+ \approx 1.70$
+
+Sekwencja [+, −, +] przy startowym $\pi=0.25$ daje trajektorię: 25% → 28% → **11%** → 17%. Negatyw od *odpornej* kliniki **dramatycznie obniża posteriori poniżej startowego priori** — sygnał o motywacji, nie o samej chorobie. (Mechanika: $LR^- \approx 0{,}31 < 1$ działa jak mnożnik mniejszy od jedynki na odds — każdy negatyw od odpornego testu jest *aktywnym dowodem* przeciwko diagnozie, nie tylko brakiem dowodu.)
+
+**Lekcja.** Konflikt opinii nie jest błędem do rozwiązania przez wybór "lepszej" kliniki. Jest *sygnałem* statystycznie przesuwającym posteriori w stronę hipotezy „(H=0, D=1)" — *osoba zdrowa oszukała łatwiejszą klinikę, nie zdołała oszukać odporniejszej*.
+
+<h3 id="niepoczytalnosc" className="font-display text-2xl text-text-primary mt-8! mb-3! scroll-mt-24">4. Niepoczytalność w procesie karnym<a href="#niepoczytalnosc" className="heading-anchor" aria-hidden="true" tabIndex={-1} /></h3>
+
+*Najsilniejszy z testów, najniższe priori* — oskarżeni o ciężkie przestępstwa.
+
+#### Scena
+
+Krzysztof, 27 lat, oskarżony o zabójstwo w bójce po imprezie. Świadkowie zgodni co do faktów: kłótnia, eskalacja, jeden cios, drugi cios, ofiara nieprzytomna, śmierć w karetce po 40 minutach. Krzysztof następnego dnia w izbie zatrzymań nie pamięta szczegółów: *"piliśmy od popołudnia, coś między nami było, dalej widzę tylko sanitariuszy"*. Bezalkoholowe testy krwi nie zostały zrobione na czas — alkohol już zmetabolizowany przy zatrzymaniu po 18 godzinach.
+
+Adwokat pisze wniosek o ocenę poczytalności. Sąd wzywa dwóch biegłych psychiatrów, na okres obserwacyjny 6 tygodni w zakładzie psychiatrycznym sądowym. Krzysztof spędza tam 42 dni. Rozmowy, testy projekcyjne, [MMPI-2-RF](#glos-mmpi), [M-FAST](#glos-mfast), [EEG](#glos-eeg). Po obserwacji opinia: *"w chwili czynu zdolność rozpoznania znaczenia czynu i pokierowania swoim postępowaniem była ograniczona w znacznym stopniu"* — Art. 31 § 2 [KK](#glos-kpk-kk), **znacznie zniesiona poczytalność**. Sąd: nadzwyczajne złagodzenie kary (Art. 60 KK) — znacząco łagodniejszy wyrok zamiast jednej z surowych sankcji Art. 148 § 1 KK.
+
+Czy biegli się pomylili? **Statystycznie — z dużym prawdopodobieństwem tak.** Prawdziwa znacznie zniesiona poczytalność w chwili czynu jest rzadka w tej populacji (rzędu kilku procent oskarżonych o przestępstwa z użyciem przemocy — dokładny baseline zależy od konkretnej populacji i jurysdykcji, a w opracowaniach polskich nie jest dobrze udokumentowany). Krzysztof miał potężny motyw, by symulować — różnica między karą po nadzwyczajnym złagodzeniu a jedną z trzech surowych sankcji za zabójstwo z Art. 148 § 1 KK (kara pozbawienia wolności od 10 lat, 25 lat, dożywocie) to całe pokolenie życia. Skale walidacyjne (M-FAST, MMPI-2-RF) wykrywają część prób manipulacji, ale empirycznie ich $f_1$ — czyli odsetek "wpadek" osoby motywowanej, która zdoła przejść — pozostaje na poziomie kilkunastu-dwudziestu procent nawet w warunkach obserwacji szpitalnej (Rogers & Bender 2018, podsumowanie meta-analiz). Dwóch biegłych zgodnych nie znaczy że prawdziwa diagnoza — znaczy że *test dał ten sam wynik dwa razy*. **Te dwie rzeczy nie są tym samym przy niskim priori.**
+
+#### Setup
+
+Oskarżony o ciężkie przestępstwo (zabójstwo, agresja seksualna) wnioskuje o uznanie **znacznie zniesionej poczytalności** (Art. 31 § 2 KK). **Test = pełna ekspertyza psychiatryczno-psychologiczna sądowa:** co najmniej dwóch biegłych psychiatrów + biegły psycholog, baterie testów z silnymi skalami walidacyjnymi (MMPI-2-RF, [PAI](#glos-pai), M-FAST), wywiad środowiskowy, często obserwacja w zakładzie psychiatrycznym.
+
+**Profil X i nagroda.** Maksymalna nagroda z 4 scenariuszy: różnica między jedną z surowych sankcji Art. 148 § 1 KK (zagrożenie obejmuje karę pozbawienia wolności od lat 10, karę 25 lat pozbawienia wolności albo dożywocie — trzy odrębne sankcje, nie ciągłą skalę) a znacząco łagodniejszą karą po nadzwyczajnym złagodzeniu (Art. 60 KK).
+
+**Drobne napięcie z wariantem lekkim:** wykryta symulacja niepoczytalności może wpłynąć na ocenę postawy w procesie (brak skruchy, zaostrzenie kary w ramach dyskrecji sądu) i pociąga realne koszty (przedłużona obserwacja, kolejne ekspertyzy). Samo nieprawdziwe oświadczenie oskarżonego o własnym stanie psychicznym nie jest jednak karalne — zasada *nemo tenetur se ipsum accusare* (Art. 74 § 1 KPK) gwarantuje oskarżonemu brak obowiązku dostarczania dowodów na własną niekorzyść. Granicą są fałszywe oskarżenie osoby trzeciej (Art. 234 KK) i fałszywe zawiadomienie o przestępstwie (Art. 238 KK) — same w symulacji niepoczytalności zwykle nieaktywne. Dla oskarżonego o najcięższe przestępstwa marginalne konsekwencje pozostają niską ceną wobec szansy na nadzwyczajne złagodzenie. Wariant lekki pozostaje dobrym przybliżeniem.
+
+<BayesAnalyzer preset="niepoczytalnosc" view="single" editable={false} />
+
+**Co naiwny obserwator zakłada.** Dwie skrajne pozycje:
+
+- **Opinia publiczna:** „każdy psychopata twierdzi że jest chory" — drastyczne zawyżenie $f_1$, posteriori subiektywne ~0%
+- **Obrona / część prawników:** „dwóch biegłych potwierdziło = pewność" — posteriori subiektywne 95-99%
+
+Obie skrajności to warianty znanych heurystyk: pierwsza — *[heurystyka reprezentatywności](#glos-reprezentatywnosc)* („psychopata = każdy oskarżony"; Tversky & Kahneman 1974), druga — BRN nałożony na zaufanie do liczby ekspertów („dwóch biegłych ≈ 2× pewność").
+
+**Realnie** — posteriori po jednej pozytywnej ekspertyzie:
+
+$$P(H=1 \mid E=1) = \frac{0.04 \cdot 0.97}{0.04 \cdot 0.97 + 0.96 \cdot 0.20} \approx 17\%$$
+
+Mimo że **test jest rygorystyczny** (najniższe $f_1=0.20$ z 4 scenariuszy), niskie priori (rzadkość prawdziwej niepoczytalności w chwili czynu) ciągnie posteriori w dół.
+
+Dla porównania: naiwny Bayes (używając reklamowanych $s_0=0.95$, $f_0=0.05$) dałby ~44.2% — sześciokrotnie wyższe niż realne 17%, ale wciąż dramatycznie niżej od intuicyjnego 95-99%. Pełne porównanie trzech poziomów dla wszystkich scenariuszy → ramka "Trzy liczby, trzy odbiorcy" w sekcji "Dwie warstwy rozjazdu".
+
+#### Sekwencja: strukturalna niepewność procesu karnego
+
+<BayesAnalyzer preset="niepoczytalnosc" view="sequential" editable={false} clinics={[{s1:0.97,f1:0.20,result:1,name:'Pierwszy biegły psychiatra'},{s1:0.97,f1:0.20,result:1,name:'Drugi biegły psychiatra'},{s1:0.96,f1:0.18,result:1,name:'Obserwacja w zakładzie'}]} />
+
+Trzy zgodne ekspertyzy (dwóch biegłych psychiatrów + obserwacja w zakładzie):
+
+- Biegły psychiatra: $LR^+ \approx 4.85$ ($s_1=0.97$, $f_1=0.20$)
+- Obserwacja w zakładzie: $LR^+ \approx 5.33$ ($s_1=0.96$, $f_1=0.18$ — kilkutygodniowa obserwacja jest *strukturalnie mocniejsza* niż wywiad)
+- Po 1 (biegły): 16.8%
+- Po 2 (drugi biegły): 49.5%
+- Po 3 (obserwacja): ~84%
+
+**Dwie zgodne ekspertyzy dają ~50% pewności.** Daleko od 95-99% intuicyjnego. **Dopiero trzy** — z udziałem obserwacji w zakładzie — dają posteriori w okolicach 84% **przy idealizowanym założeniu warunkowej niezależności trzech ekspertyz**. Polski kodeks postępowania karnego (Art. 202 § 1 [KPK](#glos-kpk-kk)) wymaga powołania *co najmniej* dwóch biegłych psychiatrów — w praktyce zwykle właśnie dwóch. To **strukturalnie niewystarczające** żeby dać pewność, jakiej moralnie wymaga waga decyzji.
+
+Uwaga: w polskiej praktyce dwóch biegłych psychiatrów + obserwacja w zakładzie to nie są **trzy warunkowo niezależne** testy — biegli zwykle prowadzą obserwację wspólnie i konsultują przed opinią łączną. Pokazana trajektoria zakłada idealizowaną niezależność; realna trajektoria byłaby **wolniejsza** (efektywnie mniej niezależnych obserwacji niż n=3). To granica zastosowania modelu opisana w [math.md sekcja 13](./math#13-zalozenia-upraszczajace).
+
+**Lekcja.** Nawet *najmocniejszy* z testów nie daje pewności, jakiej oczekuje system prawny od ekspertyzy psychiatrycznej. Niskie priori systematycznie obniża posteriori. To nie znaczy że biegli się mylą — znaczy że *struktura matematyczna* problemu wymaga więcej obserwacji niż system ma w typowej procedurze. Implikacja dla legislacji: Art. 31 KK powinien być stosowany ostrożniej. Implikacja dla biegłych: opinia powinna komunikować nie tylko *swoje przekonanie*, ale *strukturalną niepewność* przy niskim priori.
+
+## Dwie warstwy rozjazdu
+
+Cztery różne domeny, ten sam rozjazd. Dwie przyczyny — jedna w matematyce, druga w głowie.
+
+### Skąd ta różnica
+
+Klasyczny wzór Bayesa, bez założenia o oszustwie, używa parametrów *reklamowanych* przez producenta testu. Te liczby pochodzą zwykle z walidacji na próbie, w której respondenci nie mieli motywu, by ten test "obejść" — pacjenci szpitalni, uczestnicy badań naukowych, ochotnicy. W ich populacji $f_0 \approx 0{,}05$–$0{,}15$, $s_0 \approx 0{,}80$–$0{,}95$, i naiwny Bayes daje sensowne wyniki.
+
+W realnym scenariuszu, gdzie testowana osoba *aktywnie próbuje uzyskać konkretny wynik*, profil odpowiedzi się zmienia. Pytania, które dla uczciwego respondenta są neutralne, dla oszukującego stają się "co odpowiedzieć, żeby wypaść tak, jak chcę". Część pytań pozostaje strukturalnie odporna (oczywiste fakty, niezależne pomiary, mechanizmy walidacyjne wbudowane w narzędzie), ale część — często większość — jest zmanipulowalna. **W praktyce FPR rośnie z reklamowanej $f_0 \approx 0{,}10$ (walidacja na uczciwej próbie) do realnej $f_1 \approx 0{,}60$–$0{,}85$ (populacja pod presją oszustwa)** w typowych psychometrycznych narzędziach. Czterokrotny lub ośmiokrotny wzrost FPR.
+
+To wystarczy, by posteriori spadło z intuicyjnych "70-85% pewności" do faktycznych "10-30%" — w zależności od priori i konkretnych parametrów testu.
+
+### Trzy liczby, trzy odbiorcy
+
+Pod każdą diagnozą krążą *trzy różne* poziomy pewności o całkowicie różnym statusie poznawczym:
+
+- **Intuicja-kotwica** — laik kotwiczy na "swoistości testu" lub na liczbie podanej przez ekspertkę. Bez rachunku Bayesa. To liczba, którą podaje większość respondentów w eksperymentach BRN (Casscells 1978).
+- **Naiwny Bayes** — ktoś użył wzoru, ale z reklamowanymi $s_0, f_0$. Formalnie poprawnie, ale z parametrami z walidacji na uczciwej próbie. To liczba, którą da student statystyki, gdy "uwzględni częstość bazową".
+- **Realny Bayes** — ten sam wzór, ale z $s_1, f_1$ z adversarialnej populacji. To prawdopodobieństwo, którego *naprawdę* powinniśmy używać.
+
+Konkretnie dla czterech scenariuszy posta (kolumna "Intuicja-kotwica" odnosi się do **pojedynczej** pozytywnej ekspertyzy — tak samo jak "Realny Bayes", żeby trzy kolumny były porównywalne):
+
+| Scenariusz | $\pi$ | Intuicja-kotwica | Naiwny Bayes | Realny Bayes |
+|---|---|---|---|---|
+| [ADHD u dorosłych](#adhd) | 7% | 70-85% *(BRN — kotwica na swoistości 0.90)* | 37.6% | **7.8%** |
+| [AI-detection (eseje)](#ai-detection) | 15% | 75-90% *(kotwica liczbowa na podanym "87% AI-probability")* | 71.2% | **26.1%** |
+| [Whiplash powypadkowy](#whiplash) | 25% | 70-85% *(BRN — kotwica na swoistości 0.85)* | 63.4% | **30.5%** |
+| [Niepoczytalność](#niepoczytalnosc) | 4% | 95-99% *(zaufanie do liczby ekspertów — BRN nałożony na "biegły potwierdził")* | 44.2% | **16.8%** |
+
+*Trzy różne mechanizmy psychologiczne* generują kolumnę "Intuicja-kotwica":
+
+- **BRN (base rate neglect)** dla ADHD i whiplash — laik kotwiczy na reklamowanej swoistości testu, ignorując priori.
+- **Anchoring liczbowy** dla AI-detection — laik kotwiczy na konkretnej liczbie podanej przez detektor ("87% AI-probability"), niezależnie od tego, czy jest sensowna.
+- **Zaufanie do liczby ekspertów** dla niepoczytalności — laik kotwiczy na fakcie "biegły specjalista potwierdził", traktując pojedynczą ekspertyzę jako quasi-pewność (mechanizm pokrewny BRN, ale nałożony na status epistemiczny eksperta, nie na swoistość testu).
+
+Rozjazd ma **dwa źródła**: pierwszy skok (intuicja → naiwny Bayes) jest tłumaczony mechanizmami z ramki wyżej; drugi skok (naiwny Bayes → realny Bayes) jest tłumaczony niedoszacowaniem $f_1$ przez naiwnego analityka. Większość komentarza posta używa porównań *intuicja vs realny* (bo wizualnie dramatyczniej), ale matematycznie cały rozjazd składa się z dwóch warstw — nie jednej. Sekcja niżej rozbija oba.
+
+<h3 id="intuicja-kotwica" className="font-display text-2xl text-text-primary mt-8! mb-3! scroll-mt-24">Skąd bierze się ta intuicja<a href="#intuicja-kotwica" className="heading-anchor" aria-hidden="true" tabIndex={-1} /></h3>
+
+Hipoteza posta — *„laik przyznaje pewność w okolicy reklamowanej swoistości testu"* — to **ignorowanie częstości bazowej** — BRN. Casscells, Schoenberger i Grayboys (1978, *[NEJM](#glos-nejm)*) zapytali 60 studentów i staff Harvard Medical School o test ze swoistością 95% na chorobę o prevalencji 1/1000. Modal odpowiedź: **95%** (≈ reklamowana swoistość). Prawidłowa: **~2%**. Efekt BRN jest empirycznie najmocniej udokumentowany dla skrajnie niskich prevalencji (~0.001 w eksperymencie Casscells); przy umiarkowanych $\pi$ używanych w tym poście (0.04-0.25) BRN jest słabszy, ale wciąż obserwowany w literaturze — pełna kalibracja siły efektu dla naszych zakresów parametrów wymaga osobnej replikacji, której nie zakładamy. Cytujemy Casscells jako **archetyp mechanizmu**, nie jako kalibrację konkretnych liczb.
+
+Drugie uprzedzenie poznawcze: pod **presją oszustwa** laik nie wie, że antagonistyczni respondenci dają inne $f$ niż uczciwi. Mittenberg et al. (2002, ankieta wśród N=131 neuropsychologów ABCN; respondenci szacowali base rate symulacji na podstawie własnej praktyki obejmującej w sumie ~33 tys. przypadków klinicznych) raportuje medianę szacowanego base rate symulacji **~29%** w sprawach odszkodowawczych — liczba znacznie powyżej zera, ale wielokrotnie poniżej hipotezy wariantu lekkiego (100%). To proxy dla parametru $p_0$, nie dla $f_1$.
+
+Dwa uprzedzenia poznawcze **współgrają**: pierwsze przeszacowuje precyzję testu, drugie ignoruje obecność motywowanego oszustwa w populacji testowanej. Razem dają numeryczny rozjazd dramatyczniejszy niż pojedyncze uprzedzenie z klasycznych przykładów BRN. Pełna dyskusja literatury (Eddy 1982, Gigerenzer & Hoffrage 1995, Koehler 1996, debata o ekologicznej racjonalności) → **[strona z pełną matematyką →](./math)**.
+
+## Co łączy te cztery
+
+**Model bayesowski jest uniwersalny.** Mimo że cztery scenariusze różnią się prawie wszystkim — priori 4%→25%, $f_1$ 0.20→0.85, kierunki motywacji — ten sam wzór stosuje się wszędzie tam, gdzie:
+
+1. Istnieje binarny (lub zwarty) test diagnostyczny
+2. Osoba testowana ma motyw uzyskania określonego wyniku
+3. Konsekwencje za próbę manipulacji są niewielkie lub żadne
+
+— matematyka w tym poście ma zastosowanie. Drobne presety trzeba dobrać, ale struktura argumentu jest niezmienna.
+
+**Trzy założenia, które warto znać.** Wszystko powyżej zakłada że: (a) decyzja o oszustwie jest **trwała** w obrębie jednej procedury diagnostycznej (osoba nie zmienia strategii między ekspertyzami); (b) kliniki są **warunkowo niezależne** dla danego $(H, D)$ — różne testy nie powtarzają tych samych błędów; (c) wynik testu jest **binarny** (pozytyw/negatyw), choć w praktyce większość testów daje wynik ciągły, który dopiero próg zamienia w binarny. Każde z tych założeń jest uproszczeniem i każde może załamać model w konkretnym przypadku — pełna dyskusja → [math.md sekcja 13](./math#13-zalozenia-upraszczajace).
+
+**Praktyczne implikacje (poziom: narzędzie).** Reguły poniżej są słuszne *pod założeniami modelu* (trwała decyzja o oszustwie, warunkowa niezależność klinik, parametry testu sensownie szacowalne — [pełna lista założeń w math.md](./math)):
+
+- *Druga opinia* od **innego typu narzędzia** ma znacznie większą siłę informacyjną niż powtórzenie tego samego testu — gdy "ten sam test" znaczy *ten sam protokół z ograniczoną walidacją* (jak wywiad psychiatryczny w ADHD: $LR^+ \approx 1{,}2$). Wyjątek: niezależne assessments z **bogatą metodologią walidacyjną** (M-FAST, MMPI-2-RF, EEG w niepoczytalności) zachowują wysoki $LR^+ \approx 5$ per ekspert, nawet jeśli nominalnie "ten sam typ" (psychiatra). Decyduje **struktura metodologii**, nie nazwa dyscypliny.
+- *Konflikt opinii* powinien skłaniać do podejrzenia $D$ (motywacji do oszustwa), nie do automatycznego wyboru "tej co ci pasuje" (lekcja z whiplash).
+- *Niskie priori* (rzadkie zaburzenie) wymaga **bardzo wielu zgodnych pozytywów** by osiągnąć pewność, którą system zwykle zakłada od jednej ekspertyzy (lekcja z niepoczytalności).
+- *Model jest agnostyczny co do kierunku motywacji* — podmiana etykiet przenosi go z psychiatrii do detekcji treści AI-generowanych bez utraty matematycznej spójności (lekcja ze scenariusza detekcji AI).
+
+## Playground
+
+Pobaw się parametrami sam. Slidery są aktywne. Tryb zaawansowany (toggle w widget'cie) odsłania pełen wariant ogólny z $p_0$, $p_1$.
+
+<BayesAnalyzer view="playground" editable />
+
+## Wniosek
+
+Naiwny Bayes pod adversarialnymi warunkami nie tyle *myli się* — on **systematycznie zawyża pewność po jednym pozytywnym teście**. To nie jest defekt klinicysty ani defekt narzędzia. To strukturalna własność matematyki przy nierównej dystrybucji motywacji między testowanym a obserwatorem.
+
+Liczby z czterech scenariuszy rozjeżdżają się wielokrotnie — i każda mówi to samo o decyzji.
+
+Jeśli pamiętasz tylko jedno z tego posta: *pojedyncza pozytywna diagnoza w warunkach motivated faking rzadko zasługuje na pewność, którą jej intuicyjnie przyznajesz*. Druga opinia, najlepiej od innego typu narzędzia, jest praktycznie zawsze uzasadniona.
+
+## Słowniczek
+
+### Skróty pojęciowe
+- <span id="glos-brn"></span>**BRN** — ignorowanie częstości bazowej. Tendencja do oceniania trafności testu bez uwzględnienia rzadkości testowanej cechy w populacji.
+- <span id="glos-fpr"></span>**FPR** — współczynnik fałszywych alarmów. Jak często test daje pozytyw u osoby zdrowej (parametr $f$ w modelu).
+- <span id="glos-lr"></span>**LR⁺ / LR⁻** — iloraz wiarygodności pozytywu/negatywu. Mnożnik szans, którym wynik testu przekształca priori na posteriori.
+
+### Terminologia
+- <span id="glos-priori"></span>**priori** — prawdopodobieństwo wstępne; jak częste zaburzenie jest w grupie, która zgłasza się po test.
+- <span id="glos-posteriori"></span>**posteriori** — prawdopodobieństwo końcowe po uwzględnieniu wyniku testu.
+- <span id="glos-kotwica"></span>**kotwica** — efekt poznawczy: początkowy szacunek ciągnie do siebie kolejne oceny. Tu: laik kotwiczy pewność diagnozy na reklamowanej swoistości testu.
+- <span id="glos-oszustwo"></span>**motywowane oszustwo** — respondent aktywnie próbuje uzyskać konkretny wynik testu.
+- <span id="glos-symulacja"></span>**symulacja objawów** — udawanie objawów dla zewnętrznej korzyści (odszkodowanie, uniknięcie kary).
+- <span id="glos-odszkodowanie"></span>**sprawy odszkodowawcze** — kontekst prawno-odszkodowawczy: sprawy o uszczerbek na zdrowiu (cywilne, ubezpieczeniowe).
+- <span id="glos-reprezentatywnosc"></span>**heurystyka reprezentatywności** — ocena prawdopodobieństwa na podstawie podobieństwa do stereotypu.
+- <span id="glos-podmiana"></span>**podmiana etykiet** — zmiana etykiet zmiennych w modelu (np. *H = "esej jest AI-generowany"* zamiast *H = "osoba naprawdę chora"*).
+
+### Narzędzia psychometryczne
+- <span id="glos-dsm"></span>**DSM-5** — amerykańska klasyfikacja zaburzeń psychicznych (wyd. 5).
+- <span id="glos-adhd-kwestionariusze"></span>**ASRS-v1.1 / BAARS-IV / CAARS** — kwestionariusze samoopisowe ADHD u dorosłych.
+- <span id="glos-uwaga"></span>**CPT / TOVA** — obiektywne testy uwagi używane w diagnostyce ADHD.
+- <span id="glos-mmpi"></span>**MMPI-2-RF** — kwestionariusz osobowości z mocnymi skalami walidacyjnymi wykrywającymi próby oszustwa.
+- <span id="glos-mfast"></span>**M-FAST** — skala wykrywania symulacji objawów w psychiatrii sądowej.
+- <span id="glos-pai"></span>**PAI** — inwentarz oceny osobowości.
+- <span id="glos-eeg"></span>**EEG** — elektroencefalografia.
+
+### Klasyfikacje medyczne / prawne
+- <span id="glos-wad"></span>**WAD II/III** — klasyfikacja kliniczna whiplash, stopnie II–III.
+- <span id="glos-kpk-kk"></span>**KPK / KK** — Kodeks postępowania karnego / Kodeks karny (Polska).
+- <span id="glos-icd"></span>**ICD-10/11** — międzynarodowa klasyfikacja chorób WHO; w Polsce klasyfikacja urzędowa, równolegle z DSM-5 w pracy klinicznej.
+
+### Diagnostyka medyczna
+- <span id="glos-mri"></span>**MRI** — rezonans magnetyczny (obrazowanie wykorzystujące silne pole magnetyczne).
+- <span id="glos-rtg"></span>**RTG** — rentgen (obrazowanie wykorzystujące promieniowanie X).
+- <span id="glos-ct"></span>**CT** — tomografia komputerowa.
+- <span id="glos-ndi"></span>**NDI** — Neck Disability Index, kwestionariusz oceny niepełnosprawności szyi (whiplash, ortopedia).
+- <span id="glos-vas"></span>**VAS** — Visual Analogue Scale, skala wzrokowo-analogowa bólu (0-10).
+- <span id="glos-svt"></span>**SVT** — Symptom Validity Tests, testy walidacyjności objawów; baterie pytań projektowanych do wykrywania symulacji.
+
+### Inne
+- <span id="glos-nejm"></span>**NEJM** — czasopismo medyczne *New England Journal of Medicine*.
+
+## Jeśli chcesz głębiej
+
+Sekcja Playground wyżej pozwala manipulować pełnym modelem — wszystkie pięć parametrów, tryb zaawansowany z $p_0, p_1$, sekwencja kolejnych ekspertyz, ostrzeżenia o niestandardowych konfiguracjach. To ten sam silnik, który napędza wszystkie cztery scenariusze powyżej — wartości domyślne zmieniają się, matematyka zostaje ta sama.

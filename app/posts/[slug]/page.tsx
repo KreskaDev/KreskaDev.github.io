@@ -1,13 +1,36 @@
 import { compileMDX } from 'next-mdx-remote/rsc'
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getAllPosts, getPostBySlug } from '@/lib/posts'
 import mdxComponents from '@/mdx-components'
 import { mdxOptions } from '@/lib/mdx-options'
 import type { PostFrontmatter } from '@/types/post'
+import BayesAnalyzer from '@/content/posts/pozytywny-wynik/components/BayesAnalyzer'
+
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+})
 
 export async function generateStaticParams() {
   const posts = await getAllPosts()
   return posts.map(p => ({ slug: p.slug }))
+}
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> },
+): Promise<Metadata> {
+  const { slug } = await params
+  const posts = await getAllPosts()
+  const post = posts.find(p => p.slug === slug)
+  if (!post) return { title: 'Post not found' }
+  return {
+    title: post.title,
+    description: post.summary,
+    alternates: { canonical: `/posts/${slug}/` },
+  }
 }
 
 export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -24,18 +47,39 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
   const { content } = await compileMDX({
     source: loaded.source,
-    components: mdxComponents,
+    components: { ...mdxComponents, BayesAnalyzer },
     options: { mdxOptions, parseFrontmatter: false },
   })
 
+  // ADR-023: <html lang="en"> globalnie + <article lang="pl"> lokalnie dla PL posta.
+  // Undefined dziedziczy z <html lang="en"> — brak nadpisywania tym samym.
+  const articleLang =
+    loaded.frontmatter.language && loaded.frontmatter.language !== 'en'
+      ? loaded.frontmatter.language
+      : undefined
+
+  const dateDisplay = dateFormatter.format(new Date(loaded.frontmatter.date + 'T00:00:00Z'))
+
   return (
-    <article
-      lang={loaded.frontmatter.language ?? 'en'}
-      className="prose dark:prose-invert container mx-auto max-w-2xl px-6 py-12"
-    >
-      <h1 className="font-display text-4xl text-text-primary">{loaded.frontmatter.title}</h1>
-      <p className="text-text-secondary italic">{loaded.frontmatter.subtitle}</p>
-      {content}
-    </article>
+    <div className="container mx-auto max-w-3xl px-6 py-12">
+      <article lang={articleLang} className="prose dark:prose-invert">
+        <header className="not-prose mb-8">
+          <h1 className="font-display text-4xl text-text-primary">
+            {loaded.frontmatter.title}
+          </h1>
+          {loaded.frontmatter.subtitle && (
+            <p className="text-text-secondary text-xl mt-2 font-display italic">
+              {loaded.frontmatter.subtitle}
+            </p>
+          )}
+          <div className="flex items-baseline gap-3 mt-4 text-text-tertiary text-sm font-sans">
+            <time dateTime={loaded.frontmatter.date}>{dateDisplay}</time>
+            <span aria-hidden>·</span>
+            <span>{loaded.frontmatter.author}</span>
+          </div>
+        </header>
+        {content}
+      </article>
+    </div>
   )
 }

@@ -1,0 +1,289 @@
+---
+title: Matematyka modelu — pełne wyprowadzenie
+parent: pozytywny-wynik
+language: pl
+---
+
+# Matematyka modelu
+
+Ten dokument zawiera **pełne wyprowadzenie matematyczne** modelu, którym posługuje się [główny post](../). Jeśli czytałeś główny post i intuicja jest jasna, ten dokument prawdopodobnie nie jest ci potrzebny. Jeśli chcesz sprawdzić **wyprowadzenie krok po kroku**, zweryfikować założenia, lub zobaczyć **analizę wrażliwości** — to tu.
+
+## 1. Cztery zmienne losowe
+
+Modeluję sytuację za pomocą **czterech zmiennych binarnych**:
+
+| Symbol | Znaczenie | Wartość 1 oznacza |
+|--------|-----------|--------------|
+| $H$ | stan zaburzenia | osoba **naprawdę** ma to zaburzenie |
+| $D$ | decyzja o oszustwie | osoba **świadomie** próbuje wpływać na wynik testu |
+| $E$ | wynik testu | test daje wynik **pozytywny** |
+| $V$ | wynik skali walidacyjnej (opcjonalnie) | skala **nie wykryła** próby oszustwa |
+
+Agent decyzyjny (obserwator) widzi $E$ i opcjonalnie $V$. Nie widzi $H$ ani $D$ bezpośrednio — musi je *wnioskować*.
+
+## 2. Pełen zestaw parametrów
+
+Pięć parametrów modelu w wariancie *lekkim* (zakładamy że każda osoba próbuje oszukać):
+
+$$\pi := P(H=1), \quad s_0 := P(E=1 \mid H=1, D=0), \quad s_1 := P(E=1 \mid H=1, D=1)$$
+
+$$f_0 := P(E=1 \mid H=0, D=0), \quad f_1 := P(E=1 \mid H=0, D=1)$$
+
+W *wariancie ogólnym* — kiedy nie wszyscy oszukują — dochodzą jeszcze:
+
+$$p_1 := P(D=1 \mid H=1), \quad p_0 := P(D=1 \mid H=0)$$
+
+I opcjonalnie, dla skali walidacyjnej:
+
+$$v_0 := P(V=1 \mid D=0), \quad v_1 := P(V=1 \mid D=1)$$
+
+**Typowe relacje jakościowe** w realnym świecie:
+
+- $s_1 \geq s_0$ — chora osoba która próbuje, wypada *bardziej* chora niż chora osoba uczciwa
+- $f_1 \gg f_0$ — zdrowa osoba która próbuje, wypada *znacznie* częściej chora niż zdrowa uczciwa
+- $p_0 > p_1$ — zdrowi mają silniejszą motywację do oszukania (chorzy i tak by dostali diagnozę)
+
+> **Uwaga: relacja $s_1 \geq s_0$ zakłada że "oszustwo" idzie w kierunku zwiększenia szans pozytywnej diagnozy.** W scenariuszach z *podmianą etykiet* (np. detekcja AI w esejach studenckich — H = "esej jest AI-generated", D = "autor manipuluje stylem"), kierunek się odwraca: manipulacja zmniejsza wykrywalność, więc $s_1 < s_0$ jest typowe i poprawne. Reguły kierunkowe sprawdzaj zawsze po nadaniu konkretnej semantyki D.
+
+## 3. Struktura zależności (DAG)
+
+Wszystkie cztery zmienne łączą się w DAG (directed acyclic graph) zależności przyczynowych:
+
+$$H \rightarrow D \rightarrow E, \quad H \rightarrow E, \quad D \rightarrow V$$
+
+W słowach: **stan choroby** wpływa na **decyzję o oszustwie** (osoba chora *teoretycznie* mniej potrzebuje oszukiwać). **Stan choroby** wpływa też bezpośrednio na **wynik testu** (uczciwa chora osoba bywa wykryta). **Decyzja o oszustwie** wpływa na **wynik testu** i na **skalę walidacyjną**.
+
+Faktoryzacja rozkładu łącznego:
+
+$$P(H, D, E, V) = P(V \mid D) \cdot P(E \mid H, D) \cdot P(D \mid H) \cdot P(H)$$
+
+Założenie: $V \perp E \mid D$ — skala walidacyjna i sam test są niezależne pod warunkiem znajomości intencji.
+
+## 4. Rozkład łączny — pełna enumeracja
+
+Dla $H, D, E \in \{0, 1\}$ mamy $2^3 = 8$ kombinacji:
+
+| $H$ | $D$ | $E$ | $P(H, D, E)$ | Interpretacja |
+|-----|-----|-----|--------------|---------------|
+| 1 | 1 | 1 | $\pi \cdot p_1 \cdot s_1$ | Chory próbuje oszukać, test wykrył |
+| 1 | 1 | 0 | $\pi \cdot p_1 \cdot (1-s_1)$ | Chory próbuje oszukać, test przegapił |
+| 1 | 0 | 1 | $\pi \cdot (1-p_1) \cdot s_0$ | Chory uczciwy, test wykrył |
+| 1 | 0 | 0 | $\pi \cdot (1-p_1) \cdot (1-s_0)$ | Chory uczciwy, test przegapił |
+| 0 | 1 | 1 | $(1-\pi) \cdot p_0 \cdot f_1$ | Zdrowy oszuka skutecznie |
+| 0 | 1 | 0 | $(1-\pi) \cdot p_0 \cdot (1-f_1)$ | Zdrowy oszuka nieskutecznie |
+| 0 | 0 | 1 | $(1-\pi) \cdot (1-p_0) \cdot f_0$ | Zdrowy uczciwy, fałszywy alarm |
+| 0 | 0 | 0 | $(1-\pi) \cdot (1-p_0) \cdot (1-f_0)$ | Zdrowy uczciwy, prawidłowy negatyw |
+
+Suma wszystkich ośmiu = 1.
+
+## 5. Marginalne $P(E=1)$
+
+Marginalizujemy po $H$ i $D$:
+
+$$P(E=1) = \pi \cdot \big[(1-p_1) s_0 + p_1 s_1\big] + (1-\pi) \cdot \big[(1-p_0) f_0 + p_0 f_1\big]$$
+
+To **standardowa postać Bayesa** z podmienionymi parametrami: zamiast $s, f$ używamy ważonych średnich $S^*, F^*$, gdzie wagi odzwierciedlają strukturę oszustwa w populacji.
+
+$$S^* := (1-p_1) s_0 + p_1 s_1, \quad F^* := (1-p_0) f_0 + p_0 f_1$$
+
+## 6. Posteriori $P(H \mid E)$
+
+Z twierdzenia Bayesa:
+
+$$P(H=1 \mid E=1) = \frac{\pi \cdot S^*}{\pi \cdot S^* + (1-\pi) \cdot F^*}$$
+
+$$P(H=1 \mid E=0) = \frac{\pi \cdot (1-S^*)}{\pi \cdot (1-S^*) + (1-\pi) \cdot (1-F^*)}$$
+
+**Likelihood ratio** (mnożnik szans):
+
+$$LR^+ = \frac{S^*}{F^*}, \quad LR^- = \frac{1-S^*}{1-F^*}$$
+
+W zapisie szans: $\text{odds}_{\text{post}} = \text{odds}_{\text{prior}} \cdot LR^\pm$.
+
+## 7. Wariant lekki — $p_0 = p_1 = 1$
+
+W realnych case'ach posta zakładamy że **każda osoba próbuje oszukać** (z różną kompetencją). To uproszczenie:
+
+$$p_0 = p_1 = 1 \implies S^* = s_1, \quad F^* = f_1$$
+
+Wzór redukuje się do trzech parametrów ($\pi$, $s_1$, $f_1$):
+
+$$P(H=1 \mid E=1) = \frac{\pi \cdot s_1}{\pi \cdot s_1 + (1-\pi) \cdot f_1}$$
+
+**Uzasadnienie założenia.** Profil osoby testowanej w naszym scenariuszu: racjonalna, dobrze poinformowana, bez konsekwencji za próbę oszustwa, subiektywnie przekonana że nagroda jej się należy. *Próbuje zawsze*, gdzie tylko to jest możliwe. "Częstotliwość udanego oszustwa" jest cechą testu (zawarta w $f_1$ i $s_1$), nie cechą osoby.
+
+## 8. Naiwny vs realny model
+
+**Naiwny obserwator** zakłada $p_0 = p_1 = 0$ — nikt nie próbuje oszukać. Wtedy $S^* = s_0$, $F^* = f_0$:
+
+$$LR^+_{\text{naive}} = \frac{s_0}{f_0}$$
+
+**Realny model** (wariant lekki):
+
+$$LR^+_{\text{real}} = \frac{s_1}{f_1}$$
+
+Gdy $f_1 \gg f_0$ — co jest typowe — $LR^+_{\text{real}} \ll LR^+_{\text{naive}}$. **Ignorowanie oszustwa systematycznie zawyża pewność diagnozy.** To centralna teza modelu.
+
+**Przykład numeryczny** (preset ADHD: $\pi=0.07$, $s_0=0.80$, $s_1=0.95$, $f_0=0.10$, $f_1=0.85$):
+
+$$P_{\text{naive}} = \frac{0.07 \cdot 0.80}{0.07 \cdot 0.80 + 0.93 \cdot 0.10} = \frac{0.056}{0.149} \approx 0.376$$
+
+$$P_{\text{real}} = \frac{0.07 \cdot 0.95}{0.07 \cdot 0.95 + 0.93 \cdot 0.85} = \frac{0.0665}{0.857} \approx 0.078$$
+
+**Różnica 29.8 pp.** Naiwny myśli „37% pewności", realnie tylko 7.8%.
+
+## 9. Sekwencyjne testy z trwałym $D$
+
+X testowany przez $n$ klinik. Każda ma własne parametry $(s_0^{(i)}, s_1^{(i)}, f_0^{(i)}, f_1^{(i)})$ i daje wynik $E_i$. **Krytyczne założenie:** decyzja o oszustwie $D$ jest **trwała** — osoba albo oszukuje przez całą procedurę, albo nie.
+
+Łączny rozkład:
+
+$$P(H, D, E_1, \ldots, E_n) = P(H) \cdot P(D \mid H) \cdot \prod_{i=1}^n P(E_i \mid H, D)$$
+
+Nienormalizowane posteriori dla każdej z 4 kombinacji $(h, d)$:
+
+$$\tilde{P}(H=h, D=d \mid \vec{E}) = P(H=h) \cdot P(D=d \mid H=h) \cdot \prod_{i=1}^n P(E_i = e_i \mid H=h, D=d)$$
+
+Marginalne posteriori dla $H$:
+
+$$P(H=1 \mid \vec{E}) = P(H=1, D=0 \mid \vec{E}) + P(H=1, D=1 \mid \vec{E})$$
+
+**Krytyczna obserwacja:** ze względu na trwałość $D$, wzór **nie redukuje się** do iloczynu LR per test. Wzorzec wyników informuje *jednocześnie* o $H$ i o $D$.
+
+### 9b. Wariant lekki — sekwencja
+
+Gdy $p_0 = p_1 = 1$, $D \equiv 1$. Wzór upraszcza się do klasycznego iteracyjnego Bayesa z **efektywnymi parametrami** $s_1^{(i)}, f_1^{(i)}$:
+
+$$\text{odds}_n = \text{odds}_0 \cdot \prod_{i=1}^n LR_i^{e_i}$$
+
+gdzie $LR_i^+ = s_1^{(i)} / f_1^{(i)}$ i $LR_i^- = (1-s_1^{(i)}) / (1-f_1^{(i)})$.
+
+To **upraszcza implementację** — każda klinika wnosi swój $LR$, posteriori aktualizuje się iteracyjnie.
+
+### 9c. Naiwna trajektoria — model bez świadomości oszustwa
+
+Aplikacja w widoku sekwencyjnym pokazuje **dwie linie** — naiwną i realną. Naiwny model **nie ma** per-clinic parametrów oszustwa (bo z definicji nie wie o oszustwie). Stąd:
+
+$$LR^+_{\text{naive}} = \frac{s_0}{f_0}, \quad LR^-_{\text{naive}} = \frac{1-s_0}{1-f_0}$$
+
+— **te same dla wszystkich klinik**. Naiwny analityk patrzy na każdą klinikę przez tę samą soczewkę "reklamowanej dokładności". Stąd jego trajektoria rośnie szybciej niż realna, mimo że obie reagują na ten sam ciąg wyników.
+
+## 10. Skala walidacyjna $V$
+
+Niektóre testy mają **wbudowane skale wykrywania prób oszustwa** (M-FAST, MMPI-2-RF L+F+K, PAI-RF NIM). Modelujemy je:
+
+$$v_0 := P(V=1 \mid D=0), \quad v_1 := P(V=1 \mid D=1)$$
+
+gdzie $V=1$ oznacza *skala nie wykryła próby oszustwa*. Posteriori po obu obserwacjach $E, V$:
+
+$$P(H=h \mid E=e, V=v) = \frac{\sum_d P(E=e \mid H=h, D=d) \cdot P(V=v \mid D=d) \cdot P(D=d \mid H=h) \cdot P(H=h)}{\sum_{h', d'} \text{ten sam licznik}}$$
+
+**Skrajne przypadki:**
+- *Idealna skala* ($v_0=1$, $v_1=0$): $V$ jednoznacznie identyfikuje $D$, problem rozkłada się na dwa oddzielne klasyczne Bayes'a (osobny dla $D=0$, osobny dla $D=1$).
+- *Bezużyteczna skala* ($v_0 = v_1$): $V$ nie wnosi informacji o $D$, posteriori równe modelowi bez skali.
+- *Wariant lekki* ($D \equiv 1$): skala mówi tylko o $D$, którego stan i tak znamy. Skala traci większość znaczenia.
+
+## 11. Analiza wrażliwości
+
+Jak silnie posteriori reaguje na zmiany każdego parametru? Pochodne w wariancie lekkim ($P := P(H=1 \mid E=1)$):
+
+### Względem $f_1$ (skuteczność oszustwa)
+
+$$\frac{\partial P}{\partial f_1} = -\frac{\pi \cdot s_1 \cdot (1-\pi)}{(\pi s_1 + (1-\pi) f_1)^2}$$
+
+Wartości w typowych parametrach:
+
+| $(\pi, s_1, f_1)$ | $\partial P / \partial f_1$ | Interpretacja |
+|---|---|---|
+| $(0.10, 0.92, 0.60)$ | $-0.207$ | Wzrost $f_1$ o 0.1 → spadek $P$ o ~2.1 pp |
+| $(0.01, 0.92, 0.60)$ | $-0.025$ | Mała wrażliwość przy niskim $\pi$ |
+| $(0.30, 0.92, 0.60)$ | $-0.485$ | Duża wrażliwość przy umiarkowanym $\pi$ |
+| $(0.10, 0.92, 0.30)$ | $-0.487$ | Większy gradient przy niskim $f_1$ |
+
+### Względem $\pi$ (priori)
+
+$$\frac{\partial P}{\partial \pi} = \frac{s_1 \cdot f_1}{(\pi s_1 + (1-\pi) f_1)^2}$$
+
+Zawsze dodatnia. Wyższe $\pi$ → wyższe $P$. Wartości:
+
+| $(\pi, s_1, f_1)$ | $\partial P / \partial \pi$ |
+|---|---|
+| $(0.10, 0.92, 0.60)$ | $1.38$ |
+| $(0.01, 0.92, 0.60)$ | $1.51$ |
+| $(0.30, 0.92, 0.60)$ | $1.05$ |
+
+Największy gradient przy bardzo niskim $\pi$ — **mała zmiana priori dramatycznie zmienia posteriori**. To źródło "paradoksu rzadkich diagnoz".
+
+### Hierarchia wpływu
+
+Dla typowych regimes ($\pi \leq 0.2$, $f_1 \geq 0.3$): **$f_1 > \pi > s_1$**. W praktyce: jeśli chcesz poprawić jakość diagnozy, najpierw obniż $f_1$ (uczyń test trudniejszym do oszukania), dopiero potem martw się o $s_1$ (czułość) lub o lepsze oszacowanie $\pi$ (priori).
+
+## 12. Przypadki brzegowe
+
+Tabela podsumowująca wartości $P(H=1 \mid E=1)$ przy kombinacjach skrajnych w wariancie lekkim:
+
+| Konfiguracja | $\pi$ | $s_1$ | $f_1$ | $P(H \mid E=1)$ | Komentarz |
+|--------------|-------|-------|-------|-----------------|-----------|
+| Idealna | 0.50 | 0.99 | 0.01 | 0.990 | Pewność prawie pełna |
+| Rzadkie + odporne | 0.01 | 0.95 | 0.05 | 0.161 | Test super, ale rzadkość ciągnie w dół |
+| Rzadkie + łatwe do oszukania | 0.01 | 0.95 | 0.85 | 0.011 | Posteriori prawie równe priori |
+| Powszechne + odporne | 0.40 | 0.95 | 0.05 | 0.927 | Wysokie priori + dobry test |
+| Powszechne + łatwe do oszukania | 0.40 | 0.95 | 0.85 | 0.427 | Wynik prawie 50/50 |
+| Pessymistyczna | 0.05 | 0.70 | 0.90 | 0.039 | Wszystko działa przeciwko |
+| Pathological 1: $f_1 > s_1$ | 0.10 | 0.50 | 0.90 | 0.058 | Test daje pozytyw częściej u zdrowych |
+| Pathological 2: $s_1 = f_1 = 1$ | 0.10 | 1.00 | 1.00 | 0.100 | Test bezużyteczny — zawsze pozytyw |
+| Pathological 3: $s_1 \to 0$ | 0.10 | 0.01 | 0.50 | 0.002 | Test prawie nigdy nie wykrywa chorego |
+
+**Obserwacje:**
+
+1. **Rzadkość zaburzenia + łatwość oszustwa** to combo śmiertelne — posteriori praktycznie nie odbiega od priori. To opisuje case ADHD i niepoczytalność.
+2. **Pathological 2** ($s_1 = f_1 = 1$) — test daje pozytyw wszystkim, więc $LR^+ = 1$, czyli odds nie zmieniają się. Posteriori = priori. Test jest formalnością.
+3. **Pathological 1** ($f_1 > s_1$) — model nadal daje sensowny wynik, ale niższy $P$ dla pozytywnego wyniku niż priori. Test jest *anty-informatywny*.
+
+## 13. Założenia upraszczające
+
+Lista założeń, które ten model **przyjmuje** i które mogą się rozejść z realnym światem:
+
+- **Niezależność klinik warunkowo na $(H, D)$.** W praktyce kliniki używają nakładających się narzędzi (DSM-5, [ICD-11](../#glos-icd)) i podobnych kryteriów; błędy są skorelowane przez wspólny system pojęciowy. Realistyczny model wymagałby latentnego "stanu testowego" wspólnego dla klinik.
+- **Trwałość $D$.** Zakładamy, że osoba albo oszukuje przez całą procedurę, albo nie. W realiach $D$ może być zmienne per test, zależeć od stresu, zmęczenia, świadomości danego pytania.
+- **Binarne zmienne.** Testy mają wyniki ciągłe (Likert 1-5, punktacja 0-30); model używa binarnego $E$. Pełna wersja wymagałaby Item Response Theory (IRT) z czynnikiem manipulacji.
+- **Brak strategicznego modelu osoby testowanej.** $p_0, p_1$ są dane egzogenicznie. Pełna analiza wymagałaby teorii gier — osoba decyduje czy oszukać na podstawie oczekiwanej nagrody i ryzyka.
+- **Brak modelu doboru testów przez agenta strategicznie.** Agent może wybierać kolejność testów ("najpierw test obiektywny, potem self-report jeśli pierwszy negatywny"); to nie jest tu modelowane.
+- **Selekcja populacji.** $\pi$ powinno być warunkowane na fakcie zgłoszenia się do oceny. W populacji ogólnej $\pi$ jest niższe; selekcja podnosi (kto się zgłasza po test ADHD? Już ktoś, kto podejrzewa). Ale to nie eliminuje problemu — wciąż często niska liczba.
+- **Diagnoza binarna.** W zdrowiu psychicznym diagnozy są kategorialne i często współwystępujące (ADHD + depresja + lęk). Model używa $H \in \{0, 1\}$.
+
+Każde z tych założeń **upraszcza model** i sprawia, że *realny świat* może być jeszcze bardziej skomplikowany. Ale podstawowa teza — *naiwny Bayes systematycznie zawyża pewność pod presją oszustwa* — jest robustna w prawie każdym rozsądnym rozszerzeniu modelu.
+
+## 14. Skąd biorą się liczby w prezentowanych case'ach
+
+Cztery presety w głównym poście:
+
+| Case | $\pi$ | $s_0$ | $s_1$ | $f_0$ | $f_1$ | Źródła kalibracji |
+|------|-------|-------|-------|-------|-------|---------|
+| ADHD u dorosłych | 0.07 | 0.80 | 0.95 | 0.10 | 0.85 | Faraone 2015 (meta-analiza prevalence dorosłej ADHD), Sibley 2012 (susceptibility kwestionariuszy ASRS/BAARS na faking) |
+| AI-detection esejów | 0.15 | 0.70 | 0.50 | 0.05 | 0.25 | Liang 2023 ("GPT detectors are biased against non-native English writers", $f_1$ obserwowana ~25%) |
+| Whiplash powypadkowy | 0.25 | 0.78 | 0.92 | 0.15 | 0.70 | Ferrari 1999 (whiplash cross-cultural), Carroll 2008 (objective markers w whiplash) |
+| Niepoczytalność | 0.04 | 0.95 | 0.97 | 0.05 | 0.20 | Rogers & Bender 2018 (clinical assessment of malingering), Cima et al. 2004 (claims of amnesia w psychiatrii sądowej) |
+
+**Wartości są punktem wyjścia** — narracyjnymi kontekstami, nie kalibracjami empirycznymi. Można je dostosować w *Playground* w głównym poście, żeby zobaczyć jak posteriori reaguje na zmiany.
+
+## 15. Literatura wspierająca: kotwica intuicji
+
+Claim głównego posta — *laik podaje pewność diagnozy w okolicy reklamowanej swoistości testu* — opiera się na klasycznej literaturze base-rate neglect (Kahneman & Tversky 1973; Bar-Hillel 1980; Casscells 1978). Literatura ma swoje kontrowersje: Gigerenzer i Hoffrage (1995) pokazali, że framing w naturalnych częstościach redukuje błąd dramatycznie, co dla części autorów (Koehler 1996) podważa siłę BRN jako uniwersalnej tendencji. Post nie zajmuje stanowiska w sporze o ekologiczną racjonalność — wykorzystuje tylko fakt, że w domenach z **typowym framingiem probability-style** (medycyna, prawo) BRN jest empirycznie obserwowany. Atrybucja drugiego biasu (*underestimation of malingering base rate*) opiera się na ankiecie Mittenberg et al. (2002) — to proxy dla parametru $p_0$ (proporcja oszukujących), nie dla $f_1$ (skuteczność oszustwa).
+
+- **Kahneman D, Tversky A (1973)**. *On the psychology of prediction*. Psychological Review 80(4):237-251. **(klasyczna praca o BRN — base rate neglect)**
+- **Tversky A, Kahneman D (1973)**. *Availability: A heuristic for judging frequency and probability*. Cognitive Psychology 5(2):207-232. **(referencja porównawcza — heurystyka dostępności)**
+- **Tversky A, Kahneman D (1974)**. *Judgment under uncertainty: Heuristics and biases*. Science 185(4157):1124-1131. **(źródło heurystyki anchoring)**
+- Bar-Hillel M (1980). *The base-rate fallacy in probability judgments*. Acta Psychologica 44(3):211-233.
+- Casscells W, Schoenberger A, Grayboys TB (1978). *Interpretation by physicians of clinical laboratory results*. NEJM 299(18):999-1001.
+- Eddy DM (1982). *Probabilistic reasoning in clinical medicine*. W: Kahneman, Slovic, Tversky (red.), *Judgment under Uncertainty*, CUP.
+- Gigerenzer G, Hoffrage U (1995). *How to improve Bayesian reasoning without instruction: Frequency formats*. Psychological Review 102(4):684-704.
+- Koehler JJ (1996). *The base rate fallacy reconsidered: Descriptive, normative, and methodological challenges*. Behavioral and Brain Sciences 19(1):1-17.
+- Mittenberg W, Patton C, Canyock EM, Condit DC (2002). *Base rates of malingering and symptom exaggeration*. J Clin Exp Neuropsychol 24(8):1094-1102.
+- Faraone SV, Asherson P, Banaschewski T, Buitelaar J, Ramos-Quiroga JA, Rohde LA, Sonuga-Barke EJS, Tannock R, Franke B (2015). *Attention-deficit/hyperactivity disorder*. Nature Reviews Disease Primers 1:15020.
+- Sibley MH, Pelham WE Jr, Molina BSG, Gnagy EM, Waxmonsky JG, Waschbusch DA, Derefinko KJ, Wymbs BT, Garefino AC, Babinski DE, Kuriyan AB (2012). *When diagnosing ADHD in young adults emphasize informant reports, DSM items, and impairment*. J Consult Clin Psychol 80(6):1052-1061.
+- Liang W, Yuksekgonul M, Mao Y, Wu E, Zou J (2023). *GPT detectors are biased against non-native English writers*. Patterns 4(7):100779.
+- Ferrari R (1999). *The Whiplash Encyclopedia: The Facts and Myths of Whiplash*. Aspen Publishers.
+- Carroll LJ, Holm LW, Hogg-Johnson S, Côté P, Cassidy JD, Haldeman S et al. (2008). *Course and prognostic factors for neck pain in whiplash-associated disorders*. Spine 33(4 Suppl):S83-S92.
+- Rogers R, Bender SD (red., 2018). *Clinical Assessment of Malingering and Deception* (4th ed). Guilford.
+- Cima M, Nijman H, Merckelbach H, Kremer K, Hollnack S (2004). *Claims of crime-related amnesia in forensic patients*. Int J Law Psychiatry 27(3):215-221.
