@@ -49,11 +49,12 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   const { content } = await compileMDX({
     source: loaded.source,
     components: { ...mdxComponents, BayesAnalyzer, Tabs, TabItem },
-    // blockJS:false — next-mdx-remote@6 domyślnie stripuje JSX expression attribute
-    // values (`prop={expr}`), zostawia tylko stringi i boolean shorthand. To blokuje
-    // np. `<BayesAnalyzer editable={false} clinics={[...]} />` w MDX. Treść posta
-    // żyje w `content/posts/` (nasza), nie user-submitted — security nie jest aktualne.
-    // `blockDangerousJS: true` (default) chroni przed eval/Function calls.
+    // blockJS:false — patrz ADR-033. next-mdx-remote@6 domyślnie stripuje JSX
+    // expression attribute values (`prop={expr}`), zostawia tylko stringi i boolean
+    // shorthand. To blokuje np. `<BayesAnalyzer editable={false} clinics={[...]} />`
+    // w MDX. Treść posta żyje w `content/posts/` (nasza), nie user-submitted —
+    // security nie jest aktualne. `blockDangerousJS: true` (default) chroni przed
+    // eval/Function calls.
     options: { mdxOptions, parseFrontmatter: false, blockJS: false },
   })
 

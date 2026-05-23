@@ -63,8 +63,9 @@ export default async function SubpagePage(
   const { content } = await compileMDX({
     source: loaded.source,
     components: { ...mdxComponents, BayesAnalyzer, Tabs, TabItem },
-    // blockJS:false — patrz komentarz w `app/posts/[slug]/page.tsx`. JSX expressions
-    // w MDX wymagają wyłączenia tego domyślnego stripowania w next-mdx-remote@6.
+    // blockJS:false — patrz ADR-033 + komentarz w `app/posts/[slug]/page.tsx`.
+    // JSX expressions w MDX wymagają wyłączenia tego domyślnego stripowania
+    // w next-mdx-remote@6.
     options: { mdxOptions, parseFrontmatter: false, blockJS: false },
   })
 
