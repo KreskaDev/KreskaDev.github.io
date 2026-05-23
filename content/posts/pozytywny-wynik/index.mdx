@@ -79,9 +79,11 @@ Pełne wyprowadzenie wzoru, włącznie z wariantem ogólnym (gdzie zakładamy, �
 
 ## Cztery scenariusze
 
-Cztery realia różniące się prawie wszystkim — innym priori, inną odpornością testu, inną stawką dla osoby testowanej. Cztery domeny: psychiatria dorosłych, akademicka detekcja AI, ortopedia powypadkowa, psychiatria sądowa. Wszędzie ten sam wzór, te same liczby, ta sama lekcja. Przeczytaj wszystkie po kolei — albo skacz przez kotwice [ADHD](#adhd) · [AI-detection](#ai-detection) · [Whiplash](#whiplash) · [Niepoczytalność](#niepoczytalnosc).
+Cztery realia różniące się prawie wszystkim — innym priori, inną odpornością testu, inną stawką dla osoby testowanej. Cztery domeny: psychiatria dorosłych, akademicka detekcja AI, ortopedia powypadkowa, psychiatria sądowa. Wszędzie ten sam wzór, te same liczby, ta sama lekcja. Wybierz scenariusz najbliższy twojej sytuacji — albo prześledź wszystkie.
 
-<h3 id="adhd" className="font-display text-2xl text-text-primary mt-8! mb-3! scroll-mt-24">1. ADHD u dorosłych<a href="#adhd" className="heading-anchor" aria-hidden="true" tabIndex={-1} /></h3>
+<Tabs hashSync ariaLabel="Wybór scenariusza" tabs={[{id:'adhd',title:'1. ADHD u dorosłych',tagline:'Psychiatria samoopisowa'},{id:'ai-detection',title:'2. AI-detection esejów studenckich',tagline:'Kierunek odwrócony'},{id:'whiplash',title:'3. Whiplash powypadkowy',tagline:'Konflikt opinii'},{id:'niepoczytalnosc',title:'4. Niepoczytalność w procesie karnym',tagline:'Niskie priori'}]}>
+
+<TabItem id="adhd">
 
 *Psychiatria samoopisowa, codzienna gra* — dorośli 25-40, kultura produktywności.
 
@@ -119,7 +121,9 @@ Trzy ekspertyzy: dwa kolejne wywiady psychiatryczne, potem bateria neuropsycholo
 
 **Lekcja.** Powtarzanie tego samego typu testu jest *informacyjnie redundantne*. Druga opinia psychiatryczna od *innego psychiatry* daje iluzję pewności bez wzrostu informacji. Realny wzrost wymaga *innego typu* narzędzia.
 
-<h3 id="ai-detection" className="font-display text-2xl text-text-primary mt-8! mb-3! scroll-mt-24">2. AI-detection esejów studenckich<a href="#ai-detection" className="heading-anchor" aria-hidden="true" tabIndex={-1} /></h3>
+</TabItem>
+
+<TabItem id="ai-detection">
 
 *Algorytm vs autor, kierunek odwrócony* — studenci Gen Z, post-GPT era.
 
@@ -165,7 +169,9 @@ Trzy niezależne ewaluacje przy startowym $\pi=0.15$: Turnitin AI (+), GPTZero (
 
 **Lekcja.** Model jest *elastyczny* — podmiana etykiet pozwala stosować go w domenach które na pierwszy rzut oka wyglądają "odwrotnie". Nie wymaga "chorego oszusta motywowanego do diagnozy" — wymaga jakiejkolwiek asymetrii między motywacją kandydata a kierunkiem wyniku testu. Polityka uczciwości akademickiej opierana wyłącznie na pojedynczym wyniku AI-detektora jest **matematycznie nieuzasadniona**.
 
-<h3 id="whiplash" className="font-display text-2xl text-text-primary mt-8! mb-3! scroll-mt-24">3. Whiplash powypadkowy<a href="#whiplash" className="heading-anchor" aria-hidden="true" tabIndex={-1} /></h3>
+</TabItem>
+
+<TabItem id="whiplash">
 
 *Multi-klinika natywnie, konflikt opinii* — dorośli poszkodowani w kolizjach komunikacyjnych.
 
@@ -215,7 +221,9 @@ Sekwencja [+, −, +] przy startowym $\pi=0.25$ daje trajektorię: 25% → 28% �
 
 **Lekcja.** Konflikt opinii nie jest błędem do rozwiązania przez wybór "lepszej" kliniki. Jest *sygnałem* statystycznie przesuwającym posteriori w stronę hipotezy „(H=0, D=1)" — *osoba zdrowa oszukała łatwiejszą klinikę, nie zdołała oszukać odporniejszej*.
 
-<h3 id="niepoczytalnosc" className="font-display text-2xl text-text-primary mt-8! mb-3! scroll-mt-24">4. Niepoczytalność w procesie karnym<a href="#niepoczytalnosc" className="heading-anchor" aria-hidden="true" tabIndex={-1} /></h3>
+</TabItem>
+
+<TabItem id="niepoczytalnosc">
 
 *Najsilniejszy z testów, najniższe priori* — oskarżeni o ciężkie przestępstwa.
 
@@ -269,6 +277,10 @@ Trzy zgodne ekspertyzy (dwóch biegłych psychiatrów + obserwacja w zakładzie)
 Uwaga: w polskiej praktyce dwóch biegłych psychiatrów + obserwacja w zakładzie to nie są **trzy warunkowo niezależne** testy — biegli zwykle prowadzą obserwację wspólnie i konsultują przed opinią łączną. Pokazana trajektoria zakłada idealizowaną niezależność; realna trajektoria byłaby **wolniejsza** (efektywnie mniej niezależnych obserwacji niż n=3). To granica zastosowania modelu opisana w [math.md sekcja 13](./math#13-zalozenia-upraszczajace).
 
 **Lekcja.** Nawet *najmocniejszy* z testów nie daje pewności, jakiej oczekuje system prawny od ekspertyzy psychiatrycznej. Niskie priori systematycznie obniża posteriori. To nie znaczy że biegli się mylą — znaczy że *struktura matematyczna* problemu wymaga więcej obserwacji niż system ma w typowej procedurze. Implikacja dla legislacji: Art. 31 KK powinien być stosowany ostrożniej. Implikacja dla biegłych: opinia powinna komunikować nie tylko *swoje przekonanie*, ale *strukturalną niepewność* przy niskim priori.
+
+</TabItem>
+
+</Tabs>
 
 ## Dwie warstwy rozjazdu
 

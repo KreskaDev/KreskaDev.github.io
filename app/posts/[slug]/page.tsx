@@ -6,6 +6,7 @@ import mdxComponents from '@/mdx-components'
 import { mdxOptions } from '@/lib/mdx-options'
 import type { PostFrontmatter } from '@/types/post'
 import BayesAnalyzer from '@/content/posts/pozytywny-wynik/components/BayesAnalyzer'
+import { Tabs, TabItem } from '@/components/ui/Tabs'
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
@@ -47,8 +48,13 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
   const { content } = await compileMDX({
     source: loaded.source,
-    components: { ...mdxComponents, BayesAnalyzer },
-    options: { mdxOptions, parseFrontmatter: false },
+    components: { ...mdxComponents, BayesAnalyzer, Tabs, TabItem },
+    // blockJS:false — next-mdx-remote@6 domyślnie stripuje JSX expression attribute
+    // values (`prop={expr}`), zostawia tylko stringi i boolean shorthand. To blokuje
+    // np. `<BayesAnalyzer editable={false} clinics={[...]} />` w MDX. Treść posta
+    // żyje w `content/posts/` (nasza), nie user-submitted — security nie jest aktualne.
+    // `blockDangerousJS: true` (default) chroni przed eval/Function calls.
+    options: { mdxOptions, parseFrontmatter: false, blockJS: false },
   })
 
   // ADR-023: <html lang="en"> globalnie + <article lang="pl"> lokalnie dla PL posta.
