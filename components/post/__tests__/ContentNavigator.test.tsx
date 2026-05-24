@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ContentNavigator } from '../ContentNavigator'
@@ -105,43 +105,36 @@ describe('ContentNavigator', () => {
     expect(within(nav).queryByText('Hidden')).not.toBeInTheDocument()
   })
 
-  it('active highlight via IntersectionObserver callback', () => {
-    let ioCallback: IntersectionObserverCallback | null = null
-    vi.stubGlobal(
-      'IntersectionObserver',
-      class {
-        constructor(cb: IntersectionObserverCallback) {
-          ioCallback = cb
-        }
-        observe() {}
-        unobserve() {}
-        disconnect() {}
-        takeRecords() {
-          return []
-        }
-      },
+  it('active highlight follows scroll position — ostatni header above offset jest active', () => {
+    mountArticle(
+      '<h2 id="first">First</h2><h2 id="second">Second</h2><h2 id="third">Third</h2>',
     )
-
-    mountArticle('<h2 id="first">First</h2><h2 id="second">Second</h2>')
-    render(<ContentNavigator />)
-
-    const secondHeader = document.getElementById('second') as HTMLElement
-    act(() => {
-      ioCallback?.(
-        [
-          {
-            target: secondHeader,
-            isIntersecting: true,
-          } as unknown as IntersectionObserverEntry,
-        ],
-        {} as IntersectionObserver,
-      )
+    // Stub per-heading getBoundingClientRect — jsdom domyślnie zwraca
+    // zera dla wszystkich. Offset w komponencie = 80 + 1 = 81.
+    // First/Second passed (top <= 81), Third NIE → active = Second.
+    const headings = Array.from(
+      document.querySelectorAll<HTMLElement>('article.prose h2'),
+    )
+    const tops = [10, 50, 200]
+    headings.forEach((h, i) => {
+      h.getBoundingClientRect = () =>
+        ({ top: tops[i], left: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect
     })
 
+    render(<ContentNavigator />)
+
+    // Sync rAF stub powoduje że initial recompute() w useEffect odpaliło się
+    // synchronously już podczas render — activeId jest set.
     const nav = getNav()
-    const secondLink = within(nav).getByText('Second').closest('a')
-    expect(secondLink).toHaveAttribute('aria-current', 'location')
-    const firstLink = within(nav).getByText('First').closest('a')
-    expect(firstLink).not.toHaveAttribute('aria-current')
+    expect(within(nav).getByText('Second').closest('a')).toHaveAttribute(
+      'aria-current',
+      'location',
+    )
+    expect(within(nav).getByText('First').closest('a')).not.toHaveAttribute(
+      'aria-current',
+    )
+    expect(within(nav).getByText('Third').closest('a')).not.toHaveAttribute(
+      'aria-current',
+    )
   })
 })

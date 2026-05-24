@@ -24,12 +24,15 @@ const HEADER_SELECTOR = [
 
 export function ContentNavigator() {
   const [items, setItems] = useState<NavItem[]>([])
-  const [observedActiveId, setObservedActiveId] = useState<string | null>(null)
-  const [isAtBottom, setIsAtBottom] = useState(false)
+  const [activeId, setActiveId] = useState<string | null>(null)
   const [scrollPercent, setScrollPercent] = useState(0)
   const headersRef = useRef<HTMLElement[]>([])
-  const visibleRef = useRef(new Map<Element, boolean>())
   const reducedMotion = useReducedMotion()
+
+  // Match `--top-nav-height: 80px` w globals.css. Trzymane w sync.
+  // Próg dla algorytmu "last passed header" — header jest "passed"
+  // gdy jego top edge zsuwa się NA LUB POWYŻEJ tej linii.
+  const TOP_NAV_OFFSET = 80
 
   // Phase 1 — DOM query + MutationObserver dla dynamic content (Tabs swap,
   // BayesAnalyzer hydration). queryAndIndex jest idempotent: `el.id = candidate`
@@ -104,71 +107,61 @@ export function ContentNavigator() {
     }
   }, [])
 
-  // Phase 2 — IntersectionObserver Map-strategy. Powód iteracji w DOM-order
-  // i wyboru LAST visible (nie naiwnego `entries.filter(...).pop()`): czytelnik
-  // scrolluje top→bottom; ostatni visible header w DOM-order jest tym, który
-  // JEST w tej chwili najgłębiej w viewport. Naiwny pop flickeruje przy szybkim
-  // scrollu (task.md §"IntersectionObserver entries semantics").
-  useEffect(() => {
-    const headers = headersRef.current
-    if (headers.length === 0) return
-
-    // Wyczyść stale Element references + reset observedActiveId — Tabs swap
-    // wymienia headery, stara Map zachowywała keys do unmount'owanych nodes
-    // (memory leak po wielu tab swap'ach). Plus jeśli wcześniejszy IO miał
-    // pending microtask które wpłyną na visibleRef po clear(), reset
-    // observedActiveId zapobiega briefnemu stale active-link state (race
-    // window 1 frame, post-review iter 2 polish).
-    visibleRef.current.clear()
-    setObservedActiveId(null)
-
-    const observer = new IntersectionObserver(
-      entries => {
-        for (const entry of entries) {
-          visibleRef.current.set(entry.target, entry.isIntersecting)
-        }
-        let active: HTMLElement | null = null
-        for (const h of headers) {
-          if (visibleRef.current.get(h)) active = h
-        }
-        setObservedActiveId(active?.id ?? null)
-      },
-      {
-        // Aktywacja gdy header dotknie ~20% od top viewport;
-        // deaktywacja gdy schodzi do ~30% od top. Net: zone [20%, 30%].
-        rootMargin: '-20% 0px -70% 0px',
-      },
-    )
-    headers.forEach(h => observer.observe(h))
-    return () => observer.disconnect()
-  }, [items])
-
-  // Phase 3 — Shared rAF scroll handler. Jeden listener obsługuje
-  // scrollPercent (→ ScrollProgress) + isAtBottom (→ derived activeId).
-  // ResizeObserver na document.body kompensuje BayesAnalyzer Recharts hydration
-  // (SVG renderuje się async, dodaje ~100-300px do scrollHeight po initial paint).
+  // Phase 2 — Shared rAF scroll handler obsługuje TRZY update'y:
+  //   1. `scrollPercent` → ScrollProgress fill width
+  //   2. `activeId` → highlight currently-active TOC link
+  //   3. ResizeObserver na document.body — BayesAnalyzer Recharts hydration
+  //      zmienia body height po initial paint (~100-300px SVG), bez tego
+  //      scrollPercent stale + activeId stale dla deep-link landings
+  //
+  // Active highlight — **scroll-position-based**, NIE IntersectionObserver
+  // Map-strategy (plan §"Active highlight" deviation D5, post-shipping user
+  // feedback). Algorithm: activeId = ostatni header którego top edge zsunął
+  // się NA LUB POWYŻEJ `TOP_NAV_OFFSET`. To eliminuje IO "gap problem" —
+  // gdy user scrolluje przez treść między dwoma h2 sekcjami i żaden header
+  // nie jest w IO hot zone [20%, 30%], poprzednio activeId=null
+  // (cleaner-UX-decision per plan, ale empirycznie zła ciągłość).
+  // Scroll-based daje continuous active: aktualna sekcja zawsze podświetlona.
+  // Cost: O(headers) `getBoundingClientRect` per rAF tick — dla 25 headers
+  // ~1-2ms na typowych devices, negligible. Early break gdy header jeszcze
+  // poniżej offset (DOM order = visual order).
   useEffect(() => {
     let scheduled = false
     const recompute = () => {
       if (scheduled) return
       scheduled = true
       requestAnimationFrame(() => {
-        const scrollable = document.documentElement.scrollHeight - window.innerHeight
+        scheduled = false
+
+        const scrollable =
+          document.documentElement.scrollHeight - window.innerHeight
         // Krótka strona (scrollHeight <= innerHeight) → 100% (graceful degrade).
         const pct =
           scrollable <= 0
             ? 100
             : Math.min(
                 100,
-                Math.max(0, Math.round((window.scrollY / scrollable) * 100)),
+                Math.max(
+                  0,
+                  Math.round((window.scrollY / scrollable) * 100),
+                ),
               )
         setScrollPercent(pct)
-        // 10px tolerance dla sub-pixel rounding artifacts.
-        setIsAtBottom(
-          window.scrollY + window.innerHeight >=
-            document.documentElement.scrollHeight - 10,
-        )
-        scheduled = false
+
+        // Active = ostatni header passed offset. Iteracja DOM order; break
+        // gdy header jeszcze poniżej offset (sorted by visual position).
+        // +1 px tolerance bo `<=` z dokładnie offset bywa flaky przy
+        // sub-pixel devicePixelRatio scaling.
+        const headers = headersRef.current
+        let nextActive: string | null = null
+        for (const h of headers) {
+          if (h.getBoundingClientRect().top <= TOP_NAV_OFFSET + 1) {
+            nextActive = h.id
+          } else {
+            break
+          }
+        }
+        setActiveId(nextActive)
       })
     }
     window.addEventListener('scroll', recompute, { passive: true })
@@ -179,16 +172,7 @@ export function ContentNavigator() {
       window.removeEventListener('scroll', recompute)
       resizeObserver.disconnect()
     }
-  }, [])
-
-  // Derived state — eliminacja race condition między IO i scroll listener.
-  // Storage state dla `activeId` z dwóch źródeł (IO + scroll) flickeruje 1-2
-  // frame przy bottom. Derived = pure recompute per render, no race.
-  // Czytamy z `items` (state), nie `headersRef.current` — React 19
-  // `react-hooks/refs` zabrania refs access during render; semantycznie
-  // identyczne, bo items[last].id pochodzi z tego samego headers array.
-  const lastItemId = items[items.length - 1]?.id ?? null
-  const activeId = isAtBottom && lastItemId ? lastItemId : observedActiveId
+  }, [items])
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const anchor = e.currentTarget
