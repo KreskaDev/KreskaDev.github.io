@@ -7,9 +7,13 @@
 
 interface ScrollProgressProps {
   percent: number
+  // Parent ContentNavigator przekazuje stan hooka, żeby uniknąć duplicate
+  // useReducedMotion subscription (review M2 — width transition musi
+  // zostać wyłączone gdy user ma `prefers-reduced-motion: reduce`).
+  reducedMotion?: boolean
 }
 
-export function ScrollProgress({ percent }: ScrollProgressProps) {
+export function ScrollProgress({ percent, reducedMotion = false }: ScrollProgressProps) {
   return (
     <div className="mt-4 pt-3 border-t border-border">
       <div
@@ -21,7 +25,10 @@ export function ScrollProgress({ percent }: ScrollProgressProps) {
         className="relative h-1 bg-border rounded overflow-hidden"
       >
         <div
-          className="absolute inset-y-0 left-0 bg-burgundy transition-[width] duration-100 ease-out"
+          className={[
+            'absolute inset-y-0 left-0 bg-burgundy',
+            reducedMotion ? '' : 'transition-[width] duration-100 ease-out',
+          ].join(' ')}
           style={{ width: `${percent}%` }}
         />
       </div>

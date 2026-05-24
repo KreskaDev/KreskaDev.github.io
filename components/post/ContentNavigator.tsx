@@ -34,7 +34,8 @@ export function ContentNavigator() {
   // Phase 1 — DOM query + MutationObserver dla dynamic content (Tabs swap,
   // BayesAnalyzer hydration). queryAndIndex jest idempotent: `el.id = candidate`
   // tylko gdy `!el.id` → mutation jednorazowa per element → MO callback restful
-  // gdy nic się nie zmienia (Risk #1 mitigation).
+  // gdy nic się nie zmienia. rAF-debounce konsoliduje burst callbacków
+  // z Recharts SVG animation ticks (review C1 mitigation).
   useEffect(() => {
     const queryAndIndex = () => {
       const headers = Array.from(
@@ -50,24 +51,29 @@ export function ContentNavigator() {
           let candidate = slugify(text)
           if (!candidate) continue
           // Dedupe — jeśli candidate kolizja z istniejącym DOM id lub lokalnym
-          // seenIds, append `-N` suffix. Defensive — BayesAnalyzer h4 dotychczas
-          // poza selectorem ([data-toc-exclude]), ale w przyszłości może
-          // wystąpić duplikat tekstu między różnymi sekcjami.
+          // seenIds, append `-N` suffix. Hard cap 1000 jako safety net,
+          // pętla i tak skończy się natychmiast w realnych przypadkach.
           let suffix = 0
-          while (seenIds.has(candidate) || document.getElementById(candidate)) {
+          while (
+            (seenIds.has(candidate) || document.getElementById(candidate)) &&
+            suffix < 1000
+          ) {
             suffix += 1
             candidate = `${slugify(text)}-${suffix}`
           }
-          // Runtime mutation — żeby `<a href="#${id}">` w nav + click handler
-          // `getElementById` działały.
           el.id = candidate
         }
         if (seenIds.has(el.id)) continue
         seenIds.add(el.id)
+        // Selector zapewnia h2/h3/h4 — narrowing przez tagName check, NIE
+        // unsafe cast (review M7 mitigation).
+        const tag = el.tagName
+        const level: 2 | 3 | 4 =
+          tag === 'H2' ? 2 : tag === 'H3' ? 3 : 4
         next.push({
           id: el.id,
           text: el.textContent?.trim() ?? '',
-          level: Number(el.tagName.slice(1)) as 2 | 3 | 4,
+          level,
         })
       }
       headersRef.current = headers
@@ -78,9 +84,23 @@ export function ContentNavigator() {
 
     const article = document.querySelector('article.prose')
     if (!article) return
-    const mutationObserver = new MutationObserver(() => queryAndIndex())
+
+    // rAF-debounce — Recharts SVG hydration + animation może emitować
+    // 10+ MO callbacków per frame. Konsolidacja przez rAF gwarantuje max
+    // 1 queryAndIndex per frame (review C1 mitigation).
+    let raf = 0
+    const mutationObserver = new MutationObserver(() => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        queryAndIndex()
+      })
+    })
     mutationObserver.observe(article, { childList: true, subtree: true })
-    return () => mutationObserver.disconnect()
+    return () => {
+      mutationObserver.disconnect()
+      if (raf) cancelAnimationFrame(raf)
+    }
   }, [])
 
   // Phase 2 — IntersectionObserver Map-strategy. Powód iteracji w DOM-order
@@ -91,6 +111,11 @@ export function ContentNavigator() {
   useEffect(() => {
     const headers = headersRef.current
     if (headers.length === 0) return
+
+    // Wyczyść stale Element references — Tabs swap wymienia headery, stara
+    // Map zachowywała keys do unmount'owanych nodes (review H2 — memory leak
+    // po wielu tab swap'ach). Cleanup PRZED setup gwarantuje świeży state.
+    visibleRef.current.clear()
 
     const observer = new IntersectionObserver(
       entries => {
@@ -180,6 +205,14 @@ export function ContentNavigator() {
       behavior: reducedMotion ? 'auto' : 'smooth',
       block: 'start',
     })
+    // A11y — keyboard user po smooth scroll powinien mieć focus w target
+    // sekcji, nie zostać w nav (inaczej screen reader czyta dalej z TOC).
+    // `tabindex=-1` programowo focusable bez tab-stop; `preventScroll`
+    // żeby nie konkurować z naszym scrollIntoView (review H3 mitigation).
+    if (target.tabIndex < 0 && !target.hasAttribute('tabindex')) {
+      target.setAttribute('tabindex', '-1')
+    }
+    target.focus({ preventScroll: true })
   }
 
   return (
@@ -222,7 +255,7 @@ export function ContentNavigator() {
           )
         })}
       </ol>
-      <ScrollProgress percent={scrollPercent} />
+      <ScrollProgress percent={scrollPercent} reducedMotion={reducedMotion} />
     </nav>
   )
 }
