@@ -1,0 +1,83 @@
+---
+title: Notes — extended reference for the playbook
+parent: example
+language: en
+---
+
+# Notes — extended reference
+
+This page is a **subpage** of the [Example Post playbook](/posts/example). It demonstrates two things at once:
+
+1. The supporting-page route `/posts/<slug>/<filename>/` (here: `/posts/example/notes`)
+2. The `PostBreadcrumb` component, automatically rendered at the top of every subpage to link back to the parent post
+
+The ContentNavigator works on subpages too — scroll down and the TOC on the right tracks your position, just like on the main post.
+
+## When to use a subpage
+
+Subpages are for **deep references** that would clutter the main post if inlined: full mathematical derivations, glossaries, FAQ-style addenda, or extended bibliographies. The math derivation under [`/posts/pozytywny-wynik/math`](/posts/pozytywny-wynik/math) is the canonical example in this blog.
+
+Anchor links from the main post into a subpage work the usual way — `[derivation](/posts/example/notes#derivations)`. The browser handles the cross-page jump natively; `scroll-padding-top` ensures the target heading lands below the TopNav.
+
+## Frontmatter schema
+
+Subpages use a smaller schema than the main post — three fields, none of them surfacing in blog lists:
+
+```yaml
+---
+title: Notes — extended reference
+parent: example
+language: en
+---
+```
+
+The `parent` field is required and must match a post slug. It feeds the breadcrumb label at the top of this page and the `<link rel="canonical">` in `<head>`.
+
+Subpages are **not** indexed in the blog list (`/blog`) nor in the search index — they are discoverable only via inline links from their parent post.
+
+## Derivations
+
+This section exists to give the in-page TOC a few headings to track. Scroll up and down and watch the right-hand nav follow your position.
+
+### Step one
+
+Start with the joint probability:
+
+$$
+P(H, E) = P(E \mid H) \cdot P(H)
+$$
+
+### Step two
+
+Apply the definition of conditional probability:
+
+$$
+P(H \mid E) = \frac{P(H, E)}{P(E)}
+$$
+
+### Step three
+
+Substitute and rearrange:
+
+$$
+P(H \mid E) = \frac{P(E \mid H) \cdot P(H)}{P(E)}
+$$
+
+This is Bayes' theorem in its compact form. The denominator expands via the law of total probability:
+
+$$
+P(E) = P(E \mid H) \cdot P(H) + P(E \mid \neg H) \cdot P(\neg H)
+$$
+
+## Glossary
+
+| Term | Meaning |
+|------|---------|
+| Prior     | $P(H)$ — belief about $H$ before observing $E$ |
+| Likelihood | $P(E \mid H)$ — probability of observing $E$ given $H$ |
+| Posterior | $P(H \mid E)$ — belief about $H$ after observing $E$ |
+| Evidence  | $P(E)$ — marginal probability of $E$ across all hypotheses |
+
+## Back to the parent
+
+The breadcrumb at the top of this page links back to the main playbook. You can also use a plain inline link: [back to the playbook](/posts/example).

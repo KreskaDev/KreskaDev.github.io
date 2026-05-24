@@ -1,50 +1,330 @@
 ---
-title: Example Post
-subtitle: Testing the MDX pipeline end-to-end
+title: Example Post — MDX Playbook
+subtitle: A reference for every MDX feature this blog supports
 date: 2026-05-22
 author: KreskaDev
 slug: example
-summary: Verify że MDX pipeline parsuje markdown, math, headings, links i KaTeX.
-tags: [Example]
+summary: Comprehensive playbook for authoring posts — frontmatter, headings, math, code, tables, custom components, anchors. Copy-paste from here when writing a new post.
+tags: [Example, Playbook]
 language: en
 ---
 
-## Plain heading
+## Introduction
 
-Plain paragraph w angielskim. Test inline math: $\pi = 3.14159$.
-Test bold **Tailwind 4** + italic _Geist_ + link external [Next.js docs](https://nextjs.org/) + internal [home](/).
+This post is a **playbook**. Each section demonstrates one MDX feature with the source pattern you should reuse when writing a new post. Read it once; copy from it forever.
 
-## Heading drugi poziom
+Open `prod/content/posts/example/index.mdx` side-by-side with the rendered page to see the input ↔ output mapping. The behaviour shown here is the entire toolbox you have for a new post — no other syntax is supported.
 
-Sprawdź `view-source` że ten heading ma auto-gen id (`rehype-slug` z tekstu).
-Dla manualnych anchorów w przyszłych postach: użyj HTML syntax `<h2 id="...">` (remark-heading-id
-nie działa z MDX 3 — patrz `lib/mdx-options.ts`).
+---
 
-### Trzeci poziom
+## Frontmatter
 
-Block math:
+Every post must declare seven required fields plus one optional. Schema lives in `prod/lib/posts.ts` (zod-validated at build time, so a typo crashes `npm run build` early).
+
+```yaml
+---
+title: Title shown as the h1
+subtitle: One-line tagline rendered below the h1
+date: 2026-05-22         # YYYY-MM-DD, parsed UTC
+author: KreskaDev
+slug: example            # must match the folder name
+summary: Used in blog list cards and meta description
+tags: [Example, Playbook]
+language: en             # optional: 'pl' | 'en' — controls <article lang="…">
+---
+```
+
+If `language` is omitted, the page inherits `<html lang="en">` from the root layout (per ADR-023).
+
+---
+
+## Markdown basics
+
+### Inline formatting
+
+You get **bold**, _italic_, `inline code`, and links — both [external](https://nextjs.org/) (opens in a new tab, gets the `↗` glyph) and [internal](/) (rendered through `next/link`).
+
+Combine freely: a **bold _italic_** phrase, an `inline code` snippet inside a sentence, or a [link with **emphasis** inside](/).
+
+### Lists
+
+Unordered:
+
+- First item
+- Second item with **bold**
+- Third item with [a link](/)
+
+Ordered:
+
+1. First step
+2. Second step
+3. Third step
+
+Task lists (GFM extension — useful for roadmap or completion checklists):
+
+- [x] Set up MDX pipeline
+- [x] Ship first real post
+- [ ] Write a second post
+- [ ] Configure analytics
+
+### Blockquotes
+
+> "All models are wrong, but some are useful."  
+> — George Box, on statistical modeling.
+
+Blockquotes are styled with a burgundy left border and italic body — use them sparingly for emphasis or attribution.
+
+### Tables
+
+GitHub-flavored tables work out of the box:
+
+| Feature        | Supported | Notes                                |
+|----------------|-----------|--------------------------------------|
+| Headings       | h1–h4     | h1 reserved for frontmatter title    |
+| Math           | KaTeX     | Inline and block syntax              |
+| Code blocks    | Yes       | Any language, syntax highlighted     |
+| Custom widgets | Yes       | Imported per-post in `page.tsx`      |
+
+Keep tables narrow — the prose column is `max-w-3xl` (768px) and wide tables overflow.
+
+---
+
+## Code blocks
+
+Fenced code with a language tag. The block gets a subtle background; inline `` `code` `` gets a pill.
+
+```ts
+// TypeScript example
+interface Post {
+  title: string
+  slug: string
+  date: string // YYYY-MM-DD
+}
+
+export function formatDate(post: Post): string {
+  return new Date(post.date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+```
+
+```bash
+# Shell example
+npm run dev        # local preview at :3000
+npm run build      # static export to out/
+npm run test:ci    # 102 tests
+```
+
+```python
+# Python example — for cross-language posts
+def likelihood_ratio(sensitivity: float, false_positive_rate: float) -> float:
+    return sensitivity / false_positive_rate
+```
+
+---
+
+## Math (KaTeX)
+
+Inline math wraps with single `$`: $E = mc^2$, $\pi \approx 3.14159$, or a probability $P(H \mid E)$.
+
+Block math wraps with `$$`:
 
 $$
 P(H \mid E) = \frac{P(E \mid H) \cdot P(H)}{P(E)}
 $$
 
-Test polskich diakrytyków (verify Geist latin-ext): zażółć gęślą jaźń, ąćęłńóśźż.
+Multi-line derivations work too — use `\\` for line breaks and `&` for alignment inside `aligned`:
 
-### Code
+$$
+\begin{aligned}
+P(E) &= P(E \mid H) \cdot P(H) + P(E \mid \neg H) \cdot P(\neg H) \\
+     &= s \cdot \pi + f \cdot (1 - \pi)
+\end{aligned}
+$$
 
-```ts
-const greeting: string = 'Hello, world.'
+Math is rendered at build time via `rehype-katex`. KaTeX CSS is bundled — no client-side fonts to download.
+
+**Pitfall:** the backslash + ASCII punctuation combo (`\%`, `\$`) is fragile inside MDX text. Use KaTeX inside `$…$` for percent signs in math, plain `%` in prose.
+
+---
+
+## Headings and anchors
+
+### Auto-generated slugs
+
+Every `##`, `###`, `####` gets a stable `id` via `rehype-slug`. The slug is derived from the heading text:
+
+- `## Quick reference` → `id="quick-reference"`
+- `### Edge cases` → `id="edge-cases"`
+- Polish diacritics are transliterated: `## Słowniczek` → `id="słowniczek"` (`github-slugger` keeps the diacritic; URL-encoded as `s%C5%82owniczek`)
+
+Hover a heading and a `#` glyph appears to the right — clicking copies the deep link.
+
+### Manual anchor (raw HTML)
+
+If you need a **stable URL** that survives heading-text rewrites, write the heading as raw HTML with an explicit `id`. The standard MDX shorthand `## Heading {#anchor}` does **not** work — it conflicts with MDX 3 JSX expression parsing (ADR-030).
+
+```mdx
+<h3 id="stable-anchor" className="font-display text-2xl text-text-primary mt-8! mb-3!">
+  Stable anchor heading
+  <a href="#stable-anchor" className="heading-anchor" aria-hidden="true" tabIndex={-1} />
+</h3>
 ```
 
-> Blockquote test — refined editorial italic styling z left border burgundy.
+Note the `mt-8! mb-3!` Tailwind 4 postfix `!important` — it overrides the prose plugin cascade. The `<a className="heading-anchor" />` matches what `rehype-autolink-headings` injects on auto-slug headings, so hover behavior stays identical.
 
-GFM table:
+<h3 id="example-stable-anchor" className="font-display text-2xl text-text-primary mt-8! mb-3!">
+  Live example of a manual anchor
+  <a href="#example-stable-anchor" className="heading-anchor" aria-hidden="true" tabIndex={-1} />
+</h3>
 
-| Col A | Col B |
-|-------|-------|
-| 1     | 2     |
+This heading was emitted by the snippet above. Its URL is `#example-stable-anchor`.
 
-Task list:
+---
 
-- [x] Tailwind 4
-- [ ] BayesAnalyzer (Prompt 05)
+## Internal jump links
+
+Inline links to glossary terms, footnotes, or other sections use the same anchor syntax: `[term](#anchor-id)`. The TOC nav on the right uses `[data-toc-exclude]` filters and `scroll-padding-top` so jump landings always sit `80px` below the top edge (the TopNav height).
+
+Jump to the [introduction](#introduction) or to a later section like [Polish diacritics](#polish-diacritics) to feel the smooth-scroll plus focus management — your screen-reader cursor lands on the target heading, not back in the TOC.
+
+---
+
+## Custom components
+
+The MDX pipeline merges two component maps in `app/posts/[slug]/page.tsx`:
+
+1. **Global shared** — `prod/mdx-components.tsx` overrides for `h2`/`h3`/`h4`/`a`/`code`/`blockquote`. Available in every post automatically.
+2. **Per-post** — explicitly imported in `page.tsx` and passed to `compileMDX`. Lives co-located in `prod/content/posts/<slug>/components/`.
+
+`<Tabs>` + `<TabItem>` from `prod/components/ui/Tabs.tsx` are wired up globally on every post page. Use them for case studies, code-language switchers, or any "pick one of N views" UI.
+
+<Tabs hashSync={false} tabs={[
+  { id: 'before', title: 'Before', tagline: 'naive approach' },
+  { id: 'after', title: 'After', tagline: 'refactored' },
+]}>
+
+<TabItem id="before">
+
+The "before" tab. Switch tabs to compare — the TOC on the right will swap any headings inside the active tab. With `hashSync={false}` the URL does not change on tab click.
+
+```ts
+function fetchPost(slug: string) {
+  return fetch(`/api/posts/${slug}`).then(r => r.json())
+}
+```
+
+</TabItem>
+
+<TabItem id="after">
+
+The "after" tab. Each `<TabItem>` is conditionally rendered — only the active panel sits in the DOM. The MutationObserver in ContentNavigator picks up the swap and re-indexes headings automatically.
+
+```ts
+async function fetchPost(slug: string): Promise<Post> {
+  const res = await fetch(`/api/posts/${slug}`)
+  if (!res.ok) throw new Error(`Failed: ${res.status}`)
+  return res.json()
+}
+```
+
+</TabItem>
+
+</Tabs>
+
+If a post needs a one-off interactive widget (charts, sliders, a calculator), build it as a client component under `content/posts/<slug>/components/`, import it in `page.tsx`, and merge into the components map — see `pozytywny-wynik/components/BayesAnalyzer.tsx` for the canonical example.
+
+---
+
+## Excluding content from the TOC
+
+Headings inside an element with `data-toc-exclude` are skipped by the ContentNavigator. Useful for widgets that emit their own headings (a chart legend, a modal title) but should not pollute the post outline.
+
+```mdx
+<div data-toc-exclude>
+  <h4>Widget-internal heading — invisible in TOC</h4>
+  <p>…</p>
+</div>
+```
+
+The selector `article.prose h2:not([data-toc-exclude] *):not([data-toc-exclude])` (applied to h3 and h4 too) handles both cases — heading inside the wrapper, or the wrapper itself being a heading.
+
+<div data-toc-exclude>
+
+#### This heading is inside a `data-toc-exclude` wrapper
+
+You can check the right-hand TOC: this heading does **not** appear there, but a sighted reader still sees it inline. Useful for in-context labels that do not deserve nav real estate.
+
+</div>
+
+---
+
+## Polish diacritics
+
+The chrome ships three font subsets that all include `latin-ext`, so Polish text renders crisply across the prose, display, and mono stacks. Test sample:
+
+> Zażółć gęślą jaźń. Ćma, źdźbło, łódź, śnieg. Ąćęłńóśźż.
+
+Slugs derived from Polish headings keep the diacritic in the `id` (`słowniczek`) but URL-encode it (`#s%C5%82owniczek`). Both forms resolve to the same anchor.
+
+---
+
+## Long-form sections (TOC + ScrollProgress demo)
+
+The next few sections exist mainly to give ContentNavigator a long enough document to demonstrate its full UX. Scroll slowly to watch the active link follow your reading position, then jump back to the top with the BackToTop button (visible after ~300px).
+
+### Active highlight algorithm
+
+The TOC underlines whichever heading you most recently scrolled past — calculated as "the last heading whose top edge is at or above the 80px line under the TopNav". Continuous: even in the middle of a long paragraph between two sections, the previous section stays highlighted.
+
+### ScrollProgress
+
+The thin bar pinned to the bottom of the TOC tracks `scrollY / (scrollHeight - innerHeight)`, clamped to `[0, 100]`. It updates via a single rAF-throttled handler shared with the active-highlight recompute. A ResizeObserver on `document.body` re-syncs the bar after async hydration of heavy widgets (e.g. Recharts).
+
+### BackToTop
+
+A fixed bottom-right button. Hidden under 768px (mobile gets a narrow-screen takeover instead). Visible only after `scrollY > 300`. Click → `window.scrollTo({top: 0, behavior: 'smooth'})`, with reduced-motion users getting an instant jump.
+
+### Reduced-motion respect
+
+All smooth-scroll animations honor `prefers-reduced-motion: reduce`. The custom hook `useReducedMotion` in `prod/lib/hooks/` subscribes to the media-query and returns a live boolean — toggle the preference in DevTools and watch the scroll behavior switch without a reload.
+
+### Mobile breakpoint behavior
+
+| Viewport          | ContentNavigator | ScrollProgress | BackToTop |
+|-------------------|------------------|----------------|-----------|
+| `< 768px`         | Hidden           | Hidden         | Hidden    |
+| `768–1099px`      | Hidden           | Hidden         | Visible   |
+| `≥ 1100px`        | Visible          | Visible        | Visible   |
+
+Below 768px the page is replaced by a `NarrowScreenMessage` overlay (per ADR-014) — interactive posts assume desktop. The 768–1099px range still shows the article in full width plus a back-to-top button.
+
+---
+
+## Subpages
+
+A post folder can contain multiple `.mdx` files. The file named `index.mdx` is the main entry, indexed in the blog list. Any other `*.mdx` becomes a supporting page at `/posts/<slug>/<filename>/`. Subpages use a smaller frontmatter schema:
+
+```yaml
+---
+title: Notes — extended reference
+parent: example
+language: en
+---
+```
+
+This post ships with a supporting page at [`/posts/example/notes`](/posts/example/notes) demonstrating PostBreadcrumb navigation and a second ContentNavigator instance on the same domain.
+
+---
+
+## When in doubt
+
+1. Check `prod/content/posts/pozytywny-wynik/index.mdx` for a real-world post with custom widgets.
+2. Check `prod/mdx-components.tsx` for the global tag overrides.
+3. Check `prod/lib/mdx-options.ts` for the remark/rehype plugin pipeline.
+4. Check `tasks/v5-06-content-navigator/plan.md` for the TOC/ContentNavigator design rationale.
+5. Read the ADRs in `adr/` for any architectural question — every non-obvious decision has a numbered record.
+
+Happy authoring.
