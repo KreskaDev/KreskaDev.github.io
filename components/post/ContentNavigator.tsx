@@ -48,18 +48,19 @@ export function ContentNavigator() {
         if (!el.id) {
           const text = el.textContent?.trim() ?? ''
           if (!text) continue
-          let candidate = slugify(text)
-          if (!candidate) continue
+          const base = slugify(text)
+          if (!base) continue
           // Dedupe — jeśli candidate kolizja z istniejącym DOM id lub lokalnym
           // seenIds, append `-N` suffix. Hard cap 1000 jako safety net,
           // pętla i tak skończy się natychmiast w realnych przypadkach.
+          let candidate = base
           let suffix = 0
           while (
             (seenIds.has(candidate) || document.getElementById(candidate)) &&
             suffix < 1000
           ) {
             suffix += 1
-            candidate = `${slugify(text)}-${suffix}`
+            candidate = `${base}-${suffix}`
           }
           el.id = candidate
         }
@@ -88,18 +89,18 @@ export function ContentNavigator() {
     // rAF-debounce — Recharts SVG hydration + animation może emitować
     // 10+ MO callbacków per frame. Konsolidacja przez rAF gwarantuje max
     // 1 queryAndIndex per frame (review C1 mitigation).
-    let raf = 0
+    let raf: number | null = null
     const mutationObserver = new MutationObserver(() => {
-      if (raf) return
+      if (raf !== null) return
       raf = requestAnimationFrame(() => {
-        raf = 0
+        raf = null
         queryAndIndex()
       })
     })
     mutationObserver.observe(article, { childList: true, subtree: true })
     return () => {
       mutationObserver.disconnect()
-      if (raf) cancelAnimationFrame(raf)
+      if (raf !== null) cancelAnimationFrame(raf)
     }
   }, [])
 
@@ -112,10 +113,14 @@ export function ContentNavigator() {
     const headers = headersRef.current
     if (headers.length === 0) return
 
-    // Wyczyść stale Element references — Tabs swap wymienia headery, stara
-    // Map zachowywała keys do unmount'owanych nodes (review H2 — memory leak
-    // po wielu tab swap'ach). Cleanup PRZED setup gwarantuje świeży state.
+    // Wyczyść stale Element references + reset observedActiveId — Tabs swap
+    // wymienia headery, stara Map zachowywała keys do unmount'owanych nodes
+    // (memory leak po wielu tab swap'ach). Plus jeśli wcześniejszy IO miał
+    // pending microtask które wpłyną na visibleRef po clear(), reset
+    // observedActiveId zapobiega briefnemu stale active-link state (race
+    // window 1 frame, post-review iter 2 polish).
     visibleRef.current.clear()
+    setObservedActiveId(null)
 
     const observer = new IntersectionObserver(
       entries => {
@@ -208,8 +213,10 @@ export function ContentNavigator() {
     // A11y — keyboard user po smooth scroll powinien mieć focus w target
     // sekcji, nie zostać w nav (inaczej screen reader czyta dalej z TOC).
     // `tabindex=-1` programowo focusable bez tab-stop; `preventScroll`
-    // żeby nie konkurować z naszym scrollIntoView (review H3 mitigation).
-    if (target.tabIndex < 0 && !target.hasAttribute('tabindex')) {
+    // żeby nie konkurować z naszym scrollIntoView. Headings są domyślnie
+    // non-focusable — set tabindex tylko jeśli brak (zachowuje
+    // pre-existing `tabindex="0"` jeśli ktoś go ustawił).
+    if (!target.hasAttribute('tabindex')) {
       target.setAttribute('tabindex', '-1')
     }
     target.focus({ preventScroll: true })

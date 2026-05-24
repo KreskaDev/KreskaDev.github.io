@@ -4,7 +4,7 @@ import { ScrollProgress } from '../ScrollProgress'
 
 describe('ScrollProgress', () => {
   it('renders progressbar z aria-valuenow odpowiadającym prop percent', () => {
-    render(<ScrollProgress percent={42} />)
+    render(<ScrollProgress percent={42} reducedMotion={false} />)
     const bar = screen.getByRole('progressbar', { name: 'Reading progress' })
     expect(bar).toHaveAttribute('aria-valuenow', '42')
     expect(bar).toHaveAttribute('aria-valuemin', '0')
@@ -13,10 +13,18 @@ describe('ScrollProgress', () => {
   })
 
   it('inner fill div ma width style = `${percent}%`', () => {
-    const { container } = render(<ScrollProgress percent={73} />)
+    const { container } = render(<ScrollProgress percent={73} reducedMotion={false} />)
     // Inner fill — `bg-burgundy` jest unique selector w tym komponencie.
     const fill = container.querySelector('.bg-burgundy') as HTMLElement | null
     expect(fill).not.toBeNull()
     expect(fill!.style.width).toBe('73%')
+    expect(fill!.className).toContain('transition-[width]')
+  })
+
+  it('reducedMotion=true — pomija transition-[width] na fill', () => {
+    const { container } = render(<ScrollProgress percent={50} reducedMotion={true} />)
+    const fill = container.querySelector('.bg-burgundy') as HTMLElement | null
+    expect(fill).not.toBeNull()
+    expect(fill!.className).not.toContain('transition-[width]')
   })
 })

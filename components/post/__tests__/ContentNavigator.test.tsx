@@ -74,7 +74,7 @@ describe('ContentNavigator', () => {
     expect(heading?.id).toBe('no-id-heading')
   })
 
-  it('click handler — preventDefault + history.pushState + scrollIntoView', async () => {
+  it('click handler — preventDefault + history.pushState + scrollIntoView + focus target', async () => {
     mountArticle('<h2 id="target-section">Target</h2>')
     const pushStateSpy = vi.spyOn(history, 'pushState')
     const user = userEvent.setup()
@@ -88,6 +88,9 @@ describe('ContentNavigator', () => {
       behavior: 'smooth',
       block: 'start',
     })
+    // A11y focus management — tabindex=-1 ustawiony, target ma focus
+    expect(target?.getAttribute('tabindex')).toBe('-1')
+    expect(document.activeElement).toBe(target)
     pushStateSpy.mockRestore()
   })
 

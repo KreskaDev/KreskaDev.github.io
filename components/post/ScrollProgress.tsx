@@ -7,13 +7,13 @@
 
 interface ScrollProgressProps {
   percent: number
-  // Parent ContentNavigator przekazuje stan hooka, żeby uniknąć duplicate
-  // useReducedMotion subscription (review M2 — width transition musi
-  // zostać wyłączone gdy user ma `prefers-reduced-motion: reduce`).
-  reducedMotion?: boolean
+  // Required — parent przekazuje stan hooka żeby uniknąć duplicate
+  // useReducedMotion subscription. Type-required żeby zapomniany plumbing
+  // wybuchł na compile-time, nie cicho jako always-animated.
+  reducedMotion: boolean
 }
 
-export function ScrollProgress({ percent, reducedMotion = false }: ScrollProgressProps) {
+export function ScrollProgress({ percent, reducedMotion }: ScrollProgressProps) {
   return (
     <div className="mt-4 pt-3 border-t border-border">
       <div
