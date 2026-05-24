@@ -22,6 +22,18 @@ const HEADER_SELECTOR = [
   'article.prose h4:not([data-toc-exclude] *):not([data-toc-exclude])',
 ].join(', ')
 
+// KaTeX renderuje math jako dwie reprezentacje DOM: `.katex-mathml`
+// (MathML + LaTeX annotation źródło, dla screen readers) i `.katex-html`
+// (visible HTML, aria-hidden="true"). `textContent` agreguje OBA →
+// duplikowanie. Usuwamy `.katex-mathml` w klonie, zostawiamy `.katex-html`
+// jako single canonical visible repr. Edge case: heading bez KaTeX →
+// querySelectorAll zwraca pustą listę, no-op.
+export function getHeadingText(el: HTMLElement): string {
+  const clone = el.cloneNode(true) as HTMLElement
+  clone.querySelectorAll('.katex-mathml').forEach(n => n.remove())
+  return clone.textContent?.trim() ?? ''
+}
+
 export function ContentNavigator() {
   const [items, setItems] = useState<NavItem[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -45,7 +57,7 @@ export function ContentNavigator() {
       const next: NavItem[] = []
       for (const el of headers) {
         if (!el.id) {
-          const text = el.textContent?.trim() ?? ''
+          const text = getHeadingText(el)
           if (!text) continue
           const base = slugify(text)
           if (!base) continue
@@ -72,7 +84,7 @@ export function ContentNavigator() {
           tag === 'H2' ? 2 : tag === 'H3' ? 3 : 4
         next.push({
           id: el.id,
-          text: el.textContent?.trim() ?? '',
+          text: getHeadingText(el),
           level,
         })
       }

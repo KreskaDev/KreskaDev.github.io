@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ContentNavigator } from '../ContentNavigator'
+import { ContentNavigator, getHeadingText } from '../ContentNavigator'
 
 // Sync rAF — żeby scroll-handler initial sync był obserwowalny w tym samym
 // micro-tasku co render.
@@ -103,6 +103,29 @@ describe('ContentNavigator', () => {
     const nav = getNav()
     expect(within(nav).queryByText('Visible')).toBeInTheDocument()
     expect(within(nav).queryByText('Hidden')).not.toBeInTheDocument()
+  })
+
+  it('getHeadingText — plain text heading unchanged (regression check)', () => {
+    const h2 = document.createElement('h2')
+    h2.textContent = '1. Cztery zmienne losowe'
+    expect(getHeadingText(h2)).toBe('1. Cztery zmienne losowe')
+  })
+
+  it('getHeadingText — KaTeX heading deduplicates do single repr', () => {
+    // Minimalna replikacja KaTeX DOM (z `rehype-katex` build-time output).
+    // `.katex-mathml` ma MathML symboles + LaTeX annotation source ("P(E=1)"
+    // dwa razy w tym poddrzewie) — całe poddrzewo do usunięcia. Zostaje
+    // `.katex-html` jako single visible repr.
+    const h2 = document.createElement('h2')
+    h2.innerHTML =
+      '5. Marginalne ' +
+      '<span class="katex">' +
+      '<span class="katex-mathml">' +
+      '<math><semantics><annotation encoding="application/x-tex">P(E=1)</annotation></semantics></math>' +
+      '</span>' +
+      '<span class="katex-html" aria-hidden="true"><span class="base">P(E=1)</span></span>' +
+      '</span>'
+    expect(getHeadingText(h2)).toBe('5. Marginalne P(E=1)')
   })
 
   it('active highlight follows scroll position — ostatni header above offset jest active', () => {

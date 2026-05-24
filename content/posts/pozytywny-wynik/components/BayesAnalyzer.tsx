@@ -5,7 +5,7 @@
 // Theme-aware colors przez useTheme + mounted guard (hydration mismatch fix).
 // Referencje portu: archive/v4/components/bayes-analyzer/{analyzer.js, math.js, presets.js, analyzer.css}.
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTheme } from 'next-themes'
 import {
   LineChart,
@@ -203,8 +203,8 @@ export default function BayesAnalyzer(props: BayesAnalyzerProps) {
         <ClinicsSection
           clinics={clinics}
           editable={editable}
-          presetS1={preset.s1}
-          presetF1={preset.f1}
+          currentS1={s1}
+          currentF1={f1}
           onClinicsChange={setClinics}
         />
       )}
@@ -391,103 +391,54 @@ interface ModeToggleProps {
 }
 
 function ModeToggle({ mode, onLight, onAdvanced }: ModeToggleProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null)
-
+  // Sandbox edukacyjny — brak warning modal (ADR-034). Direct toggle, reverse
+  // button daje undo bez friction. Modal usunięty z v4 carry-over.
   const handleToggle = () => {
-    if (mode === 'light') {
-      dialogRef.current?.showModal()
-    } else {
-      onLight()
-    }
-  }
-
-  const confirm = () => {
-    onAdvanced()
-    dialogRef.current?.close()
-  }
-
-  const cancel = () => {
-    dialogRef.current?.close()
+    if (mode === 'light') onAdvanced()
+    else onLight()
   }
 
   return (
-    <>
-      <div className="mt-4 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={handleToggle}
-          className="text-sm font-sans text-burgundy hover:underline focus-visible:ring-2 focus-visible:ring-burgundy focus-visible:outline-none rounded"
-        >
-          {mode === 'light' ? 'Tryb zaawansowany →' : '← Tryb lekki'}
-        </button>
-        {mode === 'advanced' && (
-          <span className="text-text-tertiary text-xs">parametry p₀, p₁ odblokowane</span>
-        )}
-      </div>
-
-      <dialog
-        ref={dialogRef}
-        aria-labelledby="adv-modal-title"
-        aria-describedby="adv-modal-desc"
-        onClose={cancel}
-        onClick={e => {
-          // Click-outside dismiss: dialog target ≡ click target ⇒ click on backdrop.
-          if (e.target === dialogRef.current) cancel()
-        }}
-        className="rounded-lg border border-border bg-bg-primary text-text-primary p-6 max-w-md backdrop:bg-black/50 not-prose"
+    <div className="mt-4 flex items-center gap-2">
+      <button
+        type="button"
+        onClick={handleToggle}
+        className="text-sm font-sans text-burgundy hover:underline focus-visible:ring-2 focus-visible:ring-burgundy focus-visible:outline-none rounded"
       >
-        <h3 id="adv-modal-title" className="font-display text-lg mb-3">
-          Tryb zaawansowany — ostrzeżenie
-        </h3>
-        <p id="adv-modal-desc" className="text-text-secondary text-sm font-sans mb-6">
-          Tryb zaawansowany odblokowuje parametry <strong>p₀, p₁</strong> — prawdopodobieństwa
-          oszustwa wśród zdrowych i chorych. Wymaga znajomości modelu. Zmiana ustawień w tym trybie
-          może produkować wyniki niespójne z założeniami modelu lekkiego.
-        </p>
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={cancel}
-            className="px-4 py-2 text-text-secondary hover:text-text-primary text-sm font-sans"
-          >
-            Anuluj
-          </button>
-          <button
-            type="button"
-            onClick={confirm}
-            autoFocus
-            className="px-4 py-2 bg-burgundy text-bg-primary rounded text-sm font-sans hover:opacity-90"
-          >
-            Rozumiem, kontynuuj
-          </button>
-        </div>
-      </dialog>
-    </>
+        {mode === 'light' ? 'Tryb zaawansowany →' : '← Tryb lekki'}
+      </button>
+      {mode === 'advanced' && (
+        <span className="text-text-tertiary text-xs">parametry p₀, p₁ odblokowane</span>
+      )}
+    </div>
   )
 }
 
 interface ClinicsSectionProps {
   clinics: Clinic[]
   editable: boolean
-  presetS1: number
-  presetF1: number
+  currentS1: number
+  currentF1: number
   onClinicsChange: (clinics: Clinic[]) => void
 }
 
 function ClinicsSection({
   clinics,
   editable,
-  presetS1,
-  presetF1,
+  currentS1,
+  currentF1,
   onClinicsChange,
 }: ClinicsSectionProps) {
+  // Auto-seed używa CURRENT state (s1, f1 po user adjustments), NIE preset.
+  // Match v4 behavior (archive/v4/components/bayes-analyzer/analyzer.js:773-778) —
+  // user scenariusz "ustaw s1=0.85, dodaj 3 kliniki" → wszystkie trzy s1=0.85.
   const addClinic = () => {
     if (clinics.length >= MAX_CLINICS) return
     onClinicsChange([
       ...clinics,
       {
-        s1: presetS1,
-        f1: presetF1,
+        s1: currentS1,
+        f1: currentF1,
         result: 1,
         name: `Klinika ${clinics.length + 1}`,
       },

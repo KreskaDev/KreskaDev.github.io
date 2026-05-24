@@ -2,7 +2,7 @@
 // 8 component testów. Wrapper z ThemeProvider — useTheme w ChartView wymaga.
 // ResizeObserver mock z fixed-size + offsetWidth/Height polyfill żyją w vitest.setup.ts.
 import { describe, it, expect } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { ThemeProvider } from 'next-themes'
 import type { ReactElement } from 'react'
 import BayesAnalyzer from '../BayesAnalyzer'
@@ -103,6 +103,26 @@ describe('BayesAnalyzer (port 1:1 z v4 WC tests)', () => {
       />,
     )
     expect(screen.getByText(/21\.9%/)).toBeInTheDocument()
+  })
+
+  it('WC9 — addClinic seeds new clinic z CURRENT s1 state, NIE preset value', () => {
+    // Regresja vs v4 fix: preset A2 ma s1=0.92, ale user adjustuje slider do 0.85
+    // przed dodaniem kliniki. Nowa klinika powinna mieć s1=0.85 (current state),
+    // NIE 0.92 (preset). Matching v4 analyzer.js:773-778 behavior.
+    renderWithTheme(
+      <BayesAnalyzer preset="A2" view="sequential" editable={true} />,
+    )
+
+    // Slider s1 ma id="slider-s1" (SliderRow component, htmlFor matchuje input id).
+    const s1Slider = document.getElementById('slider-s1') as HTMLInputElement
+    expect(s1Slider).not.toBeNull()
+    fireEvent.change(s1Slider, { target: { value: '0.85' } })
+
+    const addBtn = screen.getByRole('button', { name: /dodaj klinikę/i })
+    fireEvent.click(addBtn)
+
+    // Nowa klinika row pokazuje "s₁=0.85 f₁=..." text. Verify text obecny w DOM.
+    expect(screen.getByText(/s₁=0\.85/)).toBeInTheDocument()
   })
 
   it('WC8 — XSS defense w clinic name (<script> tag renderowany jako tekst)', () => {
