@@ -42,9 +42,23 @@
   --color-surface-elevated: rgba(255, 255, 255, 0.04);
 }
 
+/* TopNav height (Tailwind h-16 = 64px per ADR-017) + 16px breathing.
+   Single source of truth dla `scroll-padding-top` na <html>. Magic 80px
+   dokumentowany inline — jeśli TopNav `h-16` się zmieni, sync tutaj. */
+:root {
+  --top-nav-height: 80px;
+}
+
 /* Baseline body styling. `html.dark` matchuje gdy next-themes ustawia class="dark" na <html>. */
 html {
   color-scheme: light;
+  /* `scroll-padding-top` gwarantuje że smooth scroll + native anchor jump
+     ląduje 80px poniżej top edge viewport (nie pod TopNav). Działa dla:
+     `scrollIntoView({block:'start'})`, native `<a href="#section">`, browser
+     back/forward na hash, inline jump links `[FPR](#glos-fpr)`. Per-element
+     `scroll-mt-24` z `mdx-components.tsx` + `index.mdx:322` usunięte
+     (plan v5-06 §D4) — bez tego additive 80+96=176px gap. */
+  scroll-padding-top: var(--top-nav-height);
 }
 html.dark {
   color-scheme: dark;

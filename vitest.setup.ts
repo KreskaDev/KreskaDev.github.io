@@ -67,3 +67,26 @@ global.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver
 // fall-back do offsetWidth/Height; stubbing zapewnia non-zero layout w testach.
 Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, value: 600 })
 Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, value: 320 })
+
+// `IntersectionObserver` + `MutationObserver` — niedostępne w jsdom, wymagane
+// przez ContentNavigator (v5-06). Mocki noop'owe — testy które potrzebują
+// symulować callback fire'uje go ręcznie przez per-test stub (`vi.stubGlobal`
+// z capture pattern), patrz `ContentNavigator.test.tsx`.
+class IntersectionObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return []
+  }
+}
+global.IntersectionObserver = IntersectionObserverMock as unknown as typeof IntersectionObserver
+
+class MutationObserverMock {
+  observe() {}
+  disconnect() {}
+  takeRecords(): MutationRecord[] {
+    return []
+  }
+}
+global.MutationObserver = MutationObserverMock as unknown as typeof MutationObserver

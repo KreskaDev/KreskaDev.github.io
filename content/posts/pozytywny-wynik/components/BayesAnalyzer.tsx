@@ -146,7 +146,10 @@ export default function BayesAnalyzer(props: BayesAnalyzerProps) {
   const showAdvancedToggle = view === 'playground'
 
   return (
-    <div className="rounded-lg border border-border bg-bg-secondary p-6 my-8 not-prose font-sans">
+    <div
+      data-toc-exclude
+      className="rounded-lg border border-border bg-bg-secondary p-6 my-8 not-prose font-sans"
+    >
       <Header presetName={preset.name} view={view} editable={editable} />
 
       <ResultDisplay

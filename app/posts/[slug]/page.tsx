@@ -7,6 +7,8 @@ import { mdxOptions } from '@/lib/mdx-options'
 import type { PostFrontmatter } from '@/types/post'
 import BayesAnalyzer from '@/content/posts/pozytywny-wynik/components/BayesAnalyzer'
 import { Tabs, TabItem } from '@/components/ui/Tabs'
+import { ContentNavigator } from '@/components/post/ContentNavigator'
+import { BackToTop } from '@/components/post/BackToTop'
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
@@ -87,6 +89,8 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         </header>
         {content}
       </article>
+      <ContentNavigator />
+      <BackToTop />
     </div>
   )
 }

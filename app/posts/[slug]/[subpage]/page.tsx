@@ -10,6 +10,8 @@ import type { SubpageFrontmatter } from '@/types/post'
 import BayesAnalyzer from '@/content/posts/pozytywny-wynik/components/BayesAnalyzer'
 import { Tabs, TabItem } from '@/components/ui/Tabs'
 import { PostBreadcrumb } from '@/components/post/PostBreadcrumb'
+import { ContentNavigator } from '@/components/post/ContentNavigator'
+import { BackToTop } from '@/components/post/BackToTop'
 
 export async function generateStaticParams() {
   // Enumerate <slug, subpage> pairs przez filesystem. Bez tego `output: 'export'`
@@ -84,6 +86,8 @@ export default async function SubpagePage(
       <article lang={articleLang} className="prose dark:prose-invert">
         {content}
       </article>
+      <ContentNavigator />
+      <BackToTop />
     </div>
   )
 }

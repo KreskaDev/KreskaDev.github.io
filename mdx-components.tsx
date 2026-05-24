@@ -6,7 +6,7 @@ import Link from 'next/link'
 const mdxComponents: MDXComponents = {
   h2: ({ children, ...props }) => (
     <h2
-      className="font-display text-3xl text-text-primary mt-12 mb-4 scroll-mt-24"
+      className="font-display text-3xl text-text-primary mt-12 mb-4"
       {...props}
     >
       {children}
@@ -14,7 +14,7 @@ const mdxComponents: MDXComponents = {
   ),
   h3: ({ children, ...props }) => (
     <h3
-      className="font-display text-2xl text-text-primary mt-8 mb-3 scroll-mt-24"
+      className="font-display text-2xl text-text-primary mt-8 mb-3"
       {...props}
     >
       {children}
@@ -22,7 +22,7 @@ const mdxComponents: MDXComponents = {
   ),
   h4: ({ children, ...props }) => (
     <h4
-      className="font-display text-xl text-text-primary mt-6 mb-2 scroll-mt-24"
+      className="font-display text-xl text-text-primary mt-6 mb-2"
       {...props}
     >
       {children}
