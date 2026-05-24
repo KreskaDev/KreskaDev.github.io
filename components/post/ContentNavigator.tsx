@@ -29,10 +29,6 @@ export function ContentNavigator() {
   const headersRef = useRef<HTMLElement[]>([])
   const reducedMotion = useReducedMotion()
 
-  // Match `--top-nav-height: 80px` w globals.css. Trzymane w sync.
-  // Próg dla algorytmu "last passed header" — header jest "passed"
-  // gdy jego top edge zsuwa się NA LUB POWYŻEJ tej linii.
-  const TOP_NAV_OFFSET = 80
 
   // Phase 1 — DOM query + MutationObserver dla dynamic content (Tabs swap,
   // BayesAnalyzer hydration). queryAndIndex jest idempotent: `el.id = candidate`
@@ -126,6 +122,20 @@ export function ContentNavigator() {
   // ~1-2ms na typowych devices, negligible. Early break gdy header jeszcze
   // poniżej offset (DOM order = visual order).
   useEffect(() => {
+    // Single source of truth = `--top-nav-height` w globals.css. Czytamy
+    // raz na mount przez getComputedStyle — jeśli CSS var się zmieni
+    // (theme switch, future responsive TopNav), trzeba będzie re-read,
+    // ale obecnie static value (ADR-017 h-16 = 64px + 16px breathing).
+    // Fallback 80 dla jsdom (CSS NIE applied w testach) + SSR safety.
+    const readTopNavOffset = (): number => {
+      const raw = getComputedStyle(document.documentElement)
+        .getPropertyValue('--top-nav-height')
+        .trim()
+      const parsed = parseFloat(raw)
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : 80
+    }
+    const topNavOffset = readTopNavOffset()
+
     let scheduled = false
     const recompute = () => {
       if (scheduled) return
@@ -155,7 +165,7 @@ export function ContentNavigator() {
         const headers = headersRef.current
         let nextActive: string | null = null
         for (const h of headers) {
-          if (h.getBoundingClientRect().top <= TOP_NAV_OFFSET + 1) {
+          if (h.getBoundingClientRect().top <= topNavOffset + 1) {
             nextActive = h.id
           } else {
             break
