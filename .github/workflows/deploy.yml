@@ -1,0 +1,76 @@
+# .github/workflows/deploy.yml
+# Static export → GitHub Pages deploy dla user-pages repo (per ADR-001 + ADR-004).
+# Trigger: push do main + manual via gh CLI. paths-ignore filtruje czysto-doc commits.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+  workflow_dispatch:
+
+# Minimum permissions wymagane przez actions/deploy-pages@v4
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# GitHub's recommended concurrency dla pages deployments — trwający deploy
+# nie jest ubity (cancel-in-progress: false), żeby nie pozostawić Pages w
+# broken state. Trade-off: kolejka N push'y = N deploy'ów seqential.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test:ci
+
+      # `npm run build` triggers `prebuild` hook (tsx scripts/build-search-index.ts)
+      # then runs `next build`. NIE używać `next build` direct — search index nie
+      # wygeneruje się i SearchModal 404'uje przy fetch po deploy.
+      - name: Build (static export)
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Defense-in-depth: deploy tylko z main, nawet jeśli workflow_dispatch
+    # z innym ref'em.
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
