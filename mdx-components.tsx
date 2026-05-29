@@ -1,5 +1,7 @@
 import type { MDXComponents } from 'mdx/types'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { AboutIdentity } from '@/components/about/AboutIdentity'
 
 // rehype-slug + rehype-autolink-headings dodają id + anchor link icons w pipeline,
 // tutaj tylko styling przez className.
@@ -68,6 +70,15 @@ const mdxComponents: MDXComponents = {
       {children}
     </blockquote>
   ),
+  // Wrapper aplikujący prose styling do markdown content w środku.
+  // Używany na stronach gdzie część MDX leci jako visual layout, a część
+  // jako markdown prose (np. /about/ — identity card + prose obok).
+  Prose: ({ children }: { children: ReactNode }) => (
+    <div className="prose dark:prose-invert prose-headings:font-display lg:flex-1 min-w-0">
+      {children}
+    </div>
+  ),
+  AboutIdentity,
 }
 
 export default mdxComponents

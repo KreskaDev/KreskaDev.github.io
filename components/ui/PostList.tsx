@@ -44,7 +44,7 @@ export function PostList({ posts, initialCount = DEFAULT_INITIAL, emptyState }: 
 
   return (
     <>
-      <ul className="grid grid-cols-1 lg:grid-cols-2 gap-6 list-none p-0 m-0">
+      <ul className="grid grid-cols-1 gap-6 list-none p-0 m-0">
         {posts.slice(0, visibleCount).map(post => (
           <li key={post.slug}>
             <PostCard post={post} variant="blog" />

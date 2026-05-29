@@ -29,9 +29,12 @@ export default async function AboutPage() {
     options: { mdxOptions, parseFrontmatter: false },
   })
 
+  // 2-col asymmetric layout: sticky identity sidebar (280px) + prose (1fr).
+  // Prose styling NIE jest na article wrapperze — per ADR-proposed (about-layout):
+  // MDX components <AboutIdentity> i <Prose> dzielą content, każdy ma własny scope.
   return (
     <article
-      className="container mx-auto max-w-3xl px-6 py-16 prose dark:prose-invert prose-headings:font-display"
+      className="container mx-auto max-w-5xl px-6 py-16 lg:flex lg:gap-12 lg:items-start"
       lang="en"
     >
       {content}
