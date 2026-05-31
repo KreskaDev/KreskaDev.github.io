@@ -23,10 +23,9 @@ function HeroSvg() {
 export function Hero() {
   return (
     <section className="container mx-auto max-w-3xl px-4 sm:px-6 py-16 sm:py-20 md:py-24 text-center">
-      {/* text-burgundy alone — CSS var w globals.css flipuje auto (#8B2635 light → #D97785 dark)
-          przez `.dark` override. NIE używamy `dark:text-burgundy-soft` bo `--color-burgundy-soft`
-          w dark mode = #2F1518 (dark wine → niewidoczne na dark bg). */}
-      <div className="mx-auto mb-10 w-full max-w-md text-burgundy">
+      {/* text-accent: CSS var w globals.css flipuje auto przez palette-mode :root override
+          (cool: steel blue, warm: desat burgundy). Per ADR-039/041 dual-palette token semantics. */}
+      <div className="mx-auto mb-10 w-full max-w-md text-accent">
         <HeroSvg />
       </div>
       <h1 className="font-display text-4xl sm:text-5xl md:text-6xl text-text-primary mb-6 leading-tight">

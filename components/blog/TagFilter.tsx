@@ -9,11 +9,14 @@ interface TagFilterProps {
 export function TagFilter({ uniqueTags, activeTag }: TagFilterProps) {
   // Compact tag link pattern — świadome ~32px tap target (poniżej WCAG AAA 44px)
   // per ADR-035 Consequences exception. Bumpowanie do 44px łamie density list.
+  // .tag-pill outline pattern per task spec — bg-bg-secondary baseline,
+  // active = accent-soft + accent text, hover = surface-elevated + text-primary.
   const chipBase =
-    'px-3 py-2 sm:py-1 rounded text-sm font-sans focus-visible:ring-2 focus-visible:ring-burgundy focus-visible:outline-none'
-  const chipActive = 'bg-burgundy text-bg-primary'
+    'px-3 sm:px-3.5 py-2 sm:py-1 rounded-full text-xs sm:text-[13px] font-sans border focus-visible:outline-none transition-colors'
+  const chipActive =
+    'bg-accent-soft text-accent border-accent-soft'
   const chipPassive =
-    'bg-burgundy-soft text-burgundy hover:bg-burgundy hover:text-bg-primary transition-colors'
+    'bg-bg-secondary text-text-secondary border-border hover:bg-surface-elevated hover:text-text-primary hover:border-border-strong'
 
   return (
     <nav

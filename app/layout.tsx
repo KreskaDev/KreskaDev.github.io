@@ -58,7 +58,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${instrumentSerif.variable} ${geist.variable} ${jetbrainsMono.variable}`}
     >
       <body>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+        <ThemeProvider
+          attribute="class"
+          themes={['light-warm', 'dark-warm', 'light-cool', 'dark-cool']}
+          defaultTheme="dark-cool"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
           <div className="flex flex-col min-h-screen">
             <TopNav />
             <main className="flex-1">{children}</main>

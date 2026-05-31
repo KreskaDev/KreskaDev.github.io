@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { SearchButton } from '@/components/search/SearchButton'
 import { SearchModal } from '@/components/search/SearchModal'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { PaletteToggle } from '@/components/ui/PaletteToggle'
 import { MobileMenu } from '@/components/layout/MobileMenu'
 
 export function TopNav() {
@@ -61,7 +62,7 @@ export function TopNav() {
                     aria-current={active ? 'page' : undefined}
                     className={
                       active
-                        ? 'text-burgundy underline underline-offset-4'
+                        ? 'text-accent underline underline-offset-4'
                         : 'text-text-secondary hover:text-text-primary'
                     }
                   >
@@ -74,6 +75,9 @@ export function TopNav() {
           <div className="flex items-center gap-1 sm:gap-2">
             <SearchButton onClick={() => setSearchOpen(true)} />
             <ThemeToggle />
+            {/* PaletteToggle hidden mobile per plan v5-10 R22 LOCKED (4-icon row overflow ≥360px).
+                Mobile users dostają drawer entry w MobileMenu (Krok 15). */}
+            <PaletteToggle className="hidden md:inline-flex" />
             {/* Mobile hamburger — md:hidden ukrywa na desktop gdzie inline linki przejmują. */}
             <button
               ref={triggerRef}

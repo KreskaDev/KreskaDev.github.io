@@ -244,7 +244,7 @@ export function ContentNavigator() {
         >
           <div
             className={[
-              'h-full bg-burgundy',
+              'h-full bg-accent',
               reducedMotion ? '' : 'transition-[width] duration-100 ease-out',
             ].join(' ')}
             style={{ width: `${scrollPercent}%` }}
@@ -278,7 +278,7 @@ export function ContentNavigator() {
                       'block py-2 transition-colors min-h-11',
                       indent,
                       isActive
-                        ? 'text-burgundy font-medium'
+                        ? 'text-accent font-medium'
                         : 'text-text-secondary hover:text-text-primary',
                     ].join(' ')}
                   >
@@ -321,7 +321,7 @@ export function ContentNavigator() {
                     'block py-1 transition-colors',
                     indent,
                     isActive
-                      ? 'text-burgundy font-medium border-l-2 border-burgundy -ml-px'
+                      ? 'text-accent font-medium border-l-2 border-accent -ml-px'
                       : 'text-text-secondary hover:text-text-primary border-l-2 border-transparent -ml-px',
                   ].join(' ')}
                 >

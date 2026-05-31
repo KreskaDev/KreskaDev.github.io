@@ -1,12 +1,12 @@
 'use client'
-import { Laptop, Moon, Sun } from 'lucide-react'
+import { Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
 
-// Cycle nad `theme` (user choice), NIE `resolvedTheme` (pochodna 'dark'|'light').
-// `system` musi się pojawić w cyklu — per ADR-012 (3-state dark → light → system).
-const CYCLE = ['dark', 'light', 'system'] as const
-type ThemeChoice = (typeof CYCLE)[number]
+// 2-state cycle dark ↔ light w obrębie aktualnej palety (ADR-041 amends ADR-012:
+// system theme deprecated w dual-palette mode). Toggle flipuje MODE segment
+// composite theme (e.g. 'dark-cool' → 'light-cool'), preserving palette segment.
+const THEME_RE = /^(light|dark)-(warm|cool)$/
 
 export function ThemeToggle() {
   const [mounted, setMounted] = useState(false)
@@ -28,17 +28,20 @@ export function ThemeToggle() {
     )
   }
 
-  const current: ThemeChoice = CYCLE.includes(theme as ThemeChoice) ? (theme as ThemeChoice) : 'dark'
-  const nextIdx = (CYCLE.indexOf(current) + 1) % CYCLE.length
-  const next = CYCLE[nextIdx] ?? 'dark'
+  // Parse composite theme. Fallback: dark-cool (matches defaultTheme z layout.tsx).
+  const match = (theme ?? 'dark-cool').match(THEME_RE)
+  const mode = (match?.[1] ?? 'dark') as 'light' | 'dark'
+  const palette = (match?.[2] ?? 'cool') as 'warm' | 'cool'
+  const nextMode = mode === 'dark' ? 'light' : 'dark'
+  const nextTheme = `${nextMode}-${palette}`
 
-  const Icon = current === 'dark' ? Moon : current === 'light' ? Sun : Laptop
+  const Icon = mode === 'dark' ? Moon : Sun
 
   return (
     <button
       type="button"
-      onClick={() => setTheme(next)}
-      aria-label={`Current theme: ${current}. Click to switch to ${next}.`}
+      onClick={() => setTheme(nextTheme)}
+      aria-label={`Current theme: ${mode}. Click to switch to ${nextMode}.`}
       className="w-11 h-11 inline-flex items-center justify-center rounded text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition"
     >
       <Icon size={20} aria-hidden />

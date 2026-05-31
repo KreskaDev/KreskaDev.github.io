@@ -1,24 +1,32 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-/* Class-based dark mode — next-themes toggluje class `dark` na <html>.
-   Tailwind 4 wymaga explicit @custom-variant (TW4 usunęło darkMode:'class' z JS config). */
-@custom-variant dark (&:where(.dark, .dark *));
+/* Class-based dark mode — next-themes toggluje composite class na <html>
+   (`dark-cool` / `dark-warm` / `light-cool` / `light-warm` per ADR-041 dual-palette).
+   Explicit class list (NIE [class*="dark"]) eliminuje regex false positives. */
+@custom-variant dark (&:where(.dark, .dark-cool, .dark-warm, .dark *, .dark-cool *, .dark-warm *));
 
 @theme {
-  /* === Colors — port z archive/v4/styles/blog.css :root (light) === */
-  --color-bg-primary: #FAF7F2;
-  --color-bg-secondary: #F2EFE8;
-  --color-text-primary: #1A1A1A;
-  --color-text-secondary: #6B6B6B;
-  --color-text-tertiary: #9A9A9A;
-  --color-burgundy: #8B2635;
+  /* === Color tokens — DEFAULTS = cool-light (Tailwind 4 utility class generation skeleton).
+     Runtime tokens override w :root.X-Y blocks per ADR-039 + ADR-041.
+     R18 mitigation per plan v5-10 v2 Krok 1.5: @theme defaults zapewniają discovery
+     dla utility classes (`bg-accent`, `text-accent`); :root.<palette>-<mode> override
+     przez CSS cascade at runtime. === */
+  --color-bg-primary: #FAFAFA;
+  --color-bg-secondary: #F2F2F2;
+  --color-text-primary: #2A2520;
+  --color-text-secondary: #5C5A55;
+  --color-text-tertiary: #807B72;
+  --color-accent: #3A7194;
+  --color-accent-hover: #2D5E7E;
+  --color-accent-soft: #E5EFF6;
+  --color-burgundy: #9D4754;
   --color-burgundy-soft: #F4E8E9;
-  --color-green: #3B6E47;
+  --color-green: #4A7C57;
   --color-green-soft: #E8F0EA;
   --color-border: #E5E0D8;
   --color-border-strong: #C9C0B0;
-  --color-surface-elevated: rgba(0, 0, 0, 0.02);
+  --color-surface-elevated: rgba(0, 0, 0, 0.04);
 
   /* === Fonts (next/font CSS variables wstrzykiwane na <html> w layout.tsx) === */
   --font-display: var(--font-instrument-serif), Georgia, serif;
@@ -26,20 +34,81 @@
   --font-mono: var(--font-jetbrains-mono), Menlo, Consolas, monospace;
 }
 
-/* Dark mode override — class `dark` na <html> (toggled by next-themes) */
-.dark {
-  --color-bg-primary: #1A1816;
-  --color-bg-secondary: #221F1C;
-  --color-text-primary: #F5F2EC;
+/* === 4-palette token system per ADR-041 (dual-palette theme system).
+   :root jest cool-light fallback dla SSR/pre-hydration first paint
+   (next-themes dodaje class post-hydration; przed = unstyled bez :root tokens).
+   Hex values per ADR-039 token mapping table. === */
+:root,
+:root.light-cool {
+  --color-bg-primary: #FAFAFA;
+  --color-bg-secondary: #F2F2F2;
+  --color-text-primary: #2A2520;
+  --color-text-secondary: #5C5A55;
+  --color-text-tertiary: #807B72;
+  --color-accent: #3A7194;
+  --color-accent-hover: #2D5E7E;
+  --color-accent-soft: #E5EFF6;
+  --color-burgundy: #9D4754;
+  --color-burgundy-soft: #F4E8E9;
+  --color-green: #4A7C57;
+  --color-green-soft: #E8F0EA;
+  --color-border: #E5E0D8;
+  --color-border-strong: #C9C0B0;
+  --color-surface-elevated: rgba(0, 0, 0, 0.04);
+}
+
+:root.light-warm {
+  --color-bg-primary: #FAF7F2;
+  --color-bg-secondary: #F2EFE8;
+  --color-text-primary: #2A2520;
+  --color-text-secondary: #5C5A55;
+  --color-text-tertiary: #807B72;
+  --color-accent: #9D4754;
+  --color-accent-hover: #844050;
+  --color-accent-soft: #F1E3E5;
+  --color-burgundy: #9D4754;
+  --color-burgundy-soft: #F1E3E5;
+  --color-green: #4A7C57;
+  --color-green-soft: #E8F0EA;
+  --color-border: #E5E0D8;
+  --color-border-strong: #C9C0B0;
+  --color-surface-elevated: rgba(0, 0, 0, 0.04);
+}
+
+:root.dark-cool {
+  --color-bg-primary: #181818;
+  --color-bg-secondary: #222222;
+  --color-text-primary: #E8E4DC;
   --color-text-secondary: #B5B0A6;
-  --color-text-tertiary: #6E6A62;
-  --color-burgundy: #D97785;
+  --color-text-tertiary: #8A857C;
+  --color-accent: #5290BD;
+  --color-accent-hover: #7AAACF;
+  --color-accent-soft: #11212D;
+  --color-burgundy: #C97E87;
   --color-burgundy-soft: #2F1518;
   --color-green: #7BA887;
   --color-green-soft: #16221A;
   --color-border: #383330;
   --color-border-strong: #524C47;
-  --color-surface-elevated: rgba(255, 255, 255, 0.04);
+  --color-surface-elevated: rgba(255, 255, 255, 0.06);
+}
+
+:root.dark-warm {
+  --color-bg-primary: #1A1816;
+  --color-bg-secondary: #221F1C;
+  --color-text-primary: #E8E4DC;
+  --color-text-secondary: #B5B0A6;
+  --color-text-tertiary: #8A857C;
+  --color-accent: #C97E87;
+  --color-accent-hover: #D9959C;
+  --color-accent-soft: #2F1518;
+  --color-burgundy: #C97E87;
+  --color-burgundy-soft: #2F1518;
+  --color-green: #7BA887;
+  --color-green-soft: #16221A;
+  --color-border: #383330;
+  --color-border-strong: #524C47;
+  --color-surface-elevated: rgba(255, 255, 255, 0.06);
 }
 
 /* TopNav height (Tailwind h-16 = 64px per ADR-017) + 16px breathing.
@@ -49,7 +118,8 @@
   --top-nav-height: 80px;
 }
 
-/* Baseline body styling. `html.dark` matchuje gdy next-themes ustawia class="dark" na <html>. */
+/* Baseline body styling. Composite html classes (`dark-cool`/`dark-warm`) explicit
+   matchują obok legacy `dark` per dual-palette ADR-041 amends ADR-012. */
 html {
   color-scheme: light;
   /* `scroll-padding-top` gwarantuje że smooth scroll + native anchor jump
@@ -60,7 +130,9 @@ html {
      (plan v5-06 §D4) — bez tego additive 80+96=176px gap. */
   scroll-padding-top: var(--top-nav-height);
 }
-html.dark {
+html.dark,
+html.dark-cool,
+html.dark-warm {
   color-scheme: dark;
 }
 body {
@@ -71,9 +143,26 @@ body {
   font-size: 16px;
 }
 
-/* rehype-autolink-headings (append behavior) — subtle "#" visible on heading hover. */
+/* === Global a11y/UX rules (per ADR-040 focus + selection styling).
+   Wszystkie używają semantic CSS vars → auto-flipują per palette. === */
+
+/* Browser default outline (`1px black`) niewidoczny w dark mode = a11y fail. */
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* Browser default ::selection (niebieski) kłóci się z paletą. */
+::selection {
+  background: var(--color-burgundy-soft);
+  color: var(--color-text-primary);
+}
+
+/* rehype-autolink-headings (append behavior) — visible "#" przy 25% opacity
+   na default + 100% na hover (per ADR-040 a11y discoverability bump z 0). */
 .heading-anchor {
-  opacity: 0;
+  opacity: 0.25;
   margin-left: 0.5rem;
   color: var(--color-text-tertiary);
   text-decoration: none;
@@ -84,7 +173,65 @@ h2:hover .heading-anchor,
 h3:hover .heading-anchor,
 h4:hover .heading-anchor { opacity: 1; }
 
-/* `prose` overrides — refinement w Prompt 05 razem z BayesAnalyzer styling. */
+/* === Lead paragraph (.lead) — L4 style per task spec.
+   Apply w PostPage header po H1 + meta + tags. === */
+.lead {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--color-text-primary);
+  padding-left: 16px;
+  border-left: 2px solid var(--color-accent);
+  margin: 0 0 32px;
+}
+
+/* === Prose overrides per task spec — strong color BUG fix + code styling. ===
+   Tailwind prose-invert ustawia `--tw-prose-invert-bold: #fff` → wszystkie
+   `**bold**` w dark mode = pure white = każde słowo bije w oczy. Override
+   przez globals.css scoped per M2 decision (CLAUDE.md @apply prose convention). */
+.prose strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* Inline code: pure white → text-primary; weight 600 → 500; bg surface-elevated. */
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* Block code (pre) — accent border-left stripe per task spec. Syntax highlighting
+   defer do v5-11 (D5 LOCKED). Monochrome `text-secondary` body z accent stripe. */
+.prose pre {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+  border-radius: 6px;
+  padding: 16px 18px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--color-text-secondary);
+}
+
+/* Reset inline-code styling wewnątrz <pre> (no double border/bg). */
+.prose pre code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+  font-weight: inherit;
+  border-radius: 0;
+}
 
 /* SearchModal native <dialog> reset. Padding/bg/border żyją w inner <div> wrapperze,
    żeby backdrop click pattern (`e.target === dialogRef.current`) działał — bez resetu
@@ -149,9 +296,6 @@ h4:hover .heading-anchor { opacity: 1; }
    wrapper w `mdx-components.tsx` (table component) z `-mx-4 sm:-mx-6` bleed-edge.
    Inline `.katex` flows naturally — `overflow-x: auto` na każdym inline element
    produkowało brzydkie scrollbar shadows dla short formuł (v5-08 bug). */
-.prose pre {
-  overflow-x: auto;
-}
 .prose .katex-display {
   overflow-x: auto;
   overflow-y: hidden;
