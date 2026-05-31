@@ -8,12 +8,14 @@ export default function NotFound() {
       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-center">
         <Link
           href="/"
+          prefetch={false}
           className="px-4 py-2 bg-accent text-bg-primary rounded hover:opacity-90 transition font-sans"
         >
           Home
         </Link>
         <Link
           href="/blog/"
+          prefetch={false}
           className="px-4 py-2 border border-accent text-accent rounded hover:bg-accent hover:text-bg-primary transition font-sans"
         >
           Browse posts

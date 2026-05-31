@@ -76,6 +76,7 @@ export function MobileMenu({ isOpen, onClose, triggerRef, links, pathname }: Mob
               <Link
                 key={link.href}
                 href={link.href}
+                prefetch={false}
                 onClick={onClose}
                 aria-current={active ? 'page' : undefined}
                 className={[

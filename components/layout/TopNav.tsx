@@ -49,7 +49,7 @@ export function TopNav() {
         ].join(' ')}
       >
         <nav className="container mx-auto h-full max-w-5xl px-4 sm:px-6 flex items-center justify-between gap-3">
-          <Link href="/" className="font-display text-base sm:text-lg text-text-primary truncate">
+          <Link href="/" prefetch={false} className="font-display text-base sm:text-lg text-text-primary truncate">
             What is the truth?
           </Link>
           <ul className="hidden md:flex items-center gap-6 font-sans text-sm">
@@ -59,6 +59,7 @@ export function TopNav() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
+                    prefetch={false}
                     aria-current={active ? 'page' : undefined}
                     className={
                       active
