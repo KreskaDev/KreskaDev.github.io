@@ -11,12 +11,17 @@ language: "pl"
 
 # Guitar Fretboard — widget sandbox
 
-Strona robocza dla iteracji v5-09..v5-13. W tej fazie (v5-09) testujemy bazowy
-read-only render — kształt akordu C major na standardowym strojeniu (open C,
-voicing x32010). Struny 5..1 = positions [fret 3, 2, 0, 1, 0]; struna 0 (low E)
-jest tłumiona w tym voicingu — v5-09 read-only nie renderuje muted strings,
-więc po prostu nie pojawia się w `notes` array. v5-11 ChordAnalyzer dodaje
-muted rendering jako × przed nutem.
+Strona robocza dla iteracji v5-09..v5-13. v5-09 dostarczył bazowy `<Fretboard />`
+read-only. v5-11 dodaje inteligentny wrapper `<FretboardVisualizer />` ze skale,
+akordy, click-to-highlight i sample-based audio playback (acoustic guitar nylon
+z biblioteki Gleitzman MIDI.js FluidR3_GM, CC-BY 3.0).
+
+## v5-09 baseline — `<Fretboard />` (base, read-only)
+
+Bazowy widget — voicing x32010 (open C major). Strony 5..1 = positions
+[fret 3, 2, 0, 1, 0]; struna 0 (low E) jest tłumiona w tym voicingu — v5-09
+read-only nie renderuje muted strings, więc po prostu nie pojawia się w `notes`
+array. v5-12 ChordAnalyzer dodaje muted rendering jako × przed nutem.
 
 <Fretboard
   id="demo-c-major-shape"
@@ -28,3 +33,33 @@ muted rendering jako × przed nutem.
     { string: 5, fret: 0 },
   ]}
 />
+
+## v5-11 UC1 — skala C-dur na całym gryfie
+
+`<FretboardVisualizer scale={{root:'C',type:'major'}} />` rozkłada wszystkie pozycje
+7 nut C-dur (C, D, E, F, G, A, B) na fretboardzie standardowego strojenia. Root
+note (C) wyróżniony burgundy, pozostałe scale tones szarym wypełnieniem. Klikalne —
+click na nucie selectuje + odgrywa próbkę acoustic nylon guitar.
+
+<FretboardVisualizer id="c-major-scale" scale={{ root: 'C', type: 'major' }} />
+
+## v5-11 UC2 — progresja Dm → Am → Em → F (D-moll naturalna)
+
+Cztery widgety stacked — każdy demonstruje wszystkie pozycje pitch-classes danego
+akordu na gryfie (abstract chord view, NIE konkretny chwyt — semantic per design
+doc sekcja 7+15 dec #10). Root note każdego akordu (D, A, E, F) burgundy; chord
+tones solid dark.
+
+<div className="space-y-6">
+  <FretboardVisualizer id="prog-dm" chord={{ root: 'D', type: 'min' }} />
+  <FretboardVisualizer id="prog-am" chord={{ root: 'A', type: 'min' }} />
+  <FretboardVisualizer id="prog-em" chord={{ root: 'E', type: 'min' }} />
+  <FretboardVisualizer id="prog-f" chord={{ root: 'F', type: 'maj' }} />
+</div>
+
+## v5-11 bonus — A blues minor scale
+
+`scale={{root:'A',type:'bluesMinor'}}` = pentatonic A minor + b5 (R, m3, 4, b5, 5, m7).
+Six pitch classes (A, C, D, Eb, E, G) na całym gryfie.
+
+<FretboardVisualizer id="a-blues-minor" scale={{ root: 'A', type: 'bluesMinor' }} />
