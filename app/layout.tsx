@@ -13,14 +13,19 @@ const instrumentSerif = Instrument_Serif({
   display: 'swap',
 })
 
+// v5-12 Phase 2 — explicit weight arrays per empirical audit (ADR-044, amends ADR-038).
+// Geist: 400 body, 500 font-medium + .prose code, 600 font-semibold + .prose strong.
+// JetBrains Mono: 400 default code/KaTeX, 500 + 700 SVG <text> w Fretboard.tsx:259.
 const geist = Geist({
   subsets: ['latin', 'latin-ext'],
+  weight: ['400', '500', '600'],
   variable: '--font-geist',
   display: 'swap',
 })
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin', 'latin-ext'],
+  weight: ['400', '500', '700'],
   variable: '--font-jetbrains-mono',
   display: 'swap',
 })
