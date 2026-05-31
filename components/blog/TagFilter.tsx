@@ -26,7 +26,6 @@ export function TagFilter({ uniqueTags, activeTag }: TagFilterProps) {
     >
       <Link
         href="/blog/"
-        prefetch={false}
         aria-current={activeTag === null ? 'page' : undefined}
         className={`${chipBase} ${activeTag === null ? chipActive : chipPassive}`}
       >
@@ -38,7 +37,6 @@ export function TagFilter({ uniqueTags, activeTag }: TagFilterProps) {
           <Link
             key={tag}
             href={`/blog/?tag=${encodeURIComponent(tag)}`}
-            prefetch={false}
             aria-current={isActive ? 'page' : undefined}
             className={`${chipBase} ${isActive ? chipActive : chipPassive}`}
           >
