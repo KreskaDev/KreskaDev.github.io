@@ -66,10 +66,12 @@ const OVERLAY_COLORS = {
   light: {
     selectedRing: '#8B2635',      // burgundy (ADR-037 root light)
     mutedGlyph:   '#9A9A9A',      // ADR-037 muted token light
+    bg:           '#FAF7F2',      // MIRROR Fretboard COLORS.light.bg — mask base label
   },
   dark: {
     selectedRing: '#D97785',      // burgundy dark
     mutedGlyph:   '#6E6A62',      // ADR-037 muted token dark
+    bg:           '#1A1816',      // MIRROR Fretboard COLORS.dark.bg — mask base label
   },
 } as const
 
@@ -97,7 +99,7 @@ function confidenceLabel(c: number): 'high' | 'medium' | 'low' {
 
 // === Overlay sub-component (inline, not exported) ===
 
-type Palette = { selectedRing: string; mutedGlyph: string }
+type Palette = { selectedRing: string; mutedGlyph: string; bg: string }
 
 type OverlayProps = {
   activeNotes: FretboardNote[]
@@ -127,10 +129,12 @@ function MutedAndSelectedOverlay({
     y: PADDING.top + (stringCount - 1 - pos.string) * STRING_HEIGHT,
   })
 
-  // Muted × glyph position — identyczna x jak open-string circles base Fretboard (na
-  // lewo od nutu). String 0 jest na dole (= flip y przez stringCount-1-stringIdx).
+  // Muted "X" glyph zastępuje string label base Fretboard (NIE nakłada się na literkę).
+  // Base label position: x = padding.left - 8 = 32, textAnchor="end", fontSize=11
+  // (Fretboard.tsx:206-208). Overlay maskuje literkę background-color rect (`bg` token
+  // matching base SVG background) i renderuje "X" w tym samym miejscu.
   const mutedGlyphPos = (stringIdx: number) => ({
-    x: PADDING.left + NUT_WIDTH / 2 - 16,
+    x: PADDING.left - 8,
     y: PADDING.top + (stringCount - 1 - stringIdx) * STRING_HEIGHT,
   })
 
@@ -146,23 +150,32 @@ function MutedAndSelectedOverlay({
       // display:contents na wrapperze).
       className="absolute top-0 left-0 block pointer-events-none"
     >
-      {/* Muted × glyphs — pointer-events-none, brak click handler (muted = no-op visual) */}
+      {/* Muted "X" glyph — zastępuje base label literki (E/A/D/G/B/e) bez nakładania.
+          Mask rect bg-colored zasłania base label, X renderowany w tym samym anchor.
+          Pointer-events-none, brak click handler (muted = no-op visual). */}
       {mutedStrings.map(stringIdx => {
         const pos = mutedGlyphPos(stringIdx)
         return (
-          <text
-            key={`muted-${stringIdx}`}
-            data-testid={`muted-glyph-string-${stringIdx}`}
-            x={pos.x}
-            y={pos.y}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill={palette.mutedGlyph}
-            fontSize="14"
-            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-            fontWeight="600"
-            className="pointer-events-none"
-          >×</text>
+          <g key={`muted-${stringIdx}`} className="pointer-events-none">
+            <rect
+              x={pos.x - 8}
+              y={pos.y - 8}
+              width={14}
+              height={16}
+              fill={palette.bg}
+            />
+            <text
+              data-testid={`muted-glyph-string-${stringIdx}`}
+              x={pos.x}
+              y={pos.y}
+              textAnchor="end"
+              dominantBaseline="middle"
+              fill={palette.mutedGlyph}
+              fontSize="12"
+              fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+              fontWeight="700"
+            >X</text>
+          </g>
         )
       })}
       {/* Hit-rects per active note — 48×STRING_HEIGHT (precedent FretboardVisualizer:140-148).
