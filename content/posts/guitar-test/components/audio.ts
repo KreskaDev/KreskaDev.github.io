@@ -8,11 +8,13 @@ import type { PitchedNote, NoteName } from './types'
 
 // === Sample source metadata (matches ADR-042) ===
 export const SAMPLE_INSTRUMENT = 'acoustic_guitar_nylon' as const
-const SAMPLE_KIT = 'FluidR3_GM' as const
-// Gleitzman CDN URL. Kit pivot path (FluidR3_GM → MusyngKite / FatBoy) = single-line edit.
+const SAMPLE_KIT = 'FatBoy' as const
+// Gleitzman CDN URL. Kit pivoted FluidR3_GM → FatBoy 2026-05-31 post user A/B test
+// (sonic preference). Alternatywne kity (FluidR3_GM CC-BY 3.0, MusyngKite CC-BY-SA 3.0)
+// dostępne jako single-line const change.
 const SAMPLE_URL =
   `https://gleitz.github.io/midi-js-soundfonts/${SAMPLE_KIT}/${SAMPLE_INSTRUMENT}-mp3.js`
-// License: CC-BY 3.0 — attribution w prod/public/audio/ATTRIBUTIONS.md.
+// License: CC-BY-SA 3.0 (ShareAlike) — attribution w prod/public/audio/ATTRIBUTIONS.md.
 
 // === MIDI.js global shape (after script load) ===
 type MidiSoundfontMap = Record<string, string>  // note name → data URL
