@@ -15,6 +15,7 @@ export function PostCard({ post, variant = 'home' }: PostCardProps) {
     <article className="group h-full rounded-lg border border-border bg-bg-secondary p-5 sm:p-6 hover:border-accent transition-colors">
       <Link
         href={`/posts/${post.slug}/`}
+        prefetch={false}
         aria-label={`Read post: ${post.title}`}
         className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
       >

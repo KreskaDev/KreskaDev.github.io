@@ -628,7 +628,7 @@ function ChartView({ pi, s0, f0, clinics }: ChartViewProps) {
 
   return (
     <div className="mt-6 h-60 sm:h-80">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <LineChart data={data} margin={{ top: 10, right: 20, bottom: 30, left: 8 }}>
           <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" />
           <XAxis
