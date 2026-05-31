@@ -5,23 +5,14 @@ import { getAllPosts, getPostBySlug } from '@/lib/posts'
 import mdxComponents from '@/mdx-components'
 import { mdxOptions } from '@/lib/mdx-options'
 import type { PostFrontmatter } from '@/types/post'
-import dynamic from 'next/dynamic'
-import BayesAnalyzer from '@/content/posts/pozytywny-wynik/components/BayesAnalyzer'
+import LazyBayesAnalyzer from '@/components/lazy/LazyBayesAnalyzer'
+import LazyFretboard from '@/components/lazy/LazyFretboard'
+import LazyFretboardVisualizer from '@/components/lazy/LazyFretboardVisualizer'
 import { Tabs, TabItem } from '@/components/ui/Tabs'
-
-// Per v5-12 perf audit handoff: Fretboard + FretboardVisualizer w osobnym client chunku
-// ładowanym TYLKO gdy post zawiera widget w MDX. Bez `ssr:false` (Next.js 15+ blokuje
-// w Server Component), więc widget jest server-rendered (dobry FCP/LCP), ale main JS
-// bundle nie zawiera widget code — client hydration loaduje chunk async. Placeholder
-// nie używany (default SSR renderuje HTML).
-// Deviation §3.5 dokumentowana w commit message; pełny benefit (ssr:false → no SSR cost)
-// wymaga Client Component wrappera — odłożone do v5-12 perf scope.
-const Fretboard = dynamic(
-  () => import('@/content/posts/guitar-test/components/Fretboard'),
-)
-const FretboardVisualizer = dynamic(
-  () => import('@/content/posts/guitar-test/components/FretboardVisualizer'),
-)
+// v5-12 Phase 1 — Client Component HOC wrappers wrap `next/dynamic({ ssr: false, loading })`.
+// HOC żyje w `components/lazy/` jako Client Component; Server Component (this file) importuje
+// jak regular komponent. Per-view (BayesAnalyzer) lub uniform (Fretboard/Visualizer) min-h-*
+// Tailwind placeholder eliminuje CLS — patrz ADR-043.
 import { ContentNavigator } from '@/components/post/ContentNavigator'
 import { BackToTop } from '@/components/post/BackToTop'
 
@@ -65,7 +56,14 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
   const { content } = await compileMDX({
     source: loaded.source,
-    components: { ...mdxComponents, BayesAnalyzer, Tabs, TabItem, Fretboard, FretboardVisualizer },
+    components: {
+      ...mdxComponents,
+      BayesAnalyzer: LazyBayesAnalyzer,
+      Tabs,
+      TabItem,
+      Fretboard: LazyFretboard,
+      FretboardVisualizer: LazyFretboardVisualizer,
+    },
     // blockJS:false — patrz ADR-033. next-mdx-remote@6 domyślnie stripuje JSX
     // expression attribute values (`prop={expr}`), zostawia tylko stringi i boolean
     // shorthand. To blokuje np. `<BayesAnalyzer editable={false} clinics={[...]} />`
