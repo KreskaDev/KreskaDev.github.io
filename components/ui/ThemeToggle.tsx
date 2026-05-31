@@ -16,13 +16,14 @@ export function ThemeToggle() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), [])
 
-  // Placeholder DOKŁADNIE same wymiary jak final (w-9 h-9) — bez tego CLS przy hydration.
+  // Placeholder DOKŁADNIE same wymiary jak final (w-11 h-11 = 44px WCAG AAA) —
+  // bez tego CLS przy hydration. Bump z w-9 (36px) w v5-08 dla mobile parity.
   if (!mounted) {
     return (
       <button
         type="button"
         aria-label="Loading theme"
-        className="w-9 h-9 inline-flex items-center justify-center rounded text-text-secondary"
+        className="w-11 h-11 inline-flex items-center justify-center rounded text-text-secondary"
       />
     )
   }
@@ -38,9 +39,9 @@ export function ThemeToggle() {
       type="button"
       onClick={() => setTheme(next)}
       aria-label={`Current theme: ${current}. Click to switch to ${next}.`}
-      className="w-9 h-9 inline-flex items-center justify-center rounded text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition"
+      className="w-11 h-11 inline-flex items-center justify-center rounded text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition"
     >
-      <Icon size={18} aria-hidden />
+      <Icon size={20} aria-hidden />
     </button>
   )
 }

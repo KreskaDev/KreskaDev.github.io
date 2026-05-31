@@ -148,7 +148,7 @@ export default function BayesAnalyzer(props: BayesAnalyzerProps) {
   return (
     <div
       data-toc-exclude
-      className="rounded-lg border border-border bg-bg-secondary p-6 my-8 not-prose font-sans"
+      className="rounded-lg border border-border bg-bg-secondary p-4 sm:p-6 my-8 not-prose font-sans"
     >
       <Header presetName={preset.name} view={view} editable={editable} />
 
@@ -237,7 +237,7 @@ interface HeaderProps {
 
 function Header({ presetName, view, editable }: HeaderProps) {
   return (
-    <div className="flex items-baseline justify-between gap-4 mb-4 pb-3 border-b border-border">
+    <div className="flex flex-wrap items-baseline justify-between gap-2 mb-4 pb-3 border-b border-border">
       <div className="font-display text-lg text-text-primary">{presetName}</div>
       <div className="text-text-tertiary text-xs font-mono">
         view: {view}{editable ? '' : ' · read-only'}
@@ -357,29 +357,39 @@ function SliderRow({ name, value, onChange }: SliderRowProps) {
   const range = RANGES[name]
   const label = PARAM_LABELS[name]
   return (
-    <div className="flex items-center gap-3">
-      <label className="text-text-primary text-sm font-display w-8 shrink-0" htmlFor={`slider-${name}`}>
-        {label?.symbol ?? name}
-      </label>
-      <input
-        id={`slider-${name}`}
-        type="range"
-        min={range.min}
-        max={range.max}
-        step={range.step}
-        value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        // accent-* Tailwind 4 utility może NIE być auto-generated z @theme tokens
-        // (utility families filter); inline style gwarantuje brand accent reliably.
-        style={{ accentColor: 'var(--color-burgundy)' }}
-        className="flex-1"
-      />
-      <span className="font-mono text-sm text-text-primary w-12 text-right tabular-nums">
-        {formatParamValue(name, value)}
-      </span>
-      <span className="text-text-tertiary text-xs hidden sm:block w-44 shrink-0">
-        {label?.description ?? ''}
-      </span>
+    // py-2 -my-2 extends tap surface bez wpływu na visual layout.
+    <div className="py-2 -my-2">
+      <div className="flex items-center gap-3">
+        <label className="text-text-primary text-sm font-display w-8 shrink-0" htmlFor={`slider-${name}`}>
+          {label?.symbol ?? name}
+        </label>
+        <input
+          id={`slider-${name}`}
+          type="range"
+          min={range.min}
+          max={range.max}
+          step={range.step}
+          value={value}
+          onChange={e => onChange(Number(e.target.value))}
+          // accent-* Tailwind 4 utility może NIE być auto-generated z @theme tokens
+          // (utility families filter); inline style gwarantuje brand accent reliably.
+          style={{ accentColor: 'var(--color-burgundy)' }}
+          className="flex-1"
+        />
+        <span className="font-mono text-sm text-text-primary w-12 text-right tabular-nums">
+          {formatParamValue(name, value)}
+        </span>
+        <span className="text-text-tertiary text-xs hidden sm:block w-44 shrink-0">
+          {label?.description ?? ''}
+        </span>
+      </div>
+      {/* Mobile-only inline description pod sliderem (edukacyjność > polish).
+          ml-11 = 44px = matchuje label width w-8 + gap-3. */}
+      {label?.description && (
+        <p className="sm:hidden text-text-tertiary text-xs mt-1 ml-11">
+          {label.description}
+        </p>
+      )}
     </div>
   )
 }
@@ -399,11 +409,11 @@ function ModeToggle({ mode, onLight, onAdvanced }: ModeToggleProps) {
   }
 
   return (
-    <div className="mt-4 flex items-center gap-2">
+    <div className="mt-4 flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3">
       <button
         type="button"
         onClick={handleToggle}
-        className="text-sm font-sans text-burgundy hover:underline focus-visible:ring-2 focus-visible:ring-burgundy focus-visible:outline-none rounded"
+        className="text-sm font-sans text-burgundy hover:underline focus-visible:ring-2 focus-visible:ring-burgundy focus-visible:outline-none rounded p-2 -m-2"
       >
         {mode === 'light' ? 'Tryb zaawansowany →' : '← Tryb lekki'}
       </button>
@@ -462,52 +472,63 @@ function ClinicsSection({
         <p className="text-text-tertiary text-sm mb-3">Brak klinik.</p>
       )}
       <ul className="space-y-2">
-        {clinics.map((c, i) => (
-          <li
-            key={i}
-            className="flex items-center gap-3 text-sm"
-            data-testid="clinic-row"
-          >
-            <span className="text-text-tertiary font-mono w-6">{i + 1}.</span>
-            {/* React JSX auto-escapuje children → XSS defense per WC8. */}
-            <span className="clinic-name text-text-primary flex-1 truncate">{c.name ?? `Klinika ${i + 1}`}</span>
-            <span className="text-text-secondary text-xs font-mono">
-              s₁={c.s1.toFixed(2)} f₁={c.f1.toFixed(2)}
-            </span>
-            <span
-              className={
-                'text-xs font-mono px-2 py-0.5 rounded ' +
-                (c.result === 1
-                  ? 'text-burgundy bg-burgundy-soft'
-                  : 'text-green bg-green-soft')
-              }
+        {clinics.map((c, i) => {
+          // Mobile 2-row card: outer <li> = flex-col; sm:contents na inner row
+          // wrapperach rzutuje je na <li> grid flow desktopowy (single row, parity
+          // z pre-v5-08 layout). React JSX auto-escapuje children → XSS defense per WC8.
+          const badgeClass =
+            'text-xs font-mono px-2 py-0.5 rounded ' +
+            (c.result === 1
+              ? 'text-burgundy bg-burgundy-soft'
+              : 'text-green bg-green-soft')
+          const badgeChar = c.result === 1 ? '+' : '−'
+          return (
+            <li
+              key={i}
+              className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3 text-sm py-1"
+              data-testid="clinic-row"
             >
-              {c.result === 1 ? '+' : '−'}
-            </span>
-            {editable && (
-              <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateClinic(i, { result: c.result === 1 ? 0 : 1 })
-                  }
-                  className="text-text-tertiary hover:text-text-primary text-xs font-sans"
-                  aria-label={`Przełącz wynik kliniki ${i + 1}`}
-                >
-                  flip
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeClinic(i)}
-                  className="text-text-tertiary hover:text-burgundy text-xs font-sans"
-                  aria-label={`Usuń klinikę ${i + 1}`}
-                >
-                  ×
-                </button>
-              </>
-            )}
-          </li>
-        ))}
+              {/* Row 1 mobile: numer + nazwa + badge prawy.
+                  sm:contents → rzut na parent flex row, badge ukryty (visible w Row 2). */}
+              <div className="flex items-center gap-3 sm:contents">
+                <span className="text-text-tertiary font-mono w-6">{i + 1}.</span>
+                <span className="clinic-name text-text-primary flex-1 truncate">
+                  {c.name ?? `Klinika ${i + 1}`}
+                </span>
+                <span className={`sm:hidden ml-auto ${badgeClass}`}>{badgeChar}</span>
+              </div>
+              {/* Row 2 mobile: s₁/f₁ + badge desktop position + flip + ×. */}
+              <div className="flex items-center gap-3 sm:contents">
+                <span className="text-text-secondary text-xs font-mono">
+                  s₁={c.s1.toFixed(2)} f₁={c.f1.toFixed(2)}
+                </span>
+                <span className={`hidden sm:inline ${badgeClass}`}>{badgeChar}</span>
+                {editable && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateClinic(i, { result: c.result === 1 ? 0 : 1 })
+                      }
+                      className="ml-auto sm:ml-0 p-2 -m-2 text-text-tertiary hover:text-text-primary text-xs font-sans min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
+                      aria-label={`Przełącz wynik kliniki ${i + 1}`}
+                    >
+                      flip
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeClinic(i)}
+                      className="p-2 -m-2 text-text-tertiary hover:text-burgundy text-xs font-sans min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
+                      aria-label={`Usuń klinikę ${i + 1}`}
+                    >
+                      ×
+                    </button>
+                  </>
+                )}
+              </div>
+            </li>
+          )
+        })}
       </ul>
       {editable && clinics.length < MAX_CLINICS && (
         <button
@@ -530,7 +551,7 @@ interface ChartViewProps {
   height?: number
 }
 
-function ChartView({ pi, s0, f0, clinics, height = 320 }: ChartViewProps) {
+function ChartView({ pi, s0, f0, clinics }: ChartViewProps) {
   const [mounted, setMounted] = useState(false)
   const { resolvedTheme } = useTheme()
   // Canonical next-themes mount-safe pattern (z ich docs) — bez tego SSR/CSR mismatch
@@ -549,18 +570,16 @@ function ChartView({ pi, s0, f0, clinics, height = 320 }: ChartViewProps) {
   const conflicts = useMemo(() => detectConflicts(clinics), [clinics])
 
   if (!mounted) {
-    // Placeholder same height — zapobiega CLS + hydration mismatch flash.
-    return <div style={{ height }} aria-hidden className="mt-6" />
+    // Placeholder spójny z final height — zapobiega CLS + hydration mismatch flash.
+    // CSS-only mobile (h-60 = 240px) → desktop (sm:h-80 = 320px) per ADR-035.
+    return <div className="h-60 sm:h-80 mt-6" aria-hidden />
   }
 
   const colors = COLORS[resolvedTheme === 'dark' ? 'dark' : 'light']
 
   if (clinics.length === 0) {
     return (
-      <div
-        style={{ height }}
-        className="mt-6 flex items-center justify-center border border-dashed border-border rounded text-text-tertiary text-sm"
-      >
+      <div className="h-60 sm:h-80 mt-6 flex items-center justify-center border border-dashed border-border rounded text-text-tertiary text-sm">
         Dodaj klinikę, by zobaczyć aktualizację posteriori.
       </div>
     )
@@ -573,9 +592,9 @@ function ChartView({ pi, s0, f0, clinics, height = 320 }: ChartViewProps) {
   }))
 
   return (
-    <div className="mt-6" style={{ width: '100%', height }}>
-      <ResponsiveContainer>
-        <LineChart data={data} margin={{ top: 10, right: 20, bottom: 30, left: 0 }}>
+    <div className="mt-6 h-60 sm:h-80">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 10, right: 20, bottom: 30, left: 8 }}>
           <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" />
           <XAxis
             dataKey="step"

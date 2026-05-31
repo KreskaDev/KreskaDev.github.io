@@ -93,6 +93,17 @@ export function Tabs({ tabs, children, hashSync = false, ariaLabel }: TabsProps)
     [hashSync],
   )
 
+  // Active tab scroll-into-view (mobile horizontal scrollable tablist).
+  // `inline: 'center'` centruje aktywny tab w widoku poziomym; `block: 'nearest'`
+  // zapobiega vertical scroll page przy aktywacji taba (race z hashSync container scroll).
+  useEffect(() => {
+    const tablist = tablistRef.current
+    if (!tablist) return
+    const activeButton = tablist.querySelector<HTMLButtonElement>(`[data-tab-id="${active}"]`)
+    if (!activeButton) return
+    activeButton.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  }, [active])
+
   const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
     let nextIdx = idx
     if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + tabs.length) % tabs.length
@@ -126,7 +137,7 @@ export function Tabs({ tabs, children, hashSync = false, ariaLabel }: TabsProps)
           ref={tablistRef}
           role="tablist"
           aria-label={ariaLabel ?? 'Tabs'}
-          className="not-prose flex flex-wrap gap-1 border-b border-border mb-6 font-sans"
+          className="not-prose flex gap-1 overflow-x-auto no-scrollbar snap-x snap-mandatory sm:flex-wrap sm:overflow-x-visible border-b border-border mb-6 font-sans"
         >
           {tabs.map((t, idx) => {
             const isActive = t.id === active
@@ -143,7 +154,7 @@ export function Tabs({ tabs, children, hashSync = false, ariaLabel }: TabsProps)
                 onClick={() => activate(t.id)}
                 onKeyDown={e => handleKeyDown(e, idx)}
                 className={
-                  'px-4 py-2 text-left text-sm transition-colors rounded-t -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burgundy ' +
+                  'shrink-0 sm:shrink snap-start px-4 py-2 text-left text-sm transition-colors rounded-t -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burgundy ' +
                   (isActive
                     ? 'text-text-primary border-b-2 border-burgundy font-semibold'
                     : 'text-text-secondary border-b-2 border-transparent hover:text-text-primary')
@@ -151,7 +162,7 @@ export function Tabs({ tabs, children, hashSync = false, ariaLabel }: TabsProps)
               >
                 <span className="block">{t.title}</span>
                 {t.tagline && (
-                  <span className="block text-xs text-text-tertiary mt-0.5 font-normal">
+                  <span className="hidden sm:block text-xs text-text-tertiary mt-0.5 font-normal">
                     {t.tagline}
                   </span>
                 )}

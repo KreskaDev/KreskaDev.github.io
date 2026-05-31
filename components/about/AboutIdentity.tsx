@@ -50,13 +50,13 @@ export function AboutIdentity({
   const formattedCoords = `${Math.abs(latNum).toFixed(2)}°${latNum >= 0 ? 'N' : 'S'}, ${Math.abs(lngNum).toFixed(2)}°${lngNum >= 0 ? 'E' : 'W'}`
 
   return (
-    <aside className="not-prose lg:w-[280px] lg:shrink-0 lg:sticky lg:top-24 lg:self-start flex flex-col gap-6">
-      <div className="relative aspect-square w-full overflow-hidden rounded-lg border border-border">
+    <aside className="not-prose w-full lg:w-[280px] lg:shrink-0 lg:sticky lg:top-24 lg:self-start flex flex-col gap-4 sm:gap-6 items-center lg:items-stretch">
+      <div className="relative aspect-square w-40 sm:w-56 lg:w-full overflow-hidden rounded-lg border border-border">
         <Image
           src={photo}
           alt="Rafał Krasowski"
           fill
-          sizes="280px"
+          sizes="(min-width: 1024px) 280px, (min-width: 640px) 224px, 160px"
           className="object-cover"
           priority
         />

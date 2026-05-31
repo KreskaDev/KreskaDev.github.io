@@ -14,8 +14,8 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="container mx-auto max-w-2xl px-6 py-24 text-center">
-      <h1 className="font-display text-4xl text-text-primary mb-4">Something went wrong</h1>
+    <div className="container mx-auto max-w-2xl px-4 sm:px-6 py-16 sm:py-24 text-center">
+      <h1 className="font-display text-3xl sm:text-4xl text-text-primary mb-4">Something went wrong</h1>
       <p className="text-text-secondary mb-8">
         An unexpected error occurred. The error has been logged.
       </p>

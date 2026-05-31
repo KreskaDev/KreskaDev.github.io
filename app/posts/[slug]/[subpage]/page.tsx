@@ -81,12 +81,12 @@ export default async function SubpagePage(
       : undefined
 
   return (
-    <div className="container mx-auto max-w-3xl px-6 py-12">
+    <div className="container mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-12">
       <PostBreadcrumb parentSlug={slug} parentTitle={parentTitle} />
-      <article lang={articleLang} className="prose dark:prose-invert">
+      <ContentNavigator />
+      <article lang={articleLang} className="prose dark:prose-invert md:prose-lg">
         {content}
       </article>
-      <ContentNavigator />
       <BackToTop />
     </div>
   )

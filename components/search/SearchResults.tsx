@@ -16,7 +16,7 @@ export function SearchResults({ results, query, onSelect }: Props) {
     return <p className="text-text-secondary text-sm py-2">No results for &ldquo;{query}&rdquo;.</p>
   }
   return (
-    <ul className="search-results flex flex-col gap-2">
+    <ul className="flex flex-col gap-2">
       {results.map(r => (
         <li key={r.slug}>
           <Link

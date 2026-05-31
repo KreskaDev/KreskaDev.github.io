@@ -8,7 +8,7 @@ import { AboutIdentity } from '@/components/about/AboutIdentity'
 const mdxComponents: MDXComponents = {
   h2: ({ children, ...props }) => (
     <h2
-      className="font-display text-3xl text-text-primary mt-12 mb-4"
+      className="font-display text-2xl md:text-3xl text-text-primary mt-12 mb-4"
       {...props}
     >
       {children}
@@ -16,7 +16,7 @@ const mdxComponents: MDXComponents = {
   ),
   h3: ({ children, ...props }) => (
     <h3
-      className="font-display text-2xl text-text-primary mt-8 mb-3"
+      className="font-display text-xl md:text-2xl text-text-primary mt-8 mb-3"
       {...props}
     >
       {children}
@@ -29,6 +29,16 @@ const mdxComponents: MDXComponents = {
     >
       {children}
     </h4>
+  ),
+  // Table wrapper: bleed-edge -mx-4 sm:-mx-6 daje tabeli pełną szerokość
+  // container'a, scroll overflow w wrapperze. `not-prose` resetuje prose
+  // typography styling (border-collapse + spacing per Tailwind base).
+  table: ({ children, ...props }) => (
+    <div className="not-prose my-6 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto">
+      <table className="min-w-full text-sm font-sans border-collapse" {...props}>
+        {children}
+      </table>
+    </div>
   ),
   a: ({ href, children, ...props }) => {
     if (typeof href !== 'string' || href.length === 0) {

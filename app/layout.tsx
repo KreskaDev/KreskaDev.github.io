@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { Instrument_Serif, Geist, JetBrains_Mono } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import { Footer } from '@/components/layout/Footer'
-import { NarrowScreenMessage } from '@/components/layout/NarrowScreenMessage'
 import { TopNav } from '@/components/layout/TopNav'
 import 'katex/dist/katex.min.css'
 import './globals.css'
@@ -60,9 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <NarrowScreenMessage />
-          {/* PARA Z md:hidden w NarrowScreenMessage — dual-gate: <768px overlay widoczne, chrome hidden; ≥768px odwrotnie. */}
-          <div className="hidden md:flex md:flex-col md:min-h-screen">
+          <div className="flex flex-col min-h-screen">
             <TopNav />
             <main className="flex-1">{children}</main>
             <Footer />

@@ -12,14 +12,14 @@ export function PostCard({ post, variant = 'home' }: PostCardProps) {
   void variant
 
   return (
-    <article className="group h-full rounded-lg border border-border bg-bg-secondary p-6 hover:border-burgundy transition-colors">
+    <article className="group h-full rounded-lg border border-border bg-bg-secondary p-5 sm:p-6 hover:border-burgundy transition-colors">
       <Link
         href={`/posts/${post.slug}/`}
         aria-label={`Read post: ${post.title}`}
         className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-burgundy rounded"
       >
-        <div className="flex items-baseline justify-between gap-4 mb-2">
-          <h3 className="font-display text-2xl text-text-primary group-hover:text-burgundy transition-colors">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4 mb-2">
+          <h3 className="font-display text-xl sm:text-2xl text-text-primary group-hover:text-burgundy transition-colors">
             {post.title}
           </h3>
           <time dateTime={post.date} className="text-text-tertiary text-sm font-sans shrink-0">

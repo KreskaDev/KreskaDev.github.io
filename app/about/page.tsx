@@ -34,7 +34,7 @@ export default async function AboutPage() {
   // MDX components <AboutIdentity> i <Prose> dzielą content, każdy ma własny scope.
   return (
     <article
-      className="container mx-auto max-w-5xl px-6 py-16 lg:flex lg:gap-12 lg:items-start"
+      className="container mx-auto max-w-5xl px-4 sm:px-6 py-12 sm:py-16 flex flex-col-reverse gap-8 lg:flex-row lg:gap-12 lg:items-start"
       lang="en"
     >
       {content}

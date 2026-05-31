@@ -18,7 +18,7 @@ function AllPostsButton() {
 
 export function LatestPosts({ allPosts }: { allPosts: PostMeta[] }) {
   return (
-    <section className="container mx-auto max-w-5xl px-6 pb-24">
+    <section className="container mx-auto max-w-5xl px-4 sm:px-6 pb-16 sm:pb-24">
       <h2 className="font-display text-3xl text-text-primary mb-8">Latest posts</h2>
       <PostList
         posts={allPosts}

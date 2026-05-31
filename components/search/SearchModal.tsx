@@ -77,26 +77,28 @@ export function SearchModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
       aria-labelledby="search-modal-title"
       className="search-dialog"
     >
-      <div className="p-6 w-full max-w-2xl bg-bg-primary text-text-primary rounded-lg shadow-xl">
+      <div className="flex flex-col w-full h-full md:h-auto max-w-none md:max-w-2xl mx-auto bg-bg-primary text-text-primary rounded-none md:rounded-lg md:shadow-xl">
         <h2 id="search-modal-title" className="sr-only">
           Search posts
         </h2>
-        <div className="flex items-center gap-3 mb-4">
+        <div className="shrink-0 flex items-center gap-3 p-4 md:p-6 md:pb-4 border-b border-border md:border-b-0">
           <SearchInput ref={inputRef} value={query} onChange={setQuery} />
           <button
             type="button"
             onClick={onClose}
             aria-label="Close search"
-            className="text-text-secondary hover:text-text-primary p-1"
+            className="w-11 h-11 inline-flex items-center justify-center rounded text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition"
           >
-            <X size={20} aria-hidden />
+            <X size={22} aria-hidden />
           </button>
         </div>
-        {error ? (
-          <p className="text-text-secondary text-sm py-4">Search temporarily unavailable.</p>
-        ) : (
-          <SearchResults results={results} query={deferredQuery} onSelect={onClose} />
-        )}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 md:pt-2">
+          {error ? (
+            <p className="text-text-secondary text-sm py-4">Search temporarily unavailable.</p>
+          ) : (
+            <SearchResults results={results} query={deferredQuery} onSelect={onClose} />
+          )}
+        </div>
       </div>
     </dialog>
   )

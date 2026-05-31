@@ -16,10 +16,10 @@ export const metadata: Metadata = {
 export default async function BlogPage() {
   const posts = await getAllPosts()
   return (
-    <section className="container mx-auto max-w-5xl px-6 py-12">
-      <header className="mb-10">
-        <h1 className="font-display text-5xl text-text-primary mb-3">Blog</h1>
-        <p className="font-sans text-lg text-text-secondary">All essays, latest first.</p>
+    <section className="container mx-auto max-w-5xl px-4 sm:px-6 py-8 sm:py-12">
+      <header className="mb-8 sm:mb-10">
+        <h1 className="font-display text-4xl sm:text-5xl text-text-primary mb-3">Blog</h1>
+        <p className="font-sans text-base sm:text-lg text-text-secondary">All essays, latest first.</p>
       </header>
       {/* Suspense wymagany dla useSearchParams w static export (output: 'export'). */}
       <Suspense fallback={<BlogListSkeleton />}>

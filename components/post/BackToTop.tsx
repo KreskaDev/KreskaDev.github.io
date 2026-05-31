@@ -44,9 +44,10 @@ export function BackToTop() {
       onClick={handleClick}
       aria-label="Back to top"
       className={[
-        // ADR-014 mobile gating — md = 768px Tailwind default.
-        'hidden md:flex',
-        'fixed bottom-6 right-6 z-40',
+        // Mobile-enabled od v5-08 (ADR-035 supersedes ADR-014). Safe-area insets
+        // protect przed iOS home indicator + Android navigation bar overlap.
+        'flex',
+        'fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-[max(1.5rem,env(safe-area-inset-right))] z-40',
         'w-12 h-12 items-center justify-center',
         'rounded-full bg-bg-primary border border-border-strong',
         'shadow-lg dark:shadow-2xl',

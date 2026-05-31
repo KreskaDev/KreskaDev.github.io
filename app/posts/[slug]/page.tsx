@@ -70,18 +70,19 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   const dateDisplay = dateFormatter.format(new Date(loaded.frontmatter.date + 'T00:00:00Z'))
 
   return (
-    <div className="container mx-auto max-w-3xl px-6 py-12">
-      <article lang={articleLang} className="prose dark:prose-invert">
+    <div className="container mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-12">
+      <ContentNavigator />
+      <article lang={articleLang} className="prose dark:prose-invert md:prose-lg">
         <header className="not-prose mb-8">
-          <h1 className="font-display text-4xl text-text-primary">
+          <h1 className="font-display text-3xl sm:text-4xl text-text-primary">
             {loaded.frontmatter.title}
           </h1>
           {loaded.frontmatter.subtitle && (
-            <p className="text-text-secondary text-xl mt-2 font-display italic">
+            <p className="text-text-secondary text-lg sm:text-xl mt-2 font-display italic">
               {loaded.frontmatter.subtitle}
             </p>
           )}
-          <div className="flex items-baseline gap-3 mt-4 text-text-tertiary text-sm font-sans">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mt-4 text-text-tertiary text-sm font-sans">
             <time dateTime={loaded.frontmatter.date}>{dateDisplay}</time>
             <span aria-hidden>·</span>
             <span>{loaded.frontmatter.author}</span>
@@ -89,7 +90,6 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         </header>
         {content}
       </article>
-      <ContentNavigator />
       <BackToTop />
     </div>
   )

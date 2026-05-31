@@ -1,7 +1,13 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Tabs, TabItem } from '../Tabs'
 import type { TabDescriptor } from '../Tabs'
+
+// jsdom NIE implementuje HTMLElement.scrollIntoView — Tabs `useEffect [active]`
+// (v5-08 scrollIntoView dla mobile scrollable tablist) by crashował testy.
+beforeEach(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn()
+})
 
 const SAMPLE_TABS: TabDescriptor[] = [
   { id: 'a', title: 'Tab A', tagline: 'Alpha' },

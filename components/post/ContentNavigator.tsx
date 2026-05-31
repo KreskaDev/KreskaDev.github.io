@@ -228,47 +228,111 @@ export function ContentNavigator() {
     target.focus({ preventScroll: true })
   }
 
+  // Mobile: pomijamy inline <details> oraz top bar gdy brak headerów (zero noise dla
+  // short post). Desktop sticky sidebar zachowuje empty-state render (parity z existing
+  // tests — `renderuje empty nav gdy article.prose nie ma headerów`).
+  const hasItems = items.length > 0
+
   return (
-    <nav
-      aria-label="Table of contents"
-      className={[
-        // Tailwind 4 arbitrary breakpoint — 1100px nie pasuje do default
-        // sm/md/lg/xl/2xl. Plan §"Layout & breakpointy" + ADR-014.
-        'hidden min-[1100px]:flex',
-        'fixed top-24 right-8',
-        'w-60 max-h-[calc(100vh-160px)]',
-        'overflow-y-auto',
-        'text-sm font-sans',
-        'border-l border-border pl-4',
-        'flex-col gap-2',
-      ].join(' ')}
-    >
-      <ol className="space-y-1 list-none p-0 m-0 flex-1">
-        {items.map(item => {
-          const isActive = item.id === activeId
-          const indent =
-            item.level === 2 ? 'pl-0' : item.level === 3 ? 'pl-3' : 'pl-6'
-          return (
-            <li key={item.id}>
-              <a
-                href={`#${item.id}`}
-                onClick={handleClick}
-                aria-current={isActive ? 'location' : undefined}
-                className={[
-                  'block py-1 transition-colors',
-                  indent,
-                  isActive
-                    ? 'text-burgundy font-medium border-l-2 border-burgundy -ml-px'
-                    : 'text-text-secondary hover:text-text-primary border-l-2 border-transparent -ml-px',
-                ].join(' ')}
-              >
-                {item.text}
-              </a>
-            </li>
-          )
-        })}
-      </ol>
-      <ScrollProgress percent={scrollPercent} reducedMotion={reducedMotion} />
-    </nav>
+    <>
+      {/* Mobile thin top bar ScrollProgress — ambient signal pod TopNav (z-40 < dialog z-50+).
+          h-0.5 = 2px niewidoczna gdy 0%, nie wpływa na layout. */}
+      {hasItems && (
+        <div
+          className="min-[1100px]:hidden fixed top-16 left-0 right-0 h-0.5 z-40 bg-border pointer-events-none"
+          aria-hidden
+        >
+          <div
+            className={[
+              'h-full bg-burgundy',
+              reducedMotion ? '' : 'transition-[width] duration-100 ease-out',
+            ].join(' ')}
+            style={{ width: `${scrollPercent}%` }}
+          />
+        </div>
+      )}
+
+      {/* Mobile inline <details> TOC — pre-prose pozycja, collapsed default.
+          Native a11y `aria-expanded` przez <summary>; zero JS overhead. */}
+      {hasItems && (
+        <details
+          aria-label="Mobile table of contents"
+          className="min-[1100px]:hidden not-prose my-6 border border-border rounded-lg bg-bg-secondary"
+        >
+          <summary className="cursor-pointer list-none px-4 py-3 font-sans text-sm font-medium text-text-primary flex items-center justify-between min-h-11">
+            <span>Spis treści</span>
+            <span aria-hidden className="text-text-tertiary">▾</span>
+          </summary>
+          <ol className="list-none p-0 m-0 px-4 pb-4 space-y-1 text-sm font-sans">
+            {items.map(item => {
+              const isActive = item.id === activeId
+              const indent =
+                item.level === 2 ? 'pl-0' : item.level === 3 ? 'pl-3' : 'pl-6'
+              return (
+                <li key={item.id}>
+                  <a
+                    href={`#${item.id}`}
+                    onClick={handleClick}
+                    aria-current={isActive ? 'location' : undefined}
+                    className={[
+                      'block py-2 transition-colors min-h-11',
+                      indent,
+                      isActive
+                        ? 'text-burgundy font-medium'
+                        : 'text-text-secondary hover:text-text-primary',
+                    ].join(' ')}
+                  >
+                    {item.text}
+                  </a>
+                </li>
+              )
+            })}
+          </ol>
+        </details>
+      )}
+
+      {/* Desktop sticky sidebar — existing rendering, niezmienione semantycznie. */}
+      <nav
+        aria-label="Table of contents"
+        className={[
+          // Tailwind 4 arbitrary breakpoint — 1100px nie pasuje do default
+          // sm/md/lg/xl/2xl. Plan §"Layout & breakpointy" + ADR-014.
+          'hidden min-[1100px]:flex',
+          'fixed top-24 right-8',
+          'w-60 max-h-[calc(100vh-160px)]',
+          'overflow-y-auto',
+          'text-sm font-sans',
+          'border-l border-border pl-4',
+          'flex-col gap-2',
+        ].join(' ')}
+      >
+        <ol className="space-y-1 list-none p-0 m-0 flex-1">
+          {items.map(item => {
+            const isActive = item.id === activeId
+            const indent =
+              item.level === 2 ? 'pl-0' : item.level === 3 ? 'pl-3' : 'pl-6'
+            return (
+              <li key={item.id}>
+                <a
+                  href={`#${item.id}`}
+                  onClick={handleClick}
+                  aria-current={isActive ? 'location' : undefined}
+                  className={[
+                    'block py-1 transition-colors',
+                    indent,
+                    isActive
+                      ? 'text-burgundy font-medium border-l-2 border-burgundy -ml-px'
+                      : 'text-text-secondary hover:text-text-primary border-l-2 border-transparent -ml-px',
+                  ].join(' ')}
+                >
+                  {item.text}
+                </a>
+              </li>
+            )
+          })}
+        </ol>
+        <ScrollProgress percent={scrollPercent} reducedMotion={reducedMotion} />
+      </nav>
+    </>
   )
 }

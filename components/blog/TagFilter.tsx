@@ -7,8 +7,10 @@ interface TagFilterProps {
 }
 
 export function TagFilter({ uniqueTags, activeTag }: TagFilterProps) {
+  // Compact tag link pattern — świadome ~32px tap target (poniżej WCAG AAA 44px)
+  // per ADR-035 Consequences exception. Bumpowanie do 44px łamie density list.
   const chipBase =
-    'px-3 py-1 rounded text-sm font-sans focus-visible:ring-2 focus-visible:ring-burgundy focus-visible:outline-none'
+    'px-3 py-2 sm:py-1 rounded text-sm font-sans focus-visible:ring-2 focus-visible:ring-burgundy focus-visible:outline-none'
   const chipActive = 'bg-burgundy text-bg-primary'
   const chipPassive =
     'bg-burgundy-soft text-burgundy hover:bg-burgundy hover:text-bg-primary transition-colors'
