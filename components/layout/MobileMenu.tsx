@@ -2,6 +2,7 @@
 import { useEffect, useRef, type RefObject } from 'react'
 import Link from 'next/link'
 import { X } from 'lucide-react'
+import { PaletteToggle } from '@/components/ui/PaletteToggle'
 
 interface MobileMenuLink {
   href: string
@@ -80,7 +81,7 @@ export function MobileMenu({ isOpen, onClose, triggerRef, links, pathname }: Mob
                 className={[
                   'min-h-12 flex items-center px-3 rounded text-base',
                   active
-                    ? 'text-burgundy bg-burgundy-soft/30 font-medium'
+                    ? 'text-accent bg-accent-soft font-medium'
                     : 'text-text-primary hover:bg-surface-elevated',
                 ].join(' ')}
               >
@@ -88,6 +89,16 @@ export function MobileMenu({ isOpen, onClose, triggerRef, links, pathname }: Mob
               </Link>
             )
           })}
+          {/* Palette toggle — zob. TopNav.tsx PaletteToggle hidden md:inline-flex
+              (Krok 14). Mobile drawer entry per ADR-041 dual-palette ergonomics. */}
+          <div className="mt-6 pt-6 border-t border-border">
+            <p className="text-xs font-mono uppercase tracking-wider text-text-tertiary mb-3 px-3">
+              Palette
+            </p>
+            <div className="px-3">
+              <PaletteToggle />
+            </div>
+          </div>
         </nav>
       </div>
     </dialog>

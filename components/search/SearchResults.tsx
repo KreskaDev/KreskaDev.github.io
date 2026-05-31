@@ -24,7 +24,7 @@ export function SearchResults({ results, query, onSelect }: Props) {
             onClick={onSelect}
             className="block p-3 rounded hover:bg-surface-elevated border border-transparent hover:border-border transition"
           >
-            <h3 className="font-display text-lg text-text-primary">{r.title}</h3>
+            <h3 className="font-sans font-semibold text-lg text-text-primary">{r.title}</h3>
             <p className="text-text-secondary text-sm mt-1 line-clamp-2">{r.summary}</p>
             {r.tags.length > 0 && (
               <p className="text-text-tertiary text-xs mt-1 font-mono">

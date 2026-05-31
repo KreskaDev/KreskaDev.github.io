@@ -26,7 +26,7 @@ export function ScrollProgress({ percent, reducedMotion }: ScrollProgressProps) 
       >
         <div
           className={[
-            'absolute inset-y-0 left-0 bg-burgundy',
+            'absolute inset-y-0 left-0 bg-accent',
             reducedMotion ? '' : 'transition-[width] duration-100 ease-out',
           ].join(' ')}
           style={{ width: `${percent}%` }}

@@ -161,9 +161,9 @@ export function Tabs({ tabs, children, hashSync = false, ariaLabel }: TabsProps)
                 onClick={() => activate(t.id)}
                 onKeyDown={e => handleKeyDown(e, idx)}
                 className={
-                  'shrink-0 sm:shrink snap-start px-4 py-2 text-left text-sm transition-colors rounded-t -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burgundy ' +
+                  'shrink-0 sm:shrink snap-start px-4 py-2 text-left text-sm transition-colors rounded-t -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ' +
                   (isActive
-                    ? 'text-text-primary border-b-2 border-burgundy font-semibold'
+                    ? 'text-text-primary border-b-2 border-accent font-semibold'
                     : 'text-text-secondary border-b-2 border-transparent hover:text-text-primary')
                 }
               >

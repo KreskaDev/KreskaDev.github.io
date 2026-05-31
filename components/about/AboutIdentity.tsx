@@ -63,7 +63,7 @@ export function AboutIdentity({
       </div>
 
       <div className="flex flex-col gap-1">
-        <span className="font-display text-lg text-text-primary">
+        <span className="font-sans font-semibold text-lg text-text-primary">
           {city}, {country}
         </span>
         <span className="font-mono text-xs text-text-tertiary tracking-wide">
@@ -77,7 +77,7 @@ export function AboutIdentity({
             href={github}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 py-2 -my-2 text-text-secondary hover:text-burgundy transition font-sans text-sm"
+            className="flex items-center gap-3 py-2 -my-2 text-text-secondary hover:text-accent transition font-sans text-sm"
           >
             <BrandIcon d={GITHUB_PATH} />
             <span>github.com/{github.replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '')}</span>
@@ -88,7 +88,7 @@ export function AboutIdentity({
             href={linkedin}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 py-2 -my-2 text-text-secondary hover:text-burgundy transition font-sans text-sm"
+            className="flex items-center gap-3 py-2 -my-2 text-text-secondary hover:text-accent transition font-sans text-sm"
           >
             <BrandIcon d={LINKEDIN_PATH} />
             <span>LinkedIn</span>
@@ -97,7 +97,7 @@ export function AboutIdentity({
         <li>
           <a
             href={`mailto:${email}`}
-            className="flex items-center gap-3 py-2 -my-2 text-text-secondary hover:text-burgundy transition font-sans text-sm"
+            className="flex items-center gap-3 py-2 -my-2 text-text-secondary hover:text-accent transition font-sans text-sm"
           >
             <BrandIcon d={MAIL_PATH} />
             <span>{email}</span>

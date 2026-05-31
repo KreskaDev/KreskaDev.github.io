@@ -42,26 +42,47 @@ import type { PresetId } from './presets'
 
 const MAX_CLINICS = 7
 
-// Editorial palette hex — verified z prod/app/globals.css :root + .dark.
-// SVG `stroke` attribute NIE supportuje CSS var reliably cross-browser → inline hex.
-const COLORS = {
-  light: {
-    naive: '#6B6B6B',      // text-secondary
-    real: '#8B2635',       // burgundy
-    conflict: '#3B6E47',   // green
-    grid: '#E5E0D8',       // border
-    text: '#1A1A1A',       // text-primary
-    tooltipBg: '#F2EFE8',  // bg-secondary
-  },
-  dark: {
-    naive: '#B5B0A6',
-    real: '#D97785',
-    conflict: '#7BA887',
-    grid: '#383330',
-    text: '#F5F2EC',
-    tooltipBg: '#221F1C',
-  },
-} as const
+// SVG `stroke` attribute NIE supportuje CSS var reliably cross-browser
+// → resolve do hex w runtime przez getComputedStyle (reactive na palette/mode flip).
+// Per ADR-039 + ADR-041 dual-palette: tokens flip between 4 palette combos.
+// SSR fallback = dark-cool tokens (per plan D3 v2: matches defaultTheme;
+// light users dostają 1-frame dark→light flip, akceptowalne minor cost).
+// Composite resolvedTheme support: z `enableSystem={false}` + composite themes
+// `resolvedTheme` zwraca literal value (np. `'dark-cool'`). useEffect dep
+// `[mounted, resolvedTheme]` fires na każdy palette/mode flip. Pre-v5-10
+// `COLORS[resolvedTheme === 'dark' ? 'dark' : 'light']` był stealth bug
+// w composite mode (always failed equality → picked light tokens w dark).
+type ChartColors = {
+  naive: string
+  real: string
+  conflict: string
+  grid: string
+  text: string
+  tooltipBg: string
+}
+
+const SSR_FALLBACK_COLORS: ChartColors = {
+  naive: '#B5B0A6',     // text-secondary dark-cool
+  real: '#5290BD',      // accent dark-cool
+  conflict: '#7BA887',  // green dark-cool
+  grid: '#383330',      // border dark-cool
+  text: '#E8E4DC',      // text-primary dark-cool
+  tooltipBg: '#222222', // bg-secondary dark-cool
+}
+
+function readChartColors(): ChartColors {
+  const style = getComputedStyle(document.documentElement)
+  const read = (varName: string, fallback: string) =>
+    style.getPropertyValue(varName).trim() || fallback
+  return {
+    naive: read('--color-text-secondary', SSR_FALLBACK_COLORS.naive),
+    real: read('--color-accent', SSR_FALLBACK_COLORS.real),
+    conflict: read('--color-green', SSR_FALLBACK_COLORS.conflict),
+    grid: read('--color-border', SSR_FALLBACK_COLORS.grid),
+    text: read('--color-text-primary', SSR_FALLBACK_COLORS.text),
+    tooltipBg: read('--color-bg-secondary', SSR_FALLBACK_COLORS.tooltipBg),
+  }
+}
 
 // Ranges suwaków — port z analyzer.js linia 35-43.
 const RANGES = {
@@ -238,7 +259,7 @@ interface HeaderProps {
 function Header({ presetName, view, editable }: HeaderProps) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-2 mb-4 pb-3 border-b border-border">
-      <div className="font-display text-lg text-text-primary">{presetName}</div>
+      <div className="font-sans font-semibold text-lg text-text-primary">{presetName}</div>
       <div className="text-text-tertiary text-xs font-mono">
         view: {view}{editable ? '' : ' · read-only'}
       </div>
@@ -282,7 +303,7 @@ function ResultDisplay({
         <div>
           <div className="text-text-tertiary text-xs uppercase tracking-wider font-mono">Naiwny (advertised)</div>
           <div
-            className="text-text-primary text-2xl font-display mt-1"
+            className="text-text-primary text-2xl font-sans font-semibold mt-1"
             aria-live="polite"
           >
             {formatPercent(pNaive)}
@@ -292,7 +313,7 @@ function ResultDisplay({
         <div>
           <div className="text-text-tertiary text-xs uppercase tracking-wider font-mono">Realny (pod presją)</div>
           <div
-            className="text-burgundy text-2xl font-display mt-1"
+            className="text-accent text-2xl font-sans font-semibold mt-1"
             aria-live="polite"
           >
             {formatPercent(pReal)}
@@ -360,7 +381,7 @@ function SliderRow({ name, value, onChange }: SliderRowProps) {
     // py-2 -my-2 extends tap surface bez wpływu na visual layout.
     <div className="py-2 -my-2">
       <div className="flex items-center gap-3">
-        <label className="text-text-primary text-sm font-display w-8 shrink-0" htmlFor={`slider-${name}`}>
+        <label className="text-text-primary text-sm font-mono w-8 shrink-0" htmlFor={`slider-${name}`}>
           {label?.symbol ?? name}
         </label>
         <input
@@ -373,7 +394,7 @@ function SliderRow({ name, value, onChange }: SliderRowProps) {
           onChange={e => onChange(Number(e.target.value))}
           // accent-* Tailwind 4 utility może NIE być auto-generated z @theme tokens
           // (utility families filter); inline style gwarantuje brand accent reliably.
-          style={{ accentColor: 'var(--color-burgundy)' }}
+          style={{ accentColor: 'var(--color-accent)' }}
           className="flex-1"
         />
         <span className="font-mono text-sm text-text-primary w-12 text-right tabular-nums">
@@ -413,7 +434,7 @@ function ModeToggle({ mode, onLight, onAdvanced }: ModeToggleProps) {
       <button
         type="button"
         onClick={handleToggle}
-        className="text-sm font-sans text-burgundy hover:underline focus-visible:ring-2 focus-visible:ring-burgundy focus-visible:outline-none rounded p-2 -m-2"
+        className="text-sm font-sans text-accent hover:underline focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none rounded p-2 -m-2"
       >
         {mode === 'light' ? 'Tryb zaawansowany →' : '← Tryb lekki'}
       </button>
@@ -465,7 +486,7 @@ function ClinicsSection({
 
   return (
     <div className="mt-6 pt-4 border-t border-border">
-      <h4 className="font-display text-sm text-text-primary mb-3">
+      <h4 className="font-sans font-semibold text-sm text-text-primary mb-3">
         Sekwencja klinik (do {MAX_CLINICS})
       </h4>
       {clinics.length === 0 && (
@@ -518,7 +539,7 @@ function ClinicsSection({
                     <button
                       type="button"
                       onClick={() => removeClinic(i)}
-                      className="p-2 -m-2 text-text-tertiary hover:text-burgundy text-xs font-sans min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
+                      className="p-2 -m-2 text-text-tertiary hover:text-accent text-xs font-sans min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center"
                       aria-label={`Usuń klinikę ${i + 1}`}
                     >
                       ×
@@ -534,7 +555,7 @@ function ClinicsSection({
         <button
           type="button"
           onClick={addClinic}
-          className="mt-3 text-sm font-sans text-burgundy hover:underline"
+          className="mt-3 text-sm font-sans text-accent hover:underline"
         >
           + dodaj klinikę
         </button>
@@ -553,6 +574,7 @@ interface ChartViewProps {
 
 function ChartView({ pi, s0, f0, clinics }: ChartViewProps) {
   const [mounted, setMounted] = useState(false)
+  const [colors, setColors] = useState<ChartColors>(SSR_FALLBACK_COLORS)
   const { resolvedTheme } = useTheme()
   // Canonical next-themes mount-safe pattern (z ich docs) — bez tego SSR/CSR mismatch
   // bo resolvedTheme jest undefined w SSR. Reguła ESLint react-hooks/set-state-in-effect
@@ -560,6 +582,19 @@ function ChartView({ pi, s0, f0, clinics }: ChartViewProps) {
   // nie cascading. Spójność z v5-02 ThemeToggle deviation.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), [])
+
+  // Reactive read CSS vars — fires na każdy palette/mode flip (4 palette combos).
+  // resolvedTheme zwraca composite literal ('dark-cool') z `enableSystem={false}`,
+  // więc dep catches AND theme toggle AND palette toggle (ADR-041 dual-palette).
+  // setColors tutaj jest reakcją na external state change (DOM class flip przez
+  // next-themes — NIE cascade z innego React setStat'a). Spójność z linią 562
+  // precedensem. eslint-disable bezpośrednio przed setColors bo eslint-disable-next-line
+  // przed useEffect aplikuje tylko do nagłówka, nie do body callbacku.
+  useEffect(() => {
+    if (!mounted) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setColors(readChartColors())
+  }, [mounted, resolvedTheme])
 
   // Trajektorie — derived per render. useMemo redukuje re-compute przy nie-trajectory state change.
   const realTraj = useMemo(() => sequentialUpdate(pi, clinics), [pi, clinics])
@@ -574,8 +609,6 @@ function ChartView({ pi, s0, f0, clinics }: ChartViewProps) {
     // CSS-only mobile (h-60 = 240px) → desktop (sm:h-80 = 320px) per ADR-035.
     return <div className="h-60 sm:h-80 mt-6" aria-hidden />
   }
-
-  const colors = COLORS[resolvedTheme === 'dark' ? 'dark' : 'light']
 
   if (clinics.length === 0) {
     return (

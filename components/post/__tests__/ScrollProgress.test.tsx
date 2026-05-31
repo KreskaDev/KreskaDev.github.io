@@ -14,8 +14,8 @@ describe('ScrollProgress', () => {
 
   it('inner fill div ma width style = `${percent}%`', () => {
     const { container } = render(<ScrollProgress percent={73} reducedMotion={false} />)
-    // Inner fill — `bg-burgundy` jest unique selector w tym komponencie.
-    const fill = container.querySelector('.bg-burgundy') as HTMLElement | null
+    // Inner fill — `bg-accent` jest unique selector w tym komponencie (v5-10 swap).
+    const fill = container.querySelector('.bg-accent') as HTMLElement | null
     expect(fill).not.toBeNull()
     expect(fill!.style.width).toBe('73%')
     expect(fill!.className).toContain('transition-[width]')
@@ -23,7 +23,7 @@ describe('ScrollProgress', () => {
 
   it('reducedMotion=true — pomija transition-[width] na fill', () => {
     const { container } = render(<ScrollProgress percent={50} reducedMotion={true} />)
-    const fill = container.querySelector('.bg-burgundy') as HTMLElement | null
+    const fill = container.querySelector('.bg-accent') as HTMLElement | null
     expect(fill).not.toBeNull()
     expect(fill!.className).not.toContain('transition-[width]')
   })

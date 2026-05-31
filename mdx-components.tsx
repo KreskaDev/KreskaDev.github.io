@@ -6,9 +6,20 @@ import { AboutIdentity } from '@/components/about/AboutIdentity'
 // rehype-slug + rehype-autolink-headings dodają id + anchor link icons w pipeline,
 // tutaj tylko styling przez className.
 const mdxComponents: MDXComponents = {
+  // H1 = brand moment per ADR-038 (Instrument Serif). MDX-rendered `#` na subpage'ach
+  // (math.mdx etc.) wymaga explicit font-display bo prose-headings:font-display dropped
+  // z Prose wrapper. PostPage header H1 jest poza prose (not-prose) z własnym className.
+  h1: ({ children, ...props }) => (
+    <h1
+      className="font-display text-3xl sm:text-4xl text-text-primary mt-0 mb-6"
+      {...props}
+    >
+      {children}
+    </h1>
+  ),
   h2: ({ children, ...props }) => (
     <h2
-      className="font-display text-2xl md:text-3xl text-text-primary mt-12 mb-4"
+      className="font-sans font-semibold text-2xl md:text-3xl text-text-primary mt-12 mb-4"
       {...props}
     >
       {children}
@@ -16,7 +27,7 @@ const mdxComponents: MDXComponents = {
   ),
   h3: ({ children, ...props }) => (
     <h3
-      className="font-display text-xl md:text-2xl text-text-primary mt-8 mb-3"
+      className="font-sans font-semibold text-xl md:text-2xl text-text-primary mt-8 mb-3"
       {...props}
     >
       {children}
@@ -24,7 +35,7 @@ const mdxComponents: MDXComponents = {
   ),
   h4: ({ children, ...props }) => (
     <h4
-      className="font-display text-xl text-text-primary mt-6 mb-2"
+      className="font-sans font-semibold text-xl text-text-primary mt-6 mb-2"
       {...props}
     >
       {children}
@@ -51,7 +62,7 @@ const mdxComponents: MDXComponents = {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-burgundy underline underline-offset-2"
+          className="text-accent underline underline-offset-2 hover:text-accent-hover"
           {...props}
         >
           {children} <span aria-hidden>↗</span>
@@ -59,7 +70,7 @@ const mdxComponents: MDXComponents = {
       )
     }
     return (
-      <Link href={href} className="text-burgundy underline underline-offset-2">
+      <Link href={href} className="text-accent underline underline-offset-2 hover:text-accent-hover">
         {children}
       </Link>
     )
@@ -84,7 +95,7 @@ const mdxComponents: MDXComponents = {
   // Używany na stronach gdzie część MDX leci jako visual layout, a część
   // jako markdown prose (np. /about/ — identity card + prose obok).
   Prose: ({ children }: { children: ReactNode }) => (
-    <div className="prose dark:prose-invert prose-headings:font-display lg:flex-1 min-w-0">
+    <div className="prose dark:prose-invert lg:flex-1 min-w-0">
       {children}
     </div>
   ),

@@ -52,7 +52,7 @@ export function BackToTop() {
         'rounded-full bg-bg-primary border border-border-strong',
         'shadow-lg dark:shadow-2xl',
         'hover:bg-bg-secondary',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burgundy',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
         reducedMotion ? '' : 'transition-opacity duration-200',
         visible ? 'opacity-100' : 'opacity-0 pointer-events-none',
       ].join(' ')}

@@ -77,16 +77,26 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           <h1 className="font-display text-3xl sm:text-4xl text-text-primary">
             {loaded.frontmatter.title}
           </h1>
-          {loaded.frontmatter.subtitle && (
-            <p className="text-text-secondary text-lg sm:text-xl mt-2 font-display italic">
-              {loaded.frontmatter.subtitle}
-            </p>
-          )}
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mt-4 text-text-tertiary text-sm font-sans">
             <time dateTime={loaded.frontmatter.date}>{dateDisplay}</time>
             <span aria-hidden>·</span>
             <span>{loaded.frontmatter.author}</span>
           </div>
+          {loaded.frontmatter.tags && loaded.frontmatter.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {loaded.frontmatter.tags.map(tag => (
+                <span
+                  key={tag}
+                  className="bg-accent-soft text-accent text-xs px-3 py-0.5 rounded-full font-sans"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          {loaded.frontmatter.subtitle && (
+            <p className="lead mt-6">{loaded.frontmatter.subtitle}</p>
+          )}
         </header>
         {content}
       </article>

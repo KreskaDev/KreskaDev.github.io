@@ -7,7 +7,7 @@ export function Footer() {
           href="https://github.com/KreskaDev/KreskaDev.github.io"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-burgundy underline underline-offset-2"
+          className="text-accent underline underline-offset-2 hover:text-accent-hover"
         >
           Source on GitHub
         </a>

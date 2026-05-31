@@ -8,7 +8,7 @@ function AllPostsButton() {
     <div className="mt-12 text-center">
       <Link
         href="/blog/"
-        className="inline-block px-6 py-3 border border-burgundy text-burgundy rounded hover:bg-burgundy hover:text-bg-primary transition font-sans"
+        className="inline-block px-6 py-3 border border-accent text-accent rounded hover:bg-accent hover:text-bg-primary transition font-sans"
       >
         All posts →
       </Link>
@@ -19,7 +19,7 @@ function AllPostsButton() {
 export function LatestPosts({ allPosts }: { allPosts: PostMeta[] }) {
   return (
     <section className="container mx-auto max-w-5xl px-4 sm:px-6 pb-16 sm:pb-24">
-      <h2 className="font-display text-3xl text-text-primary mb-8">Latest posts</h2>
+      <h2 className="font-sans font-semibold text-3xl text-text-primary mb-8">Latest posts</h2>
       <PostList
         posts={allPosts}
         emptyState={
