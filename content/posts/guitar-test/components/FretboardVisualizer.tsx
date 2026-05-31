@@ -115,10 +115,24 @@ function SelectedOverlay({
       // (parent inner div), base SVG staje się direct child, overlay top-0 = match.
       className="absolute top-0 left-0 block pointer-events-none"
     >
-      {/* Hit areas — 48×48 invisible rects, pointer-events auto. data-overlay-hit
-          marker distinguishes overlay rects od base's identyczne hit-rects (base też
-          renderuje 48×48 transparent rects per nuta) — selektor `rect[data-overlay-hit]`
-          targetuje wyłącznie wrapper's clicks w testach. */}
+      {/* Hit areas — 48×STRING_HEIGHT (48×28) invisible rects, pointer-events auto.
+          Height = STRING_HEIGHT exactly: eliminuje 20px vertical overlap zone między
+          hit-rectami sąsiadujących strun (oryginalne 48×48 dawało 20px overlap, w którym
+          later-rendered rect w DOM wygrywał click → user click na visible "D" circle
+          na string 1 fret 5 mógł trafić w dolne pół-circle gdzie A2 hit-rect z string
+          0 fret 5 też pokrywał → A2 wins per render order → wrong-string sound).
+          Tap target 48×28: width 48 OK (FRET_WIDTH=56 → 8px gap między adjacent fret
+          hit-rects, no horizontal overlap), height 28 < 44px hard rule #6 mobile spec
+          BUT compounded by immutable base STRING_HEIGHT=28 (v5-09 shipped, plan §3.1
+          hard constraint — base Fretboard NIE może być modyfikowany; vertical tap target
+          nie może być większy niż fizyczny string spacing bez wprowadzania overlap).
+          Precedent: TagFilter chips ~32px (CLAUDE.md hard rule #6 parenthetical exception
+          dla compact patterns). Width 48 zostaje dla horizontal precision per fret.
+          Regression guard: __tests__ "hit-rect vertical no-overlap invariant" asserts
+          adjacent string hit-rects mają non-overlapping y ranges — łapie regression
+          jeśli ktoś zmieni height z powrotem na 48.
+          data-overlay-hit marker distinguishes overlay rects od base's identyczne 48×48
+          hit-rects — selektor `rect[data-overlay-hit]` targetuje wyłącznie wrapper. */}
       {positions.map((pos, idx) => {
         const center = noteCenter(pos)
         const pitched = noteAtPosition(tuning, pos)
@@ -126,8 +140,8 @@ function SelectedOverlay({
           <rect
             key={`hit-${idx}-${pos.string}-${pos.fret}`}
             data-overlay-hit=""
-            x={center.x - 24} y={center.y - 24}
-            width={48} height={48}
+            x={center.x - 24} y={center.y - STRING_HEIGHT / 2}
+            width={48} height={STRING_HEIGHT}
             fill="transparent"
             className="pointer-events-auto cursor-pointer"
             onClick={() => onNoteClick(pos, pitched)}

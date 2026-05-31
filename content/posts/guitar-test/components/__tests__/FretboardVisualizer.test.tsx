@@ -159,7 +159,35 @@ describe('FretboardVisualizer — enableAudio guard', () => {
   })
 })
 
-// === Test 7: id propagation (data attribute) ===
+// === Test 8: hit-rect height = STRING_HEIGHT (regression: wrong-string click bug) ===
+// Pre-fix overlay hit-rects były 48×48 ALE strings są w pionie tylko STRING_HEIGHT=28
+// od siebie → 20px vertical overlap między adjacent string hit-rects, DOM order
+// determined winner → wrong-string audio. Fix: height = STRING_HEIGHT exactly.
+// Regression guard: jeśli ktoś w przyszłości zmieni height z powrotem na 48 (lub inny
+// wymiar > STRING_HEIGHT), invariant "adjacent string hit-rects non-overlapping y"
+// pęka i ten test wyłapuje regression.
+describe('FretboardVisualizer — hit-rect vertical no-overlap invariant', () => {
+  it('adjacent string hit-rects at same fret mają non-overlapping y ranges', () => {
+    const { container } = renderWithTheme(
+      <FretboardVisualizer
+        id="adjacency-test"
+        notes={[{ string: 0, fret: 5 }, { string: 1, fret: 5 }]}
+      />,
+    )
+    const hits = container.querySelectorAll(OVERLAY_HIT_SELECTOR)
+    expect(hits.length).toBe(2)
+    const ranges = Array.from(hits).map(h => ({
+      top: parseFloat(h.getAttribute('y')!),
+      bottom: parseFloat(h.getAttribute('y')!) + parseFloat(h.getAttribute('height')!),
+    })).sort((a, b) => a.top - b.top)
+    // ranges[0] = upper string (smaller y); ranges[1] = lower string (larger y).
+    // Invariant: bottom of upper ≤ top of lower → no overlap → click w pobliżu jednej
+    // struny NIE może być przechwycony przez hit-rect sąsiedniej.
+    expect(ranges[0]!.bottom).toBeLessThanOrEqual(ranges[1]!.top)
+  })
+})
+
+// === Test 9: id propagation (data attribute) ===
 describe('FretboardVisualizer — id propagation', () => {
   it('renders data-fretboard-visualizer-id={id}', () => {
     const { container } = renderWithTheme(
