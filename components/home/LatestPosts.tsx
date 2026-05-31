@@ -8,7 +8,6 @@ function AllPostsButton() {
     <div className="mt-12 text-center">
       <Link
         href="/blog/"
-        prefetch={false}
         className="inline-block px-6 py-3 border border-accent text-accent rounded hover:bg-accent hover:text-bg-primary transition font-sans"
       >
         All posts →

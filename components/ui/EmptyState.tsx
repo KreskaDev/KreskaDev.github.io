@@ -12,7 +12,6 @@ export function EmptyState({ message, cta }: EmptyStateProps) {
       {cta && (
         <Link
           href={cta.href}
-          prefetch={false}
           className="inline-block px-4 py-2 text-accent underline underline-offset-4 hover:opacity-80 transition font-sans"
         >
           {cta.label}
