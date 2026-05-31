@@ -21,6 +21,7 @@ export function SearchResults({ results, query, onSelect }: Props) {
         <li key={r.slug}>
           <Link
             href={`/posts/${r.slug}/`}
+            prefetch={false}
             onClick={onSelect}
             className="block p-3 rounded hover:bg-surface-elevated border border-transparent hover:border-border transition"
           >
