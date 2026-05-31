@@ -183,7 +183,7 @@ h4:hover .heading-anchor { opacity: 1; }
   color: var(--color-text-primary);
   padding-left: 16px;
   border-left: 2px solid var(--color-accent);
-  margin: 0 0 32px;
+  margin-bottom: 32px;
 }
 
 /* === Prose overrides per task spec — strong color BUG fix + code styling. ===

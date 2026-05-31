@@ -310,7 +310,7 @@ export function ContentNavigator() {
           {items.map(item => {
             const isActive = item.id === activeId
             const indent =
-              item.level === 2 ? 'pl-0' : item.level === 3 ? 'pl-3' : 'pl-6'
+              item.level === 2 ? 'pl-3' : item.level === 3 ? 'pl-6' : 'pl-9'
             return (
               <li key={item.id}>
                 <a
