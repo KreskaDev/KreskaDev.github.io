@@ -52,6 +52,9 @@ const FRET_MARKER_DOTS = new Set([3, 5, 7, 9, 15, 17, 19, 21])
 const FRET_MARKER_DOUBLE = new Set([12, 24])
 
 export default function Fretboard(props: FretboardProps) {
+  // D11.4 — id is REQUIRED prop. v5-13 może dodać runtime duplicate check
+  // (URL hash collision). W v5-09 author responsibility — React `key` warning
+  // powie jeśli duplicate w MDX.
   const {
     id,
     tuning = STANDARD_TUNING,
