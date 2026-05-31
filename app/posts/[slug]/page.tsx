@@ -95,7 +95,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
             </div>
           )}
           {loaded.frontmatter.subtitle && (
-            <p className="lead mt-6">{loaded.frontmatter.subtitle}</p>
+            <p className="lead mt-10">{loaded.frontmatter.subtitle}</p>
           )}
         </header>
         {content}

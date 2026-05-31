@@ -57,9 +57,9 @@ describe('ContentNavigator', () => {
     const beta = within(nav).getByText('Beta').closest('a')
     expect(alpha?.getAttribute('href')).toBe('#alpha')
     expect(beta?.getAttribute('href')).toBe('#beta')
-    // h2 = pl-0, h3 = pl-3, h4 = pl-6
-    expect(alpha?.className).toContain('pl-0')
-    expect(beta?.className).toContain('pl-3')
+    // h2 = pl-3, h3 = pl-6, h4 = pl-9 (gap między border-left active a tekstem)
+    expect(alpha?.className).toContain('pl-3')
+    expect(beta?.className).toContain('pl-6')
   })
 
   it('fallback id generator slugify dla heading bez id', () => {
