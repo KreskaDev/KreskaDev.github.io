@@ -1,0 +1,30 @@
+---
+title: "Guitar Fretboard — widget sandbox"
+subtitle: "Test post dla iteracji v5-09..v5-13 (rozwój komponentu fretboard)"
+date: "2026-05-31"
+author: "KreskaDev"
+slug: "guitar-test"
+summary: "Test post dla interaktywnego widgetu Guitar Fretboard — wizualizacji nut i akordów na gryfie gitary. Strona robocza w trakcie rozwoju komponentu."
+tags: ["meta", "sandbox"]
+language: "pl"
+---
+
+# Guitar Fretboard — widget sandbox
+
+Strona robocza dla iteracji v5-09..v5-13. W tej fazie (v5-09) testujemy bazowy
+read-only render — kształt akordu C major na standardowym strojeniu (open C,
+voicing x32010). Struny 5..1 = positions [fret 3, 2, 0, 1, 0]; struna 0 (low E)
+jest tłumiona w tym voicingu — v5-09 read-only nie renderuje muted strings,
+więc po prostu nie pojawia się w `notes` array. v5-11 ChordAnalyzer dodaje
+muted rendering jako × przed nutem.
+
+<Fretboard
+  id="demo-c-major-shape"
+  notes={[
+    { string: 1, fret: 3 },
+    { string: 2, fret: 2 },
+    { string: 3, fret: 0 },
+    { string: 4, fret: 1 },
+    { string: 5, fret: 0 },
+  ]}
+/>
