@@ -98,3 +98,67 @@ krawędzi przed nutem) + trzy aktywne nuty A-E-A (= root A + 5th E + root A oct)
 Algorithm rozpoznaje "A 5" (ChordType '5' power chord, R + 5 bez tercji).
 
 <ChordAnalyzer id="a5-power" shape={[null, null, null, 2, 5, 5]} />
+
+## v5-13 UC5 — Preset shape przez `chord` prop
+
+ChordAnalyzer ma **dwa wejścia** — `shape` (explicit voicing, jak w UC1-4) i `chord`
+(preset load z internal `chord-shapes.ts` library — 13 curated voicings: 5 open major,
+3 open minor, barre F, 4 jazz seventh). Tu ładujemy A minor preset przez `chord` prop —
+wrapper rozwiązuje `{root:'A',type:'min'}` do shape `x02210` z biblioteki. Identyczny
+efekt jak gdyby autor zapisał `shape={[null,0,2,2,1,0]}`, ale czytelniejszy MDX.
+
+<ChordAnalyzer id="preset-a-min" chord={{ root: 'A', type: 'min' }} />
+
+## v5-13 UC6 — Jazz cadence ii-V-I w C-dur (Dm7 → G7 → Cmaj7)
+
+Klasyczna kadencja jazzowa — minor seventh na drugim stopniu, dominant seventh na piątym,
+major seventh na pierwszym. Wszystkie trzy akordy mają charakterystyczne brzmienia czwórek
+(tetrad): m7 (smutny/relaxed), 7 (bluesowy tension), maj7 (jasny/resolved). Każdy widget
+wyświetla degrees breakdown — łatwo prześledzić jak `m7` i `7` różnią się tercją (m3 vs 3),
+a `maj7` od `7` siódemką (7 vs m7).
+
+<div className="space-y-6">
+  <ChordAnalyzer id="jazz-dm7" chord={{ root: 'D', type: 'min7' }} />
+  <ChordAnalyzer id="jazz-g7" chord={{ root: 'G', type: '7' }} />
+  <ChordAnalyzer id="jazz-cmaj7" shape={[null, 3, 2, 0, 0, 0]} />
+</div>
+
+## v5-13 UC7 — Rodzina C (extension chain)
+
+Ten sam root C, ale dodajemy kolejne nuty extension: triada `C` → siódemka `Cmaj7` →
+nona `Cmaj9`. Algorithm aktualizuje detected name + degrees breakdown — z trzech
+inerwałów `[R, 3, 5]` rośnie do `[R, 3, 5, 7, 9]`. Pedagogicznie pokazuje, że "akord
+to nie jeden szczegół, tylko stack interwałów" — dodanie jednej nuty zmienia tonalność.
+
+<div className="space-y-6">
+  <ChordAnalyzer id="family-c" shape={[null, 3, 2, 0, 1, 0]} />
+  <ChordAnalyzer id="family-cmaj7" shape={[null, 3, 2, 0, 0, 0]} />
+  <ChordAnalyzer id="family-cmaj9" shape={[null, 3, 0, 0, 0, 0]} />
+</div>
+
+## v5-13 UC8 — Symetria dim7 (jedna voicing, cztery nazwy)
+
+Akord zmniejszony septymowy (`dim7`) ma symetryczną strukturę — wszystkie cztery
+interwały to małe tercje (3 semitony). Konsekwencja: ten sam voicing rozpoznajemy
+jako **cztery różne akordy** zależnie od którą nutę uznamy za root. Voicing
+`x23130` w Standard tuning daje pitches `B-F-G#-D` — to równocześnie Ddim7, Fdim7,
+G#dim7 i Bdim7. Algorithm zwraca primary "D dim7" (pierwszy enumerowany), ale w
+ranked output wszystkie cztery są obecne z identyczną confidence 1.00. W jazzie
+kontekst tonalny (poprzedni akord, kierunek głosu basu) decyduje którą nazwę użyć.
+
+<ChordAnalyzer id="dim7-symmetry" shape={[null, 2, 3, 1, 3, null]} />
+
+## v5-13 UC9 — Inwersje basowe (ta sama voicing, trzy interpretacje)
+
+Pojedynczy open C voicing `x32010` zawiera pitches `C-E-G-C-E`. Zależnie od tego
+**która struna nosi bass note**, czytelnik słyszy inną inwersję — root position
+(bass=C), pierwsza inwersja (bass=E), druga inwersja (bass=G). Wrapper kontroluje
+to przez `rootStringIndex` — same shape, three names: "C maj", "C/E", "C/G".
+Pedagogicznie demonstruje że *słownik* slash chord ("ułamkowy zapis") to nie
+zawsze realny voicing change, czasem tylko reinterpretacja basu.
+
+<div className="space-y-6">
+  <ChordAnalyzer id="inv-c" shape={{ frets: [null, 3, 2, 0, 1, 0], rootStringIndex: 1 }} />
+  <ChordAnalyzer id="inv-c-over-e" shape={{ frets: [null, 3, 2, 0, 1, 0], rootStringIndex: 2 }} />
+  <ChordAnalyzer id="inv-c-over-g" shape={{ frets: [null, 3, 2, 0, 1, 0], rootStringIndex: 3 }} />
+</div>
