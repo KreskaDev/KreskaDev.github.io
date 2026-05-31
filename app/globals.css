@@ -146,7 +146,9 @@ h4:hover .heading-anchor { opacity: 1; }
 }
 
 /* Prose overflow — mobile-safe rendering math + code blocks. Tabela ma dedykowany
-   wrapper w `mdx-components.tsx` (table component) z `-mx-4 sm:-mx-6` bleed-edge. */
+   wrapper w `mdx-components.tsx` (table component) z `-mx-4 sm:-mx-6` bleed-edge.
+   Inline `.katex` flows naturally — `overflow-x: auto` na każdym inline element
+   produkowało brzydkie scrollbar shadows dla short formuł (v5-08 bug). */
 .prose pre {
   overflow-x: auto;
 }
@@ -154,12 +156,6 @@ h4:hover .heading-anchor { opacity: 1; }
   overflow-x: auto;
   overflow-y: hidden;
   padding-block: 0.25rem;
-}
-.prose .katex {
-  max-width: 100%;
-  overflow-x: auto;
-  display: inline-block;
-  vertical-align: middle;
 }
 
 /* Scrollbar hide utility — Tabs mobile horizontal scrollable nie powinien

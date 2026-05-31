@@ -94,9 +94,16 @@ export function Tabs({ tabs, children, hashSync = false, ariaLabel }: TabsProps)
   )
 
   // Active tab scroll-into-view (mobile horizontal scrollable tablist).
-  // `inline: 'center'` centruje aktywny tab w widoku poziomym; `block: 'nearest'`
-  // zapobiega vertical scroll page przy aktywacji taba (race z hashSync container scroll).
+  // Skip na initial mount — `block: 'nearest'` w teorii zapobiega vertical scroll,
+  // ale gdy tablist jest poza viewport (deep w poście), browser i tak skroluje
+  // stronę żeby przybliżyć tab button → auto-scroll po wejściu w post (v5-08 bug).
+  // Skroluj TYLKO po user-initiated activate (click/keyboard arrow), NIE na mount.
+  const isInitialMount = useRef(true)
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
     const tablist = tablistRef.current
     if (!tablist) return
     const activeButton = tablist.querySelector<HTMLButtonElement>(`[data-tab-id="${active}"]`)
