@@ -8,6 +8,7 @@ import type { PostFrontmatter } from '@/types/post'
 import LazyBayesAnalyzer from '@/components/lazy/LazyBayesAnalyzer'
 import LazyFretboard from '@/components/lazy/LazyFretboard'
 import LazyFretboardVisualizer from '@/components/lazy/LazyFretboardVisualizer'
+import LazyChordAnalyzer from '@/components/lazy/LazyChordAnalyzer'
 import { Tabs, TabItem } from '@/components/ui/Tabs'
 // v5-12 Phase 1 — Client Component HOC wrappers wrap `next/dynamic({ ssr: false, loading })`.
 // HOC żyje w `components/lazy/` jako Client Component; Server Component (this file) importuje
@@ -63,6 +64,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       TabItem,
       Fretboard: LazyFretboard,
       FretboardVisualizer: LazyFretboardVisualizer,
+      ChordAnalyzer: LazyChordAnalyzer,
     },
     // blockJS:false — patrz ADR-033. next-mdx-remote@6 domyślnie stripuje JSX
     // expression attribute values (`prop={expr}`), zostawia tylko stringi i boolean

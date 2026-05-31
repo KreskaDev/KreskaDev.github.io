@@ -368,17 +368,109 @@ export function spellNote(
 }
 
 // ============================================================
-// Stubs (per D0.1 — implementation w v5-11 / v5-12)
+// detectChord — weighted confidence + ranked top-3 (ADR-045)
 // ============================================================
 
-// TODO v5-11 — implementacja per design doc sekcja 8 (best-effort detection).
-export function detectChord(notes: NoteName[]): { name: string; confidence: number } | null {
-  void notes
-  return null
+// Sharps-default root candidates (12 chromatic pitch classes). Wrapper consumer może
+// override enharmonic preference via prop `rootNote` (out-of-scope v5-13 detection).
+const DETECT_ROOTS: readonly NoteName[] = [
+  'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+]
+
+// Confidence floor — odrzuca near-zero scores (50+ entries otherwise) per ADR-045.
+const CONFIDENCE_FLOOR = 0.3
+
+export function detectChord(
+  notes: NoteName[],
+): Array<{ name: string; confidence: number; spec: ChordSpec }> | null {
+  if (notes.length < 2) return null
+
+  // Dedupe pitch classes (octave normalization). Set<number> O(n).
+  const pitchClassSet = new Set<number>(notes.map(n => PITCH_CLASS[n]))
+  if (pitchClassSet.size < 2) return null
+
+  const inputPCs = Array.from(pitchClassSet)
+  const allChordTypes = Object.keys(CHORD_TABLE) as ChordType[]
+
+  // `enumOrder` field internal — tiebreaker w sort dla deterministic output (DETECT_ROOTS
+  // order + CHORD_TABLE declaration order). Bez tego [A,E] mogłoby flaky vs "C 5".
+  const candidates: Array<{
+    name: string
+    confidence: number
+    spec: ChordSpec
+    enumOrder: number
+  }> = []
+
+  for (const root of DETECT_ROOTS) {
+    const rootPC = PITCH_CLASS[root]
+    for (const type of allChordTypes) {
+      const requiredSemis = CHORD_TABLE[type].semitones
+      const requiredPCs = new Set<number>(requiredSemis.map(s => (rootPC + s) % 12))
+      let matched = 0
+      for (const pc of requiredPCs) if (pitchClassSet.has(pc)) matched++
+      let extras = 0
+      for (const pc of inputPCs) if (!requiredPCs.has(pc)) extras++
+
+      const requiredCount = requiredPCs.size
+      let confidence = matched / requiredCount - 0.1 * extras
+      if (confidence < 0) confidence = 0
+      if (confidence > 1) confidence = 1
+      if (confidence < CONFIDENCE_FLOOR) continue
+
+      candidates.push({
+        name: `${root} ${type}`,
+        confidence,
+        spec: { root, type },
+        enumOrder: candidates.length,
+      })
+    }
+  }
+
+  if (candidates.length === 0) return null
+
+  candidates.sort((a, b) => b.confidence - a.confidence || a.enumOrder - b.enumOrder)
+  return candidates.slice(0, 3).map(c => ({
+    name: c.name,
+    confidence: c.confidence,
+    spec: c.spec,
+  }))
 }
 
-// TODO v5-12 — używa non-canonical IntervalName entries (b3/b6/bb7/#2/b9/#9/11/#11/13/b13).
+// ============================================================
+// spellChordDegrees — lookup table per ChordType (ADR-045)
+// ============================================================
+
+// Non-canonical bb7/b9/#9 użyte dla dim7/7b9/7#9 per design doc §5 line 229-237.
+// NIE deleguje do intervalBetween (canonical-only) — Record<ChordType, ...> TS exhaustive.
+const CHORD_DEGREES_TABLE: Record<ChordType, readonly IntervalName[]> = {
+  '5':         ['R', '5'],
+  'maj':       ['R', '3', '5'],
+  'min':       ['R', 'm3', '5'],
+  'dim':       ['R', 'm3', 'b5'],
+  'aug':       ['R', '3', '#5'],
+  'sus2':      ['R', '2', '5'],
+  'sus4':      ['R', '4', '5'],
+  '6':         ['R', '3', '5', '6'],
+  'min6':      ['R', 'm3', '5', '6'],
+  '7':         ['R', '3', '5', 'm7'],
+  'maj7':      ['R', '3', '5', '7'],
+  'min7':      ['R', 'm3', '5', 'm7'],
+  'dim7':      ['R', 'm3', 'b5', 'bb7'],
+  'min7b5':    ['R', 'm3', 'b5', 'm7'],
+  '7sus4':     ['R', '4', '5', 'm7'],
+  '9':         ['R', '3', '5', 'm7', '9'],
+  'maj9':      ['R', '3', '5', '7', '9'],
+  'min9':      ['R', 'm3', '5', 'm7', '9'],
+  'add9':      ['R', '3', '5', '9'],
+  'min(add9)': ['R', 'm3', '5', '9'],
+  '7b9':       ['R', '3', '5', 'm7', 'b9'],
+  '7#9':       ['R', '3', '5', 'm7', '#9'],
+  '7b5':       ['R', '3', 'b5', 'm7'],
+  '7#5':       ['R', '3', '#5', 'm7'],
+  '11':        ['R', '3', '5', 'm7', '9', '11'],
+  '13':        ['R', '3', '5', 'm7', '9', '13'],
+}
+
 export function spellChordDegrees(chord: ChordSpec): IntervalName[] {
-  void chord
-  return []
+  return [...CHORD_DEGREES_TABLE[chord.type]]
 }
