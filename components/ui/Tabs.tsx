@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import type { KeyboardEvent, ReactNode } from 'react'
+import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 
 // Generic tabs widget — używany w MDX dla case studies (z hashSync), w przyszłości
 // może obsługiwać code snippet language switcher itp.
@@ -89,18 +89,19 @@ export function Tabs({ tabs, children, hashSync = false, ariaLabel }: TabsProps)
         // replaceState — bez nowego history entry, bez triggera hashchange.
         history.replaceState(null, '', `#${id}`)
       }
-      // Mobile horizontal scrollable tablist — przybliż wybrany button.
-      // Wywoływane tylko z user-initiated handlera (click/keyboard) — wcześniejszy
-      // useEffect[active] + isInitialMount ref nie działał w React 19 Strict Mode
-      // (double-invoke unmount→remount zachowuje ref `false`, skrol palił przy
-      // każdym wejściu na post, bo Tabs głęboko w treści przyciągał browsera).
-      requestAnimationFrame(() => {
-        const btn = tablistRef.current?.querySelector<HTMLButtonElement>(`[data-tab-id="${id}"]`)
-        btn?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-      })
     },
     [hashSync],
   )
+
+  // scrollIntoView wywoływane bezpośrednio z handlerów (NIE z useEffect[active]) —
+  // wcześniejszy isInitialMount ref nie działał w React 19 Strict Mode (double-invoke
+  // unmount→remount zachowywał ref `false`, skrol palił po wejściu w post). Dostęp do
+  // DOM idzie przez `event.currentTarget`, nie `tablistRef.current` — lint react-hooks/refs
+  // traktuje ref.current w body komponentu jako render-time access.
+  const handleClick = (e: MouseEvent<HTMLButtonElement>, id: string) => {
+    activate(id)
+    e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
     let nextIdx = idx
@@ -113,10 +114,10 @@ export function Tabs({ tabs, children, hashSync = false, ariaLabel }: TabsProps)
     const nextId = tabs[nextIdx]?.id
     if (!nextId) return
     activate(nextId)
-    const nextBtn = tablistRef.current?.querySelector<HTMLButtonElement>(
-      `[data-tab-id="${nextId}"]`,
-    )
+    const tablist = e.currentTarget.parentElement
+    const nextBtn = tablist?.querySelector<HTMLButtonElement>(`[data-tab-id="${nextId}"]`)
     nextBtn?.focus()
+    nextBtn?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
   }
 
   if (tabs.length === 0) return null
@@ -149,7 +150,7 @@ export function Tabs({ tabs, children, hashSync = false, ariaLabel }: TabsProps)
                 aria-controls={ctxValue.panelIdFor(t.id)}
                 id={ctxValue.triggerIdFor(t.id)}
                 tabIndex={isActive ? 0 : -1}
-                onClick={() => activate(t.id)}
+                onClick={e => handleClick(e, t.id)}
                 onKeyDown={e => handleKeyDown(e, idx)}
                 className={
                   'shrink-0 sm:shrink snap-start px-4 py-2 text-left text-sm transition-colors rounded-t -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ' +
