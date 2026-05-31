@@ -49,9 +49,10 @@ const MAX_CLINICS = 7
 // light users dostają 1-frame dark→light flip, akceptowalne minor cost).
 // Composite resolvedTheme support: z `enableSystem={false}` + composite themes
 // `resolvedTheme` zwraca literal value (np. `'dark-cool'`). useEffect dep
-// `[mounted, resolvedTheme]` fires na każdy palette/mode flip. Pre-v5-10
-// `COLORS[resolvedTheme === 'dark' ? 'dark' : 'light']` był stealth bug
-// w composite mode (always failed equality → picked light tokens w dark).
+// `[mounted, resolvedTheme]` fires na każdy palette/mode flip. Pre-v5-10 ChartView
+// miał `COLORS[resolvedTheme === 'dark' ? 'dark' : 'light']` jako stealth bug
+// w composite mode (always failed equality → picked light tokens w dark) —
+// refactor v5-10 eliminuje.
 type ChartColors = {
   naive: string
   real: string
@@ -587,9 +588,10 @@ function ChartView({ pi, s0, f0, clinics }: ChartViewProps) {
   // resolvedTheme zwraca composite literal ('dark-cool') z `enableSystem={false}`,
   // więc dep catches AND theme toggle AND palette toggle (ADR-041 dual-palette).
   // setColors tutaj jest reakcją na external state change (DOM class flip przez
-  // next-themes — NIE cascade z innego React setStat'a). Spójność z linią 562
-  // precedensem. eslint-disable bezpośrednio przed setColors bo eslint-disable-next-line
-  // przed useEffect aplikuje tylko do nagłówka, nie do body callbacku.
+  // next-themes — NIE cascade z innego React setStat'a). Spójność z setMounted
+  // useEffect precedensem wyżej. Disable directive musi być bezpośrednio przed
+  // setColors bo dyrektywa "next-line" aplikuje tylko do następnej linii
+  // (przed useEffect aplikowałaby do nagłówka, nie do body callbacku).
   useEffect(() => {
     if (!mounted) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
