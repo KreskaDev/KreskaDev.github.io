@@ -23,16 +23,18 @@ Bazowy widget — voicing x32010 (open C major). Strony 5..1 = positions
 read-only nie renderuje muted strings, więc po prostu nie pojawia się w `notes`
 array. v5-12 ChordAnalyzer dodaje muted rendering jako × przed nutem.
 
-<Fretboard
-  id="demo-c-major-shape"
-  notes={[
-    { string: 1, fret: 3 },
-    { string: 2, fret: 2 },
-    { string: 3, fret: 0 },
-    { string: 4, fret: 1 },
-    { string: 5, fret: 0 },
-  ]}
-/>
+<div className="my-6 -mx-4 sm:-mx-6 md:-mx-8 overflow-x-auto [&>div[data-fretboard-id]]:contents">
+  <Fretboard
+    id="demo-c-major-shape"
+    notes={[
+      { string: 1, fret: 3 },
+      { string: 2, fret: 2 },
+      { string: 3, fret: 0 },
+      { string: 4, fret: 1 },
+      { string: 5, fret: 0 },
+    ]}
+  />
+</div>
 
 ## v5-11 UC1 — skala C-dur na całym gryfie
 
