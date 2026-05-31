@@ -89,27 +89,18 @@ export function Tabs({ tabs, children, hashSync = false, ariaLabel }: TabsProps)
         // replaceState — bez nowego history entry, bez triggera hashchange.
         history.replaceState(null, '', `#${id}`)
       }
+      // Mobile horizontal scrollable tablist — przybliż wybrany button.
+      // Wywoływane tylko z user-initiated handlera (click/keyboard) — wcześniejszy
+      // useEffect[active] + isInitialMount ref nie działał w React 19 Strict Mode
+      // (double-invoke unmount→remount zachowuje ref `false`, skrol palił przy
+      // każdym wejściu na post, bo Tabs głęboko w treści przyciągał browsera).
+      requestAnimationFrame(() => {
+        const btn = tablistRef.current?.querySelector<HTMLButtonElement>(`[data-tab-id="${id}"]`)
+        btn?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+      })
     },
     [hashSync],
   )
-
-  // Active tab scroll-into-view (mobile horizontal scrollable tablist).
-  // Skip na initial mount — `block: 'nearest'` w teorii zapobiega vertical scroll,
-  // ale gdy tablist jest poza viewport (deep w poście), browser i tak skroluje
-  // stronę żeby przybliżyć tab button → auto-scroll po wejściu w post (v5-08 bug).
-  // Skroluj TYLKO po user-initiated activate (click/keyboard arrow), NIE na mount.
-  const isInitialMount = useRef(true)
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
-    }
-    const tablist = tablistRef.current
-    if (!tablist) return
-    const activeButton = tablist.querySelector<HTMLButtonElement>(`[data-tab-id="${active}"]`)
-    if (!activeButton) return
-    activeButton.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-  }, [active])
 
   const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
     let nextIdx = idx
