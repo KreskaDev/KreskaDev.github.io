@@ -105,7 +105,15 @@ function SelectedOverlay({
       width={svgWidth}
       height={svgHeight}
       viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-      className="absolute top-6 left-0 right-0 mx-auto block min-w-[640px] pointer-events-none"
+      // Pozycjonowanie top-0 left-0 relative do inner div (siblings z base SVG).
+      // Base SVG i overlay SVG mają identyczny width/height/viewBox → idealne pokrycie.
+      // Wcześniejszy `top-6` zakładał że base SVG jest 24px od wrapper-top (przez my-6
+      // na base outer div) — nieprawda przez margin-collapse: my-6 collapsował UP do
+      // wrappera, base SVG siedział na top=0 wrapper-content → overlay top-6 = 24px
+      // za nisko, hit-rects 24px niżej niż visible note circles, rings drawn off-grid.
+      // Fix: neutralizujemy base outer div via [&>div[data-fretboard-id]]:contents
+      // (parent inner div), base SVG staje się direct child, overlay top-0 = match.
+      className="absolute top-0 left-0 block pointer-events-none"
     >
       {/* Hit areas — 48×48 invisible rects, pointer-events auto. data-overlay-hit
           marker distinguishes overlay rects od base's identyczne hit-rects (base też
@@ -210,28 +218,57 @@ export default function FretboardVisualizer(props: FretboardVisualizerProps) {
     'chord' in props && props.chord ? props.chord.root :
     undefined
 
+  // Wrapper-level geometry — duplikowane z SelectedOverlay (oba muszą znać svgWidth
+  // żeby inner div miał poprawny width dla layered SVG sibling alignment).
+  const stringCount = tuning.strings.length
+  const svgWidth = NUT_WIDTH + FRET_WIDTH * fretCount + PADDING.left + PADDING.right
+  const svgHeight = STRING_HEIGHT * (stringCount - 1) + PADDING.top + PADDING.bottom
+
+  // Layout architecture (post-bugfix):
+  // - Outer wrapper: my-6 + negative horizontal margins extending poza prose container
+  //   (prose max-w-3xl content ≈720px, SVG 736px → break out żeby pomieścić bez scroll
+  //   na desktop). overflow-x-auto fallback dla narrow viewports (mobile).
+  // - Inner div: relative, mx-auto, width=svgWidth → SHARED layout container dla obu
+  //   SVGs. Base SVG (przez [&>div[data-fretboard-id]]:contents wariant Tailwind
+  //   neutralizuje base outer div my-6 -mx-4 sm:mx-0 overflow-x-auto via display:contents)
+  //   staje się direct child inner div, normal flow. Overlay SVG absolute top-0 left-0
+  //   overlays. Identical viewBox + width = pixel-perfect alignment, no margin-collapse
+  //   bug (poprzednio: my-6 base outer div collapsował do wrapper, overlay top-6 dawał
+  //   24px desync hit-rects vs visible notes).
   return (
     <div
-      className="relative"
+      className={
+        'relative my-6 -mx-4 sm:-mx-6 md:-mx-8 overflow-x-auto ' +
+        // Neutralize base outer div via display:contents — drops its my-6 -mx-4 sm:mx-0
+        // overflow-x-auto (które na mobile rozpychało base outer div o 32px i przywracało
+        // overlay scroll desync). Tailwind 4 syntax: `[&>...]` = direct child (underscore
+        // `[&_>...]` = descendant, niepoprawne tutaj).
+        '[&>div[data-fretboard-id]]:contents'
+      }
       data-fretboard-visualizer-id={id}
     >
-      <Fretboard
-        id={`${id}-base`}
-        tuning={tuning}
-        fretCount={fretCount}
-        notes={baseNotes}
-        rootNote={rootNote}
-        // onPlayNote left at default noop — wrapper handles click via overlay sibling.
-      />
-      <SelectedOverlay
-        positions={baseNotes}
-        selectedPos={selected}
-        tuning={tuning}
-        fretCount={fretCount}
-        resolvedTheme={resolvedTheme}
-        mounted={mounted}
-        onNoteClick={handleNoteClick}
-      />
+      <div
+        className="relative mx-auto"
+        style={{ width: `${svgWidth}px`, minWidth: '640px', height: `${svgHeight}px` }}
+      >
+        <Fretboard
+          id={`${id}-base`}
+          tuning={tuning}
+          fretCount={fretCount}
+          notes={baseNotes}
+          rootNote={rootNote}
+          // onPlayNote left at default noop — wrapper handles click via overlay sibling.
+        />
+        <SelectedOverlay
+          positions={baseNotes}
+          selectedPos={selected}
+          tuning={tuning}
+          fretCount={fretCount}
+          resolvedTheme={resolvedTheme}
+          mounted={mounted}
+          onNoteClick={handleNoteClick}
+        />
+      </div>
     </div>
   )
 }
