@@ -14,14 +14,14 @@ language: "pl"
 Strona robocza dla iteracji v5-09..v5-13. v5-09 dostarczył bazowy `<Fretboard />`
 read-only. v5-11 dodaje inteligentny wrapper `<FretboardVisualizer />` ze skale,
 akordy, click-to-highlight i sample-based audio playback (acoustic guitar nylon
-z biblioteki Gleitzman MIDI.js FluidR3_GM, CC-BY 3.0).
+z biblioteki Gleitzman MIDI.js FatBoy, CC-BY-SA 3.0).
 
 ## v5-09 baseline — `<Fretboard />` (base, read-only)
 
 Bazowy widget — voicing x32010 (open C major). Strony 5..1 = positions
 [fret 3, 2, 0, 1, 0]; struna 0 (low E) jest tłumiona w tym voicingu — v5-09
 read-only nie renderuje muted strings, więc po prostu nie pojawia się w `notes`
-array. v5-12 ChordAnalyzer dodaje muted rendering jako × przed nutem.
+array. v5-13 ChordAnalyzer dodaje muted rendering jako × przed nutem.
 
 <div className="my-6 -mx-4 sm:-mx-6 md:-mx-8 overflow-x-auto [&>div[data-fretboard-id]]:contents">
   <Fretboard
@@ -65,3 +65,36 @@ tones solid dark.
 Six pitch classes (A, C, D, Eb, E, G) na całym gryfie.
 
 <FretboardVisualizer id="a-blues-minor" scale={{ root: 'A', type: 'bluesMinor' }} />
+
+## v5-13 UC1 — Open C voicing (`x32010`)
+
+Klasyczny open C major voicing — fingering `x32010` (struna 0 muted, 5 active).
+Algorithm rozpoznaje "C maj" z confidence ≥0.9. Degrees breakdown [R, 3, 5] potwierdza
+triadyczną strukturę.
+
+<ChordAnalyzer id="open-c-maj" shape={[null, 3, 2, 0, 1, 0]} />
+
+## v5-13 UC2 — Slash chord C/E (rootStringIndex)
+
+Ten sam shape co UC1, ale z explicit `rootStringIndex: 2` (struna 2 = D string fret 2 =
+E3 bass). Wrapper porównuje bass note z detected root → display "C/E" slash chord form
+(suffix " maj" stripped dla canonical nomenclature).
+
+<ChordAnalyzer id="slash-c-over-e" shape={{ frets: [null, 3, 2, 0, 1, 0], rootStringIndex: 2 }} />
+
+## v5-13 UC3 — Ambiguous voicing (Cadd9 vs C major)
+
+Voicing `[null, 3, 2, 0, 3, 3]` — pitches C-E-G-D-G nad C basem (canonical Cadd9 open
+voicing z D na B string fret 3). Algorithm widzi dwa near-equally confident readings:
+primary "C add9" (1.00) + secondary "C maj" (0.90, Δconfidence < 0.2 threshold).
+Wrapper renders oba inline.
+
+<ChordAnalyzer id="ambiguous-cadd9" shape={[null, 3, 2, 0, 3, 3]} />
+
+## v5-13 UC4 — Muted-heavy A5 power chord
+
+Power chord `[null, null, null, 2, 5, 5]` — trzy muted strings (× glyphs na lewej
+krawędzi przed nutem) + trzy aktywne nuty A-E-A (= root A + 5th E + root A oct).
+Algorithm rozpoznaje "A 5" (ChordType '5' power chord, R + 5 bez tercji).
+
+<ChordAnalyzer id="a5-power" shape={[null, null, null, 2, 5, 5]} />

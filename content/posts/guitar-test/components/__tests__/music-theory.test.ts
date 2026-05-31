@@ -247,11 +247,242 @@ describe('spellNote (full enharmonic — D0.2)', () => {
   })
 })
 
-describe('stub functions (D0.1)', () => {
-  it('detectChord returns null (stub for v5-11)', () => {
-    expect(detectChord(['C', 'E', 'G'])).toBeNull()
+// ============================================================
+// v5-13 — detectChord (weighted confidence + ranked top-3 per ADR-045)
+// ============================================================
+
+describe('detectChord — open majors', () => {
+  it('[C, E, G] → primary "C maj", confidence ≥0.9', () => {
+    const result = detectChord(['C', 'E', 'G'])
+    expect(result).not.toBeNull()
+    expect(result![0]!.name).toBe('C maj')
+    expect(result![0]!.spec).toEqual({ root: 'C', type: 'maj' })
+    expect(result![0]!.confidence).toBeGreaterThanOrEqual(0.9)
   })
-  it('spellChordDegrees returns [] (stub for v5-12)', () => {
-    expect(spellChordDegrees({ root: 'C', type: 'maj' })).toEqual([])
+  it('[G, B, D] → primary "G maj"', () => {
+    const result = detectChord(['G', 'B', 'D'])
+    expect(result![0]!.name).toBe('G maj')
+  })
+  it('[D, F#, A] → primary "D maj"', () => {
+    const result = detectChord(['D', 'F#', 'A'])
+    expect(result![0]!.name).toBe('D maj')
+  })
+  it('[A, C#, E] → primary "A maj"', () => {
+    const result = detectChord(['A', 'C#', 'E'])
+    expect(result![0]!.name).toBe('A maj')
+  })
+  it('[E, G#, B] → primary "E maj"', () => {
+    const result = detectChord(['E', 'G#', 'B'])
+    expect(result![0]!.name).toBe('E maj')
+  })
+})
+
+describe('detectChord — open minors', () => {
+  it('[A, C, E] → primary "A min"', () => {
+    const result = detectChord(['A', 'C', 'E'])
+    expect(result![0]!.name).toBe('A min')
+  })
+  it('[E, G, B] → primary "E min"', () => {
+    const result = detectChord(['E', 'G', 'B'])
+    expect(result![0]!.name).toBe('E min')
+  })
+  it('[D, F, A] → primary "D min"', () => {
+    const result = detectChord(['D', 'F', 'A'])
+    expect(result![0]!.name).toBe('D min')
+  })
+})
+
+describe('detectChord — barre + dim/aug', () => {
+  it('[F, A, C] → primary "F maj"', () => {
+    const result = detectChord(['F', 'A', 'C'])
+    expect(result![0]!.name).toBe('F maj')
+  })
+  it('[B, D, F#] → primary "B min"', () => {
+    const result = detectChord(['B', 'D', 'F#'])
+    expect(result![0]!.name).toBe('B min')
+  })
+  it('[B, D, F] → primary "B dim"', () => {
+    const result = detectChord(['B', 'D', 'F'])
+    expect(result![0]!.name).toBe('B dim')
+  })
+  it('[C, E, G#] → primary type "aug" (symmetric — wszystkie 3 augs tie at 1.0; C wins by enumOrder)', () => {
+    const result = detectChord(['C', 'E', 'G#'])
+    expect(result![0]!.spec.type).toBe('aug')
+    expect(result![0]!.spec.root).toBe('C')
+  })
+})
+
+describe('detectChord — sus chords', () => {
+  it('[C, F, G] → primary "C sus4"', () => {
+    const result = detectChord(['C', 'F', 'G'])
+    expect(result![0]!.name).toBe('C sus4')
+  })
+  it('[C, D, G] → primary "C sus2"', () => {
+    const result = detectChord(['C', 'D', 'G'])
+    expect(result![0]!.name).toBe('C sus2')
+  })
+})
+
+describe('detectChord — sevenths', () => {
+  it('[C, E, G, Bb] → primary "C 7" dominant', () => {
+    const result = detectChord(['C', 'E', 'G', 'Bb'])
+    expect(result![0]!.name).toBe('C 7')
+  })
+  it('[C, E, G, B] → primary "C maj7"', () => {
+    const result = detectChord(['C', 'E', 'G', 'B'])
+    expect(result![0]!.name).toBe('C maj7')
+  })
+  it('[E, G, B, D] → primary "E min7" (E enum earlier than G 6 tie)', () => {
+    const result = detectChord(['E', 'G', 'B', 'D'])
+    expect(result![0]!.name).toBe('E min7')
+  })
+  it('[G, B, D, F] → primary "G 7"', () => {
+    const result = detectChord(['G', 'B', 'D', 'F'])
+    expect(result![0]!.name).toBe('G 7')
+  })
+  it('[B, D, F, Ab] → primary type "dim7" (symmetric — 4 dim7 tie; D wins by enumOrder)', () => {
+    const result = detectChord(['B', 'D', 'F', 'Ab'])
+    expect(result![0]!.spec.type).toBe('dim7')
+  })
+})
+
+describe('detectChord — extended ninths', () => {
+  it('[C, E, G, Bb, D] → primary "C 9"', () => {
+    const result = detectChord(['C', 'E', 'G', 'Bb', 'D'])
+    expect(result![0]!.name).toBe('C 9')
+  })
+  it('[C, E, G, B, D] → primary "C maj9"', () => {
+    const result = detectChord(['C', 'E', 'G', 'B', 'D'])
+    expect(result![0]!.name).toBe('C maj9')
+  })
+  it('[A, C, E, G, B] → primary "A min9"', () => {
+    const result = detectChord(['A', 'C', 'E', 'G', 'B'])
+    expect(result![0]!.name).toBe('A min9')
+  })
+})
+
+describe('detectChord — power chord + ranked output', () => {
+  it('[A, E] → primary "A 5" (power chord R+5)', () => {
+    const result = detectChord(['A', 'E'])
+    expect(result![0]!.name).toBe('A 5')
+  })
+  it('ranked output capped at 3 entries max (Decyzja #2 top-3 cap)', () => {
+    const result = detectChord(['C', 'E', 'G'])
+    expect(result!.length).toBeLessThanOrEqual(3)
+  })
+  it('ambiguous [C, E, G, A] → ranked includes "C 6" primary + "A min" secondary (multi-reading)', () => {
+    const result = detectChord(['C', 'E', 'G', 'A'])
+    expect(result!.length).toBeGreaterThanOrEqual(2)
+    expect(result![0]!.name).toBe('C 6')
+    expect(result!.some(r => r.name.startsWith('A min'))).toBe(true)
+  })
+})
+
+describe('detectChord — edge cases', () => {
+  it('[] (empty) → null', () => {
+    expect(detectChord([])).toBeNull()
+  })
+  it('[C] (single note) → null', () => {
+    expect(detectChord(['C'])).toBeNull()
+  })
+  it('chromatic cluster [C, Db, D] → not null but top candidate confidence < 0.7', () => {
+    const result = detectChord(['C', 'Db', 'D'])
+    expect(result).not.toBeNull()
+    expect(result![0]!.confidence).toBeLessThan(0.7)
+  })
+  it('enharmonic [C, Eb, G] === [C, D#, G] both detect "C min"', () => {
+    const r1 = detectChord(['C', 'Eb', 'G'])
+    const r2 = detectChord(['C', 'D#', 'G'])
+    expect(r1![0]!.spec.type).toBe('min')
+    expect(r2![0]!.spec.type).toBe('min')
+    expect(r1![0]!.spec.root).toBe('C')
+    expect(r2![0]!.spec.root).toBe('C')
+  })
+  it('duplicates [C, E, G, C, E] → dedupe → "C maj"', () => {
+    const result = detectChord(['C', 'E', 'G', 'C', 'E'])
+    expect(result![0]!.name).toBe('C maj')
+  })
+  it('confidence clamped 0..1 — never returns >1 lub <0', () => {
+    const result = detectChord(['C', 'E', 'G'])
+    for (const r of result!) {
+      expect(r.confidence).toBeGreaterThanOrEqual(0)
+      expect(r.confidence).toBeLessThanOrEqual(1)
+    }
+  })
+})
+
+// ============================================================
+// v5-13 — spellChordDegrees (lookup table per ChordType per ADR-045)
+// ============================================================
+
+describe('spellChordDegrees — basic triads', () => {
+  it('{C, maj} → [R, 3, 5]', () => {
+    expect(spellChordDegrees({ root: 'C', type: 'maj' })).toEqual(['R', '3', '5'])
+  })
+  it('{C, min} → [R, m3, 5]', () => {
+    expect(spellChordDegrees({ root: 'C', type: 'min' })).toEqual(['R', 'm3', '5'])
+  })
+  it('{C, dim} → [R, m3, b5]', () => {
+    expect(spellChordDegrees({ root: 'C', type: 'dim' })).toEqual(['R', 'm3', 'b5'])
+  })
+  it('{C, aug} → [R, 3, #5]', () => {
+    expect(spellChordDegrees({ root: 'C', type: 'aug' })).toEqual(['R', '3', '#5'])
+  })
+  it('{C, sus2} → [R, 2, 5]', () => {
+    expect(spellChordDegrees({ root: 'C', type: 'sus2' })).toEqual(['R', '2', '5'])
+  })
+  it('{C, sus4} → [R, 4, 5]', () => {
+    expect(spellChordDegrees({ root: 'C', type: 'sus4' })).toEqual(['R', '4', '5'])
+  })
+})
+
+describe('spellChordDegrees — sevenths', () => {
+  it('{C, 7} → [R, 3, 5, m7]', () => {
+    expect(spellChordDegrees({ root: 'C', type: '7' })).toEqual(['R', '3', '5', 'm7'])
+  })
+  it('{C, maj7} → [R, 3, 5, 7]', () => {
+    expect(spellChordDegrees({ root: 'C', type: 'maj7' })).toEqual(['R', '3', '5', '7'])
+  })
+  it('{C, min7} → [R, m3, 5, m7]', () => {
+    expect(spellChordDegrees({ root: 'C', type: 'min7' })).toEqual(['R', 'm3', '5', 'm7'])
+  })
+  it('{C, min7b5} → [R, m3, b5, m7]', () => {
+    expect(spellChordDegrees({ root: 'C', type: 'min7b5' })).toEqual(['R', 'm3', 'b5', 'm7'])
+  })
+  it('{C, dim7} → [R, m3, b5, bb7] (non-canonical bb7)', () => {
+    expect(spellChordDegrees({ root: 'C', type: 'dim7' })).toEqual(['R', 'm3', 'b5', 'bb7'])
+  })
+})
+
+describe('spellChordDegrees — extended', () => {
+  it('{C, 9} → [R, 3, 5, m7, 9]', () => {
+    expect(spellChordDegrees({ root: 'C', type: '9' })).toEqual(['R', '3', '5', 'm7', '9'])
+  })
+  it('{C, min9} → [R, m3, 5, m7, 9]', () => {
+    expect(spellChordDegrees({ root: 'C', type: 'min9' })).toEqual(['R', 'm3', '5', 'm7', '9'])
+  })
+  it('{C, 7b9} → [R, 3, 5, m7, b9] (non-canonical b9)', () => {
+    expect(spellChordDegrees({ root: 'C', type: '7b9' })).toEqual(['R', '3', '5', 'm7', 'b9'])
+  })
+  it('{C, 7#9} → [R, 3, 5, m7, #9] (non-canonical #9)', () => {
+    expect(spellChordDegrees({ root: 'C', type: '7#9' })).toEqual(['R', '3', '5', 'm7', '#9'])
+  })
+  it('{C, 11} → [R, 3, 5, m7, 9, 11]', () => {
+    expect(spellChordDegrees({ root: 'C', type: '11' })).toEqual(['R', '3', '5', 'm7', '9', '11'])
+  })
+  it('{C, 13} → [R, 3, 5, m7, 9, 13]', () => {
+    expect(spellChordDegrees({ root: 'C', type: '13' })).toEqual(['R', '3', '5', 'm7', '9', '13'])
+  })
+})
+
+describe('spellChordDegrees — power chord + non-C roots', () => {
+  it('{C, "5"} power chord → [R, 5]', () => {
+    expect(spellChordDegrees({ root: 'C', type: '5' })).toEqual(['R', '5'])
+  })
+  it('{A, maj} → [R, 3, 5] (root invariant)', () => {
+    expect(spellChordDegrees({ root: 'A', type: 'maj' })).toEqual(['R', '3', '5'])
+  })
+  it('{F#, min7} → [R, m3, 5, m7] (non-C root)', () => {
+    expect(spellChordDegrees({ root: 'F#', type: 'min7' })).toEqual(['R', 'm3', '5', 'm7'])
   })
 })
