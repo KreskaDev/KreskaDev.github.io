@@ -34,18 +34,20 @@ const _buffers = new Map<string, AudioBuffer>()  // decoded cache per note
 const _bufferPromises = new Map<string, Promise<AudioBuffer | null>>()
 let _loadPromise: Promise<void> | null = null
 
-// === PitchedNote → MIDI.js note name "C4" / "F#3" etc. ===
-// Gleitzman keys use sharps only (no flats, no B#/E#/Cb/Fb). Normalize defensively:
-// flats → sharps; B#→C(+1oct); Cb→B(-1oct); E#→F; Fb→E.
+// === PitchedNote → MIDI.js note name "C4" / "Eb3" etc. ===
+// Gleitzman FluidR3_GM uses FLATS ONLY (Bb, Db, Eb, Gb, Ab) — empirycznie verified
+// 2026-05-31 via Object.keys(window.MIDI.Soundfont.acoustic_guitar_nylon): 88 keys,
+// all sharps absent. Plan §0.2 dokumentowane "sharps only" było błędne.
+// Normalize defensively: sharps → flats; B#→C(+1oct); Cb→B(-1oct); E#→F; Fb→E.
 function pitchedNoteToMidiKey(note: PitchedNote): string {
   if (note.name === 'B#') return `C${note.octave + 1}`
   if (note.name === 'Cb') return `B${note.octave - 1}`
   if (note.name === 'E#') return `F${note.octave}`
   if (note.name === 'Fb') return `E${note.octave}`
-  const FLAT_TO_SHARP: Partial<Record<NoteName, string>> = {
-    'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#',
+  const SHARP_TO_FLAT: Partial<Record<NoteName, string>> = {
+    'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb',
   }
-  const normalized = FLAT_TO_SHARP[note.name] ?? note.name
+  const normalized = SHARP_TO_FLAT[note.name] ?? note.name
   return `${normalized}${note.octave}`
 }
 
