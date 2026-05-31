@@ -7,7 +7,7 @@ import { getAllPosts, getSubpage } from '@/lib/posts'
 import mdxComponents from '@/mdx-components'
 import { mdxOptions } from '@/lib/mdx-options'
 import type { SubpageFrontmatter } from '@/types/post'
-import BayesAnalyzer from '@/content/posts/pozytywny-wynik/components/BayesAnalyzer'
+import LazyBayesAnalyzer from '@/components/lazy/LazyBayesAnalyzer'
 import { Tabs, TabItem } from '@/components/ui/Tabs'
 import { PostBreadcrumb } from '@/components/post/PostBreadcrumb'
 import { ContentNavigator } from '@/components/post/ContentNavigator'
@@ -64,7 +64,7 @@ export default async function SubpagePage(
 
   const { content } = await compileMDX({
     source: loaded.source,
-    components: { ...mdxComponents, BayesAnalyzer, Tabs, TabItem },
+    components: { ...mdxComponents, BayesAnalyzer: LazyBayesAnalyzer, Tabs, TabItem },
     // blockJS:false — patrz ADR-033 + komentarz w `app/posts/[slug]/page.tsx`.
     // JSX expressions w MDX wymagają wyłączenia tego domyślnego stripowania
     // w next-mdx-remote@6.
