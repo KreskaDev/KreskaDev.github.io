@@ -5,10 +5,23 @@ import { getAllPosts, getPostBySlug } from '@/lib/posts'
 import mdxComponents from '@/mdx-components'
 import { mdxOptions } from '@/lib/mdx-options'
 import type { PostFrontmatter } from '@/types/post'
+import dynamic from 'next/dynamic'
 import BayesAnalyzer from '@/content/posts/pozytywny-wynik/components/BayesAnalyzer'
-import Fretboard from '@/content/posts/guitar-test/components/Fretboard'
-import FretboardVisualizer from '@/content/posts/guitar-test/components/FretboardVisualizer'
 import { Tabs, TabItem } from '@/components/ui/Tabs'
+
+// Per v5-12 perf audit handoff: Fretboard + FretboardVisualizer w osobnym client chunku
+// ładowanym TYLKO gdy post zawiera widget w MDX. Bez `ssr:false` (Next.js 15+ blokuje
+// w Server Component), więc widget jest server-rendered (dobry FCP/LCP), ale main JS
+// bundle nie zawiera widget code — client hydration loaduje chunk async. Placeholder
+// nie używany (default SSR renderuje HTML).
+// Deviation §3.5 dokumentowana w commit message; pełny benefit (ssr:false → no SSR cost)
+// wymaga Client Component wrappera — odłożone do v5-12 perf scope.
+const Fretboard = dynamic(
+  () => import('@/content/posts/guitar-test/components/Fretboard'),
+)
+const FretboardVisualizer = dynamic(
+  () => import('@/content/posts/guitar-test/components/FretboardVisualizer'),
+)
 import { ContentNavigator } from '@/components/post/ContentNavigator'
 import { BackToTop } from '@/components/post/BackToTop'
 
