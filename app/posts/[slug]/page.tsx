@@ -6,6 +6,7 @@ import mdxComponents from '@/mdx-components'
 import { mdxOptions } from '@/lib/mdx-options'
 import type { PostFrontmatter } from '@/types/post'
 import BayesAnalyzer from '@/content/posts/pozytywny-wynik/components/BayesAnalyzer'
+import Fretboard from '@/content/posts/guitar-test/components/Fretboard'
 import { Tabs, TabItem } from '@/components/ui/Tabs'
 import { ContentNavigator } from '@/components/post/ContentNavigator'
 import { BackToTop } from '@/components/post/BackToTop'
@@ -50,7 +51,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
   const { content } = await compileMDX({
     source: loaded.source,
-    components: { ...mdxComponents, BayesAnalyzer, Tabs, TabItem },
+    components: { ...mdxComponents, BayesAnalyzer, Tabs, TabItem, Fretboard },
     // blockJS:false — patrz ADR-033. next-mdx-remote@6 domyślnie stripuje JSX
     // expression attribute values (`prop={expr}`), zostawia tylko stringi i boolean
     // shorthand. To blokuje np. `<BayesAnalyzer editable={false} clinics={[...]} />`
