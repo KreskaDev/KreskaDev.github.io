@@ -1,0 +1,237 @@
+'use client'
+
+// FretboardVisualizer — intelligent wrapper nad bazowym Fretboard (v5-09).
+// (a) Discriminated union props scale|chord|notes, (b) on-the-fly note generator via
+// shipped music-theory pure functions (zero static presets), (c) click-to-highlight
+// state machine z overlay SVG sibling (base immutable; base.onPlayNote forwarduje tylko
+// PitchedNote → multi-octave collision possible → wrapper przejmuje click control),
+// (d) audio playback przez custom Web Audio mini-player (audio.ts, zero npm deps).
+// Per ADR-042 (audio architecture) + ADR-011 (React local state per-instance).
+
+import { useMemo, useState, useEffect } from 'react'
+import { useTheme } from 'next-themes'
+import type {
+  NoteName, FretPosition, FretboardNote,
+  ScaleSpec, ChordSpec, Tuning, PitchedNote,
+} from './types'
+import { DEFAULT_FRET_COUNT } from './types'
+import {
+  scaleNotes, chordNotes, positionsOfNote, noteAtPosition, STANDARD_TUNING,
+} from './music-theory'
+import Fretboard from './Fretboard'
+import { ensureAudio, playPitchedNote } from './audio'
+
+// === FretboardVisualizer props (discriminated union — task.md §"Kontekst" wzór) ===
+
+type SharedProps = {
+  id: string                              // REQUIRED, symmetric z base (D11.4 v5-09)
+  tuning?: Tuning                         // default STANDARD_TUNING
+  fretCount?: number                      // default DEFAULT_FRET_COUNT (12)
+  enableAudio?: boolean                   // default true (Pre-confirmed #3)
+}
+
+export type FretboardVisualizerProps = SharedProps & (
+  | { scale: ScaleSpec; chord?: never; notes?: never }
+  | {
+      /**
+       * Akord jako ABSTRACT PITCH-CLASS DISPLAY — wrapper rozkłada wszystkie
+       * pozycje pitch classes na gryfie (np. {root:'C',type:'maj'} → wszystkie C/E/G).
+       * To RÓŻNA semantyka niż `chord` w przyszłym ChordAnalyzer (v5-12) gdzie ten
+       * sam ChordSpec ładuje konkretny preset shape voicing (np. open C voicing
+       * x32010). Identyczny shape typu, różny intent. Patrz design doc sekcja 7+8+15
+       * decyzja #10.
+       */
+      chord: ChordSpec; scale?: never; notes?: never
+    }
+  | { notes: FretPosition[]; scale?: never; chord?: never }
+)
+
+// === Geometry MIRROR z Fretboard.tsx:48-50,94-99. ===
+// Source of truth: prod/content/posts/guitar-test/components/Fretboard.tsx.
+// Drift risk (Risk #3): jeśli base geometry zmieni się w future, wrapper overlay
+// nie alignuje position-by-position. Mitigation: manual smoke po każdej v5-NN
+// touching base. Reason for MIRROR (nie shared import): base Fretboard NIE eksportuje
+// geometry constants — wymagałoby modyfikacji base (hard constraint immutable).
+//
+// `padding.left = 40` MIRROR safe: wrapper NIE exposuje `showStringLabels` →
+// base zawsze defaults true → padding.left zawsze 40. Drift today: nie ma.
+const FRET_WIDTH = 56
+const STRING_HEIGHT = 28
+const NUT_WIDTH = 8
+const PADDING = { top: 28, right: 16, bottom: 28, left: 40 }
+
+// MIRROR z ADR-037 root color tokens (jedyne hex potrzebne overlay'owi).
+// SVG stroke/fill NIE supportuje CSS var reliably cross-browser → inline hex
+// (precedens: BayesAnalyzer.tsx + Fretboard.tsx COLORS).
+const OVERLAY_COLORS = {
+  light: { selectedRing: '#8B2635' },   // burgundy (= ADR-037 root light)
+  dark:  { selectedRing: '#D97785' },   // burgundy dark
+} as const
+
+type SelectedOverlayProps = {
+  positions: FretboardNote[]
+  selectedPos: FretPosition | null
+  tuning: Tuning
+  fretCount: number
+  resolvedTheme: string | undefined
+  mounted: boolean
+  onNoteClick: (pos: FretPosition, pitched: PitchedNote) => void
+}
+
+function SelectedOverlay({
+  positions, selectedPos, tuning, fretCount,
+  resolvedTheme, mounted, onNoteClick,
+}: SelectedOverlayProps) {
+  const palette = mounted && resolvedTheme === 'dark' ? OVERLAY_COLORS.dark : OVERLAY_COLORS.light
+  const stringCount = tuning.strings.length
+  const innerWidth = NUT_WIDTH + FRET_WIDTH * fretCount
+  const innerHeight = STRING_HEIGHT * (stringCount - 1)
+  const svgWidth = innerWidth + PADDING.left + PADDING.right
+  const svgHeight = innerHeight + PADDING.top + PADDING.bottom
+
+  // MIRROR formula z Fretboard.tsx:105-110. Open-string center (fret=0) NIE używa
+  // FRET_WIDTH arithmetic — circle siedzi LEFT od nut (`x = padding.left - 12`).
+  // Risk #20: misalign tu = open C/G w UC1 i open E w UC2 prog-em nie reagują.
+  const noteCenter = (pos: FretPosition) => ({
+    x: pos.fret === 0
+      ? PADDING.left + NUT_WIDTH / 2 - 16
+      : PADDING.left + NUT_WIDTH + (pos.fret - 0.5) * FRET_WIDTH,
+    y: PADDING.top + (stringCount - 1 - pos.string) * STRING_HEIGHT,
+  })
+
+  return (
+    <svg
+      aria-hidden="true"
+      width={svgWidth}
+      height={svgHeight}
+      viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+      className="absolute top-6 left-0 right-0 mx-auto block min-w-[640px] pointer-events-none"
+    >
+      {/* Hit areas — 48×48 invisible rects, pointer-events auto. data-overlay-hit
+          marker distinguishes overlay rects od base's identyczne hit-rects (base też
+          renderuje 48×48 transparent rects per nuta) — selektor `rect[data-overlay-hit]`
+          targetuje wyłącznie wrapper's clicks w testach. */}
+      {positions.map((pos, idx) => {
+        const center = noteCenter(pos)
+        const pitched = noteAtPosition(tuning, pos)
+        return (
+          <rect
+            key={`hit-${idx}-${pos.string}-${pos.fret}`}
+            data-overlay-hit=""
+            x={center.x - 24} y={center.y - 24}
+            width={48} height={48}
+            fill="transparent"
+            className="pointer-events-auto cursor-pointer"
+            onClick={() => onNoteClick(pos, pitched)}
+          />
+        )
+      })}
+      {/* Selected ring overlay (Decyzja #3 — wariant (a) SVG ring). Base note r=10.5,
+          ring r=14 → ~3.5px outer offset visible delta. */}
+      {selectedPos && positions.some(p =>
+        p.string === selectedPos.string && p.fret === selectedPos.fret) && (
+        <circle
+          data-selected="true"
+          cx={noteCenter(selectedPos).x}
+          cy={noteCenter(selectedPos).y}
+          r={14}
+          stroke={palette.selectedRing}
+          strokeWidth={3}
+          fill="none"
+          className="pointer-events-none"
+        />
+      )}
+    </svg>
+  )
+}
+
+export default function FretboardVisualizer(props: FretboardVisualizerProps) {
+  const {
+    id, tuning = STANDARD_TUNING, fretCount = DEFAULT_FRET_COUNT,
+    enableAudio = true,
+  } = props
+
+  // useTheme + mounted guard — precedent BayesAnalyzer.tsx + Fretboard.tsx:80-86.
+  // resolvedTheme undefined w SSR → hydration mismatch jeśli inline'owany. setState
+  // jednorazowy, NIE cascading.
+  const { resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setMounted(true), [])
+
+  const [selected, setSelected] = useState<FretPosition | null>(null)
+
+  const isSamePos = (a: FretPosition | null, b: FretPosition) =>
+    a !== null && a.string === b.string && a.fret === b.fret
+
+  const handleNoteClick = (pos: FretPosition, pitched: PitchedNote) => {
+    setSelected(prev => isSamePos(prev, pos) ? null : pos)
+    if (enableAudio !== false) {
+      // Lazy load samples na first user gesture (autoplay policy + bundle budget).
+      // ensureAudio() resolves z AudioContext; playPitchedNote async (per-note lazy decode).
+      ensureAudio()
+        .then(ctx => playPitchedNote(ctx, pitched, 0.6))
+        .catch(err => {
+          // Silent UX per ADR-034 — czytelnik nie widzi modal/toast; autor w devtools.
+          console.error('[FretboardVisualizer] audio playback failed:', err)
+        })
+    }
+  }
+
+  // Generate notes from props (useMemo — invariant per render).
+  const baseNotes = useMemo<FretboardNote[]>(() => {
+    if ('scale' in props && props.scale) {
+      const root = props.scale.root
+      const scale = scaleNotes(root, props.scale.type)
+      return scale.flatMap(note =>
+        positionsOfNote(tuning, fretCount, note).map<FretboardNote>(pos => ({
+          ...pos,
+          color: note === root ? 'root' : 'scale-tone',
+        })),
+      )
+    }
+    if ('chord' in props && props.chord) {
+      const root = props.chord.root
+      const chord = chordNotes(root, props.chord.type)
+      return chord.flatMap(note =>
+        positionsOfNote(tuning, fretCount, note).map<FretboardNote>(pos => ({
+          ...pos,
+          color: note === root ? 'root' : 'chord-tone',
+        })),
+      )
+    }
+    // 'notes' mode (escape hatch) — explicit list, no root inference.
+    return props.notes.map<FretboardNote>(pos => ({ ...pos, color: 'chord-tone' }))
+  }, [props, tuning, fretCount])
+
+  // Decyzja planisty #7 — extract + pass do base (forward compat v5-13 degree overlay).
+  const rootNote: NoteName | undefined =
+    'scale' in props && props.scale ? props.scale.root :
+    'chord' in props && props.chord ? props.chord.root :
+    undefined
+
+  return (
+    <div
+      className="relative"
+      data-fretboard-visualizer-id={id}
+    >
+      <Fretboard
+        id={`${id}-base`}
+        tuning={tuning}
+        fretCount={fretCount}
+        notes={baseNotes}
+        rootNote={rootNote}
+        // onPlayNote left at default noop — wrapper handles click via overlay sibling.
+      />
+      <SelectedOverlay
+        positions={baseNotes}
+        selectedPos={selected}
+        tuning={tuning}
+        fretCount={fretCount}
+        resolvedTheme={resolvedTheme}
+        mounted={mounted}
+        onNoteClick={handleNoteClick}
+      />
+    </div>
+  )
+}
