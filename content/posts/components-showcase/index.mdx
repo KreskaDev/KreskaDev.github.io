@@ -141,10 +141,10 @@ For every example I picked one running domain: a public library. Books, members,
 
 ## 3. CodeTabs — four languages, same slices of the domain
 
-### 3.1 Loan repository — C# vs TypeScript
+### 3.1 Loan repository — C# vs TypeScript vs Python
 
 <CodeTabs
-  caption="Repository for the Loan aggregate — C# (EF Core) and TypeScript (Drizzle). Same operations, idiom of each stack."
+  caption="Repository for the Loan aggregate — C# (EF Core), TypeScript (Drizzle), Python (SQLAlchemy). Same operations, idiom of each stack."
   snippets={[
     {
       lang: 'csharp',
@@ -203,13 +203,46 @@ export const loanRepository = {
   },
 }`
     },
+    {
+      lang: 'python',
+      filename: 'loan_repository.py',
+      code: `from sqlalchemy import select, func, and_
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
+
+from .models import Loan, LoanStatus
+from .types import LoanId, MemberId
+
+class LoanRepository:
+    def __init__(self, session: AsyncSession):
+        self._session = session
+
+    async def get_by_id(self, loan_id: LoanId) -> Loan | None:
+        stmt = (select(Loan)
+                .options(joinedload(Loan.borrower), joinedload(Loan.copy))
+                .where(Loan.id == loan_id))
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def count_active_by_member(self, member_id: MemberId) -> int:
+        stmt = select(func.count(Loan.id)).where(and_(
+            Loan.borrower_id == member_id,
+            Loan.status == LoanStatus.ACTIVE,
+        ))
+        return await self._session.scalar(stmt) or 0
+
+    async def add(self, loan: Loan) -> None:
+        self._session.add(loan)
+        await self._session.commit()
+`
+    },
   ]}
 />
 
-### 3.2 Python single — overdue loan analytics
+### 3.2 Overdue analytics — Python vs C# vs TypeScript
 
 <CodeTabs
-  caption="Overdue loan analytics — Python with pandas. The natural idiom for data tasks."
+  caption="Overdue loans grouped by member tier — Python (pandas), C# (LINQ), TypeScript (array methods). Same shape of result, different idioms."
   snippets={[
     {
       lang: 'python',
@@ -231,6 +264,79 @@ def overdue_summary(loans_csv: str, as_of: datetime) -> pd.DataFrame:
 if __name__ == '__main__':
     summary = overdue_summary('loans.csv', datetime(2026, 6, 1))
     print(summary)
+`
+    },
+    {
+      lang: 'csharp',
+      filename: 'OverdueAnalytics.cs',
+      code: `public sealed record OverdueByTier(MembershipTier Tier, int Count, double AvgDays);
+
+public sealed class OverdueAnalytics
+{
+    private readonly LibraryDbContext _db;
+
+    public OverdueAnalytics(LibraryDbContext db) => _db = db;
+
+    public async Task<List<OverdueByTier>> Summary(DateTime asOf, CancellationToken ct)
+    {
+        var rows = await _db.Loans
+            .Where(l => l.ReturnedAt == null && l.DueAt < asOf)
+            .Select(l => new
+            {
+                Tier = l.Borrower.Tier,
+                OverdueDays = EF.Functions.DateDiffDay(l.DueAt, asOf),
+            })
+            .ToListAsync(ct);
+
+        return rows
+            .GroupBy(x => x.Tier)
+            .Select(g => new OverdueByTier(
+                Tier: g.Key,
+                Count: g.Count(),
+                AvgDays: Math.Round(g.Average(x => (double)x.OverdueDays), 1)))
+            .OrderByDescending(x => x.Count)
+            .ToList();
+    }
+}
+`
+    },
+    {
+      lang: 'typescript',
+      filename: 'overdueAnalytics.ts',
+      code: `import { db } from './db'
+import { loans, members } from './schema'
+import { and, eq, isNull, lt } from 'drizzle-orm'
+import type { MembershipTier } from './types'
+
+export interface OverdueByTier {
+  tier: MembershipTier
+  count: number
+  avgDays: number
+}
+
+export async function overdueSummary(asOf: Date): Promise<OverdueByTier[]> {
+  const rows = await db
+    .select({ tier: members.tier, dueAt: loans.dueAt })
+    .from(loans)
+    .innerJoin(members, eq(loans.borrowerId, members.id))
+    .where(and(isNull(loans.returnedAt), lt(loans.dueAt, asOf)))
+
+  const byTier = new Map<MembershipTier, number[]>()
+  for (const { tier, dueAt } of rows) {
+    const days = Math.floor((asOf.getTime() - dueAt.getTime()) / 86_400_000)
+    const arr = byTier.get(tier) ?? []
+    arr.push(days)
+    byTier.set(tier, arr)
+  }
+
+  return Array.from(byTier.entries())
+    .map(([tier, days]) => ({
+      tier,
+      count: days.length,
+      avgDays: Math.round((days.reduce((a, b) => a + b, 0) / days.length) * 10) / 10,
+    }))
+    .sort((a, b) => b.count - a.count)
+}
 `
     },
   ]}
