@@ -1,0 +1,485 @@
+---
+title: "Diagrams and code — tools of this series"
+subtitle: "Mermaid + CodeTabs on a dry run, Library/Lending domain"
+date: 2026-06-08
+author: KreskaDev
+slug: components-showcase
+summary: "A short technical preview of the two widgets I'll lean on in upcoming pattern posts: Mermaid for diagrams (sequence, class, state, ER, flowchart) and CodeTabs for code samples across four languages (C#, TypeScript, Python, PowerShell). All examples come from one running domain: a public library."
+tags:
+  - meta
+  - tooling
+  - v6-series
+---
+
+## 1. Why this post exists
+
+Every software project lives in tension between abstraction and code. Diagrams answer "what and why"; code answers "how, exactly". In the upcoming series on programming patterns — DDD, CQRS, EventStorming, mediators, integrations — I'll juggle both layers. This short post is a technical preview of the tools I'll use.
+
+For every example I picked one running domain: a public library. Books, members, loans, fines, reservations — familiar enough to skip the glossary, rich enough to demonstrate every pattern.
+
+## 2. Mermaid — five diagram types
+
+### 2.1 Sequence — Member borrows a book
+
+<Mermaid
+  diagramKind="sequence"
+  caption="Borrowing a book — request/response flow between Member, Library API, and Loan service"
+  chart={`sequenceDiagram
+    actor M as Member
+    participant API as Library API
+    participant L as Loan Service
+    participant DB as Loan DB
+    M->>API: POST /loans { bookId, memberId }
+    API->>L: createLoan(cmd)
+    L->>DB: findActiveByMember(memberId)
+    DB-->>L: count = 2
+    L->>DB: insert(Loan{Active, dueAt: +14d})
+    DB-->>L: ok
+    L-->>API: Loan{id, dueAt}
+    API-->>M: 201 Created
+`} />
+
+### 2.2 Class — Loan / Member / BookCopy
+
+<Mermaid
+  diagramKind="class"
+  caption="Aggregate model: Loan, Member, BookCopy (initial sketch — full map lands in later posts)"
+  chart={`classDiagram
+    class Loan {
+      +LoanId id
+      +MemberId borrower
+      +BookCopyId copy
+      +DateTime borrowedAt
+      +DateTime dueAt
+      +LoanStatus status
+      +renew(days) Result
+      +returnCopy(at) Result
+    }
+    class Member {
+      +MemberId id
+      +string name
+      +MembershipTier tier
+      +int activeLoansLimit
+    }
+    class BookCopy {
+      +BookCopyId id
+      +ISBN isbn
+      +Shelf location
+      +CopyCondition condition
+    }
+    Loan "*" --> "1" Member : borrower
+    Loan "*" --> "1" BookCopy : copy
+`} />
+
+### 2.3 State — Loan lifecycle
+
+<Mermaid
+  diagramKind="state"
+  caption="Loan lifecycle — from reservation to closing"
+  chart={`stateDiagram-v2
+    [*] --> Reserved : reserve()
+    Reserved --> Active : pickUp()
+    Reserved --> [*] : cancel() / expire()
+    Active --> Returned : returnCopy() before dueAt
+    Active --> Overdue : tick() past dueAt
+    Overdue --> Returned : returnCopy() with fee
+    Returned --> [*]
+`} />
+
+### 2.4 ER — data schemas (modular monolith)
+
+A modular monolith splits the data layer into **per-module schemas** — usually separate PostgreSQL `SCHEMA`s in one database, or logically separate databases sharing one host. The contract: each module owns its tables exclusively; **cross-module references use ID-only, never foreign keys**. That isolation is what lets a module ship as its own service later without ripping the schema apart.
+
+Below: three schemas of the library — **Lending** (operational state), **Catalog** (book metadata), **Billing** (fines & payments). External references are annotated in comments.
+
+<Mermaid
+  diagramKind="er"
+  caption="Lending schema — operational state: who borrowed what, when, due dates, reservations. References Catalog only by ID."
+  chart={`erDiagram
+    MEMBER ||--o{ LOAN : "borrows"
+    MEMBER ||--o{ RESERVATION : "places"
+    BOOK_COPY ||--o{ LOAN : "lent as"
+    BOOK_COPY ||--o{ RESERVATION : "reserved as"
+
+    MEMBER {
+      uuid id PK
+      string name
+      string email UK
+      enum tier
+      int active_loans_limit
+    }
+    LOAN {
+      uuid id PK
+      uuid member_id FK
+      uuid copy_id FK
+      timestamp borrowed_at
+      timestamp due_at
+      timestamp returned_at
+      enum status
+    }
+    RESERVATION {
+      uuid id PK
+      uuid member_id FK
+      uuid copy_id FK
+      timestamp placed_at
+      enum status
+    }
+    BOOK_COPY {
+      uuid id PK
+      uuid book_id "ref Catalog.BOOK.id (no FK)"
+      string shelf
+      enum condition
+    }
+`} />
+
+<Mermaid
+  diagramKind="er"
+  caption="Catalog schema — book metadata: titles, editions, authors, publishers, genres. Zero knowledge of loans or members."
+  chart={`erDiagram
+    BOOK ||--o{ BOOK_EDITION : "published as"
+    BOOK ||--o{ BOOK_AUTHOR : "written by"
+    AUTHOR ||--o{ BOOK_AUTHOR : "wrote"
+    PUBLISHER ||--o{ BOOK_EDITION : "publishes"
+    BOOK ||--o{ BOOK_GENRE : "classified as"
+    GENRE ||--o{ BOOK_GENRE : "groups"
+
+    BOOK {
+      uuid id PK
+      string title
+      string original_language
+      year first_published
+    }
+    BOOK_EDITION {
+      uuid id PK
+      uuid book_id FK
+      uuid publisher_id FK
+      string isbn UK
+      year published_year
+    }
+    AUTHOR {
+      uuid id PK
+      string name
+      string bio
+    }
+    BOOK_AUTHOR {
+      uuid book_id FK
+      uuid author_id FK
+    }
+    PUBLISHER {
+      uuid id PK
+      string name
+      string country
+    }
+    GENRE {
+      uuid id PK
+      string name UK
+    }
+    BOOK_GENRE {
+      uuid book_id FK
+      uuid genre_id FK
+    }
+`} />
+
+<Mermaid
+  diagramKind="er"
+  caption="Billing schema — fines and payments. References Lending.LOAN and Lending.MEMBER by ID only — strict module boundary."
+  chart={`erDiagram
+    MEMBER_ACCOUNT ||--o{ FINE : "owes"
+    MEMBER_ACCOUNT ||--o{ PAYMENT : "settles via"
+    PAYMENT ||--o{ PAYMENT_ALLOCATION : "covers"
+    FINE ||--o{ PAYMENT_ALLOCATION : "paid by"
+
+    MEMBER_ACCOUNT {
+      uuid id PK
+      uuid member_id UK "ref Lending.MEMBER.id (no FK)"
+      decimal balance
+      timestamp opened_at
+    }
+    FINE {
+      uuid id PK
+      uuid account_id FK
+      uuid loan_id "ref Lending.LOAN.id (no FK)"
+      decimal amount
+      enum reason
+      timestamp incurred_at
+      enum status
+    }
+    PAYMENT {
+      uuid id PK
+      uuid account_id FK
+      decimal amount
+      enum method
+      timestamp paid_at
+    }
+    PAYMENT_ALLOCATION {
+      uuid id PK
+      uuid payment_id FK
+      uuid fine_id FK
+      decimal allocated_amount
+    }
+`} />
+
+### 2.5 Flowchart — "can I borrow another book?"
+
+<Mermaid
+  diagramKind="flow"
+  caption="Decision: can the Member borrow another book?"
+  chart={`flowchart TD
+    Start([Member clicks 'Borrow']) --> CheckActive{activeLoans < limit?}
+    CheckActive -- no --> RejectLimit[/Reject: limit exceeded/]
+    CheckActive -- yes --> CheckOverdue{any overdue?}
+    CheckOverdue -- yes --> RejectOverdue[/Reject: return overdue first/]
+    CheckOverdue -- no --> CheckCopy{copy available?}
+    CheckCopy -- no --> Reserve[Offer reservation]
+    CheckCopy -- yes --> Create[Create Loan]
+    Create --> End([Show confirmation])
+    RejectLimit --> End
+    RejectOverdue --> End
+    Reserve --> End
+`} />
+
+## 3. CodeTabs — four languages, same slices of the domain
+
+### 3.1 Loan repository — C# vs TypeScript vs Python
+
+<CodeTabs
+  caption="Repository for the Loan aggregate — C# (EF Core), TypeScript (Drizzle), Python (SQLAlchemy). Same operations, idiom of each stack."
+  snippets={[
+    {
+      lang: 'csharp',
+      filename: 'LoanRepository.cs',
+      code: `public sealed class LoanRepository : ILoanRepository
+{
+    private readonly LibraryDbContext _db;
+
+    public LoanRepository(LibraryDbContext db) => _db = db;
+
+    public async Task<Loan?> GetById(LoanId id, CancellationToken ct)
+        => await _db.Loans
+            .Include(l => l.Borrower)
+            .Include(l => l.Copy)
+            .SingleOrDefaultAsync(l => l.Id == id, ct);
+
+    public async Task<int> CountActiveByMember(MemberId memberId, CancellationToken ct)
+        => await _db.Loans
+            .CountAsync(l => l.BorrowerId == memberId && l.Status == LoanStatus.Active, ct);
+
+    public async Task Add(Loan loan, CancellationToken ct)
+    {
+        await _db.Loans.AddAsync(loan, ct);
+        await _db.SaveChangesAsync(ct);
+    }
+}`
+    },
+    {
+      lang: 'typescript',
+      filename: 'loanRepository.ts',
+      code: `import { db } from './db'
+import { loans } from './schema'
+import { and, count, eq } from 'drizzle-orm'
+import type { Loan, LoanId, MemberId } from './types'
+
+export const loanRepository = {
+  async getById(id: LoanId): Promise<Loan | null> {
+    const rows = await db
+      .select()
+      .from(loans)
+      .where(eq(loans.id, id))
+      .limit(1)
+    return rows[0] ?? null
+  },
+
+  async countActiveByMember(memberId: MemberId): Promise<number> {
+    const rows = await db
+      .select({ count: count() })
+      .from(loans)
+      .where(and(eq(loans.borrowerId, memberId), eq(loans.status, 'active')))
+    return rows[0]?.count ?? 0
+  },
+
+  async add(loan: Loan): Promise<void> {
+    await db.insert(loans).values(loan)
+  },
+}`
+    },
+    {
+      lang: 'python',
+      filename: 'loan_repository.py',
+      code: `from sqlalchemy import select, func, and_
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
+
+from .models import Loan, LoanStatus
+from .types import LoanId, MemberId
+
+class LoanRepository:
+    def __init__(self, session: AsyncSession):
+        self._session = session
+
+    async def get_by_id(self, loan_id: LoanId) -> Loan | None:
+        stmt = (select(Loan)
+                .options(joinedload(Loan.borrower), joinedload(Loan.copy))
+                .where(Loan.id == loan_id))
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def count_active_by_member(self, member_id: MemberId) -> int:
+        stmt = select(func.count(Loan.id)).where(and_(
+            Loan.borrower_id == member_id,
+            Loan.status == LoanStatus.ACTIVE,
+        ))
+        return await self._session.scalar(stmt) or 0
+
+    async def add(self, loan: Loan) -> None:
+        self._session.add(loan)
+        await self._session.commit()
+`
+    },
+  ]}
+/>
+
+### 3.2 Overdue analytics — Python vs C# vs TypeScript
+
+<CodeTabs
+  caption="Overdue loans grouped by member tier — Python (pandas), C# (LINQ), TypeScript (array methods). Same shape of result, different idioms."
+  snippets={[
+    {
+      lang: 'python',
+      filename: 'overdue_analytics.py',
+      code: `import pandas as pd
+from datetime import datetime
+
+def overdue_summary(loans_csv: str, as_of: datetime) -> pd.DataFrame:
+    df = pd.read_csv(loans_csv, parse_dates=['borrowed_at', 'due_at', 'returned_at'])
+    active = df[df['returned_at'].isna()].copy()
+    active['overdue_days'] = (as_of - active['due_at']).dt.days
+    overdue = active[active['overdue_days'] > 0]
+    by_tier = (overdue
+        .groupby('member_tier')
+        .agg(count=('id', 'size'), avg_days=('overdue_days', 'mean'))
+        .round(1))
+    return by_tier.sort_values('count', ascending=False)
+
+if __name__ == '__main__':
+    summary = overdue_summary('loans.csv', datetime(2026, 6, 1))
+    print(summary)
+`
+    },
+    {
+      lang: 'csharp',
+      filename: 'OverdueAnalytics.cs',
+      code: `public sealed record OverdueByTier(MembershipTier Tier, int Count, double AvgDays);
+
+public sealed class OverdueAnalytics
+{
+    private readonly LibraryDbContext _db;
+
+    public OverdueAnalytics(LibraryDbContext db) => _db = db;
+
+    public async Task<List<OverdueByTier>> Summary(DateTime asOf, CancellationToken ct)
+    {
+        var rows = await _db.Loans
+            .Where(l => l.ReturnedAt == null && l.DueAt < asOf)
+            .Select(l => new
+            {
+                Tier = l.Borrower.Tier,
+                OverdueDays = EF.Functions.DateDiffDay(l.DueAt, asOf),
+            })
+            .ToListAsync(ct);
+
+        return rows
+            .GroupBy(x => x.Tier)
+            .Select(g => new OverdueByTier(
+                Tier: g.Key,
+                Count: g.Count(),
+                AvgDays: Math.Round(g.Average(x => (double)x.OverdueDays), 1)))
+            .OrderByDescending(x => x.Count)
+            .ToList();
+    }
+}
+`
+    },
+    {
+      lang: 'typescript',
+      filename: 'overdueAnalytics.ts',
+      code: `import { db } from './db'
+import { loans, members } from './schema'
+import { and, eq, isNull, lt } from 'drizzle-orm'
+import type { MembershipTier } from './types'
+
+export interface OverdueByTier {
+  tier: MembershipTier
+  count: number
+  avgDays: number
+}
+
+export async function overdueSummary(asOf: Date): Promise<OverdueByTier[]> {
+  const rows = await db
+    .select({ tier: members.tier, dueAt: loans.dueAt })
+    .from(loans)
+    .innerJoin(members, eq(loans.borrowerId, members.id))
+    .where(and(isNull(loans.returnedAt), lt(loans.dueAt, asOf)))
+
+  const byTier = new Map<MembershipTier, number[]>()
+  for (const { tier, dueAt } of rows) {
+    const days = Math.floor((asOf.getTime() - dueAt.getTime()) / 86_400_000)
+    const arr = byTier.get(tier) ?? []
+    arr.push(days)
+    byTier.set(tier, arr)
+  }
+
+  return Array.from(byTier.entries())
+    .map(([tier, days]) => ({
+      tier,
+      count: days.length,
+      avgDays: Math.round((days.reduce((a, b) => a + b, 0) / days.length) * 10) / 10,
+    }))
+    .sort((a, b) => b.count - a.count)
+}
+`
+    },
+  ]}
+/>
+
+### 3.3 PowerShell single — local database seed
+
+<CodeTabs
+  caption="Script seeding a local book_copies table from a JSON file. The natural idiom for dev tooling."
+  snippets={[
+    {
+      lang: 'powershell',
+      filename: 'Seed-Library.ps1',
+      code: `<#
+.SYNOPSIS
+  Seeds the local book_copies table from books.json with random shelf/condition.
+#>
+param(
+    [Parameter(Mandatory)][string]$ConnectionString,
+    [string]$BooksJsonPath = './data/books.json',
+    [int]$CopiesPerBook = 3
+)
+
+$shelves = @('A1', 'A2', 'B1', 'B2', 'C1', 'C2')
+$conditions = @('New', 'Good', 'Fair', 'Worn')
+
+$books = Get-Content $BooksJsonPath | ConvertFrom-Json
+
+foreach ($book in $books) {
+    Write-Host "Seeding copies for: $($book.title)" -ForegroundColor Cyan
+    1..$CopiesPerBook | ForEach-Object {
+        $copyId = [guid]::NewGuid()
+        $shelf = Get-Random -InputObject $shelves
+        $condition = Get-Random -InputObject $conditions
+        $sql = "INSERT INTO book_copies (id, book_id, shelf, condition) VALUES ('$copyId', '$($book.id)', '$shelf', '$condition');"
+        Invoke-SqlCmd -ConnectionString $ConnectionString -Query $sql
+    }
+}
+Write-Host "Done. Seeded $($books.Count * $CopiesPerBook) copies." -ForegroundColor Green
+`
+    },
+  ]}
+/>
+
+## 4. What's next
+
+These two widgets are the foundation of the workshop I'll write patterns with. In the next post we dive into EventStorming and the first real domain story — leveraging the now-familiar Mermaid + CodeTabs. If you see a need for another tool (state machine playground? hexagonal visualizer? animated message splitter?), the backlog is open — DM.
