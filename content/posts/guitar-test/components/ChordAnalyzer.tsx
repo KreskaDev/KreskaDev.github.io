@@ -18,11 +18,17 @@ import type {
 } from './types'
 import { DEFAULT_FRET_COUNT } from './types'
 import {
-  noteAtPosition, detectChord, spellChordDegrees, STANDARD_TUNING,
+  noteAtPosition, detectChord, spellChordDegrees, chordNotes, STANDARD_TUNING,
 } from './music-theory'
 import { CHORD_SHAPES } from './chord-shapes'
 import Fretboard from './Fretboard'
 import { ensureAudio, playPitchedNote } from './audio'
+import { playSequence } from './audio-sequence'
+import { NotesRow, IntervalsRow, DetectedNameRow } from './accordion-rows'
+
+// v5-14 labelMode — wrapper-API enum local; symmetric z FretboardVisualizer
+// (każdy wrapper deklaruje własny typ, NIE shared do types.ts dopóki v5-16 notation).
+type LabelMode = 'note' | 'degree'
 
 // === ChordAnalyzer props (discriminated union) ===
 
@@ -33,7 +39,8 @@ type SharedProps = {
   rootNote?: NoteName
   enharmonicPreference?: 'sharps' | 'flats' | 'auto'
   enableAudio?: boolean
-  showDegrees?: boolean
+  showDegrees?: boolean              // v5-13 — controls inline badges (orthogonal z labelMode)
+  labelMode?: LabelMode              // v5-14, default 'note'; gates fretboard label mode
 }
 
 export type ChordAnalyzerProps = SharedProps & (
@@ -232,6 +239,13 @@ export default function ChordAnalyzer(props: ChordAnalyzerProps) {
 
   const [selected, setSelected] = useState<FretPosition | null>(null)
 
+  // v5-14 labelMode — per ADR-011 per-instance state. Orthogonal z showDegrees per
+  // scenario X (plan §0.3): showDegrees gates inline badges, labelMode gates fretboard
+  // label mode. Combination labelMode='degree' + showDegrees=true → both render (acceptable).
+  const [labelMode, setLabelMode] = useState<LabelMode>(props.labelMode ?? 'note')
+  const toggleLabelMode = () =>
+    setLabelMode(prev => prev === 'note' ? 'degree' : 'note')
+
   const shape = resolveShape(props)
 
   // Active notes (frets[i] !== null) z color rola (root vs chord-tone na podstawie
@@ -333,6 +347,59 @@ export default function ChordAnalyzer(props: ChordAnalyzerProps) {
   // fallback do raw primary.name (np. "C maj" gdy brak rootStringIndex lub bass=root).
   const displayName = slashDisplayName ?? primary?.name ?? null
 
+  // v5-14 accordion content (independent od v5-13 `degrees` useMemo which is showDegrees-gated;
+  // accordion content musi renderować się regardless of showDegrees value per Pre-confirmed #2
+  // — accordion expansion to OSOBNA feature niż inline badges).
+  const accordionNoteNames = useMemo<NoteName[]>(() => {
+    if (!primary) return []
+    return chordNotes(primary.spec.root, primary.spec.type)
+  }, [primary])
+
+  const accordionDegrees = useMemo<IntervalName[]>(() => {
+    if (!primary) return []
+    return spellChordDegrees(primary.spec)
+  }, [primary])
+
+  // accordionDisplayName direct reuse of `displayName` (already computes slash) — plan §3.5
+  // Decyzja (a): zero extra computation dla primary; sloth: brak osobnego useMemo bo displayName
+  // jest już derived value (slashDisplayName ?? primary?.name ?? null).
+  const accordionDisplayName = displayName
+
+  // Secondary reading w accordion — Δ<0.2 threshold per ADR-045 + plan §3.5 Decyzja (b).
+  // Inline slash logic duplicated dla secondary (plan accepts inline duplication; zero
+  // modyfikacji shipped slashDisplayName useMemo per plan §3.5 final paragraph).
+  const accordionSecondaryName = useMemo<string | undefined>(() => {
+    if (!detection || detection.length < 2) return undefined
+    const p = detection[0]
+    const s = detection[1]
+    if (!p || !s) return undefined
+    if (p.confidence - s.confidence >= 0.2) return undefined
+    // Slash composition dla secondary — symmetric logic do shipped slashDisplayName useMemo.
+    if (!shape || shape.rootStringIndex === undefined) return s.name
+    const bassFret = shape.frets[shape.rootStringIndex]
+    if (bassFret === null || bassFret === undefined) return s.name
+    const bassNote = noteAtPosition(tuning, { string: shape.rootStringIndex, fret: bassFret })
+    if (bassNote.name === s.spec.root) return s.name
+    const baseSlashName = s.spec.type === 'maj' ? s.spec.root : s.name
+    return `${baseSlashName}/${bassNote.name}`
+  }, [detection, shape, tuning])
+
+  // v5-14 Play chord handler — kompozycja activeNotes → PitchedNote[] → playSequence z
+  // interval=0 (chord simultaneous). enableAudio guard per v5-13 convention; silent UX
+  // na error per ADR-034.
+  const handlePlayChord = async () => {
+    if (enableAudio === false) return
+    if (activeNotes.length === 0) return
+    try {
+      const pitchedNotes: PitchedNote[] = activeNotes.map(fbNote =>
+        noteAtPosition(tuning, { string: fbNote.string, fret: fbNote.fret })
+      )
+      await playSequence(pitchedNotes, { interval: 0 })
+    } catch (err) {
+      console.error('[ChordAnalyzer] play chord failed:', err)
+    }
+  }
+
   // Layout pattern z FretboardVisualizer.tsx:252-287 — outer wrapper z display:contents
   // na base outer div neutralizuje margin-collapse i scroll desync (commit 84624b1).
   return (
@@ -392,6 +459,7 @@ export default function ChordAnalyzer(props: ChordAnalyzerProps) {
           fretCount={fretCount}
           notes={activeNotes}
           rootNote={rootNoteOverride ?? primary?.spec.root}
+          showDegrees={labelMode === 'degree'}
         />
         <MutedAndSelectedOverlay
           activeNotes={activeNotes}
@@ -420,6 +488,46 @@ export default function ChordAnalyzer(props: ChordAnalyzerProps) {
           ))}
         </ul>
       )}
+
+      {/* v5-14 accordion + Play chord + degree toggle button row. Accordion kolokowany
+          pod inline degrees badges (v5-13 zostają intact per Pre-confirmed #2). Native
+          <details> per Pre-confirmed #9; accordion + degree toggle niezależne per
+          Pre-confirmed #3. Play button rendered tylko jeśli enableAudio !== false
+          (plan §3.5 hide-not-disable lock). */}
+      <div className="mx-auto max-w-prose mt-3 px-4 sm:px-0 not-prose flex flex-wrap items-center gap-3">
+        {primary && (
+          <details className="w-full sm:w-auto">
+            <summary className="cursor-pointer py-3 px-4 text-sm text-text-secondary hover:text-text-primary transition-colors">
+              Show intervals
+            </summary>
+            <div className="mt-3 pl-4 space-y-2 text-sm">
+              <NotesRow notes={accordionNoteNames} />
+              <IntervalsRow degrees={accordionDegrees} />
+              <DetectedNameRow name={accordionDisplayName} secondaryName={accordionSecondaryName} />
+              {enableAudio !== false && activeNotes.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handlePlayChord}
+                  data-testid="play-chord-button"
+                  className="mt-2 py-3 px-4 text-sm text-text-secondary hover:text-text-primary border border-border-default rounded transition-colors"
+                >
+                  ▶ Play chord
+                </button>
+              )}
+            </div>
+          </details>
+        )}
+        {primary && (
+          <button
+            type="button"
+            onClick={toggleLabelMode}
+            data-testid="label-mode-toggle"
+            className="py-3 px-4 text-sm text-text-secondary hover:text-text-primary border border-border-default rounded transition-colors"
+          >
+            {labelMode === 'note' ? 'Show degrees' : 'Show notes'}
+          </button>
+        )}
+      </div>
     </div>
   )
 }

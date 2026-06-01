@@ -198,3 +198,79 @@ describe('FretboardVisualizer — id propagation', () => {
     ).not.toBeNull()
   })
 })
+
+// === v5-14: intervals accordion + labelMode (plan §3.7) ===
+// jsdom <details> pattern: preferowane fireEvent.click(summary) → details.open=true
+// (verified empirycznie podczas pierwszego runa Test V1; fallback `details.open = true`
+// z act() jeśli pierwszy wariant nie toggle'uje).
+
+describe('FretboardVisualizer — v5-14 accordion render', () => {
+  it('renders <details> collapsed by default dla scale variant', () => {
+    const { container } = renderWithTheme(
+      <FretboardVisualizer id="vis-acc-1" scale={{ root: 'C', type: 'major' }} />,
+    )
+    const details = container.querySelector('details')
+    expect(details).not.toBeNull()
+    expect(details?.open).toBe(false)
+  })
+
+  it('click <summary> "Show intervals" → details.open=true', () => {
+    const { container, getByText } = renderWithTheme(
+      <FretboardVisualizer id="vis-acc-2" scale={{ root: 'C', type: 'major' }} />,
+    )
+    const details = container.querySelector('details')!
+    fireEvent.click(getByText('Show intervals'))
+    expect(details.open).toBe(true)
+  })
+
+  it('expanded accordion dla D dorian shows notes + intervals + name', () => {
+    const { getByText, getByTestId } = renderWithTheme(
+      <FretboardVisualizer id="vis-acc-3" scale={{ root: 'D', type: 'dorian' }} />,
+    )
+    fireEvent.click(getByText('Show intervals'))
+    expect(getByTestId('notes-row').textContent).toContain('D')
+    expect(getByTestId('notes-row').textContent).toContain('F')
+    expect(getByTestId('intervals-row').textContent).toContain('R')
+    expect(getByTestId('detected-name-row').textContent).toContain('D dorian')
+  })
+
+  it('notes variant accordion hidden (edge case §3.4)', () => {
+    const { container } = renderWithTheme(
+      <FretboardVisualizer id="vis-acc-4" notes={[{ string: 0, fret: 3 }]} />,
+    )
+    const details = container.querySelector('details')
+    expect(details).toBeNull()
+  })
+})
+
+describe('FretboardVisualizer — v5-14 labelMode', () => {
+  it('default labelMode="note" → fretboard renders note labels (no R degree marker)', () => {
+    const { container } = renderWithTheme(
+      <FretboardVisualizer id="vis-lm-1" scale={{ root: 'C', type: 'major' }} />,
+    )
+    const svgText = container.querySelector('svg')?.textContent ?? ''
+    // Note mode: brak 'R' marker (root degree label tylko w degree mode); note letters
+    // C/D/E/F/G/A/B repeated. SVG text bez separatorów → word boundary nieuzywalny;
+    // używamy negative check na 'R' jako bardziej deterministic discriminator.
+    expect(svgText).not.toMatch(/R/)
+  })
+
+  it('labelMode="degree" prop → fretboard renders R root degree marker', () => {
+    const { container } = renderWithTheme(
+      <FretboardVisualizer id="vis-lm-2" scale={{ root: 'C', type: 'major' }} labelMode="degree" />,
+    )
+    const svgText = container.querySelector('svg')?.textContent ?? ''
+    expect(svgText).toMatch(/R/)
+  })
+
+  it('toggle button click switches labelMode "note" ↔ "degree"', () => {
+    const { container, getByText } = renderWithTheme(
+      <FretboardVisualizer id="vis-lm-3" scale={{ root: 'C', type: 'major' }} />,
+    )
+    const showDegreesBtn = getByText('Show degrees')
+    fireEvent.click(showDegreesBtn)
+    expect(getByText('Show notes')).not.toBeNull()
+    const svgText = container.querySelector('svg')?.textContent ?? ''
+    expect(svgText).toMatch(/R/)
+  })
+})

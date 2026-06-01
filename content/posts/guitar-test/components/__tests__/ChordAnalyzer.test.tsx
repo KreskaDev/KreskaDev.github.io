@@ -208,3 +208,142 @@ describe('ChordAnalyzer — enableAudio guard', () => {
     expect(audio.playPitchedNote).not.toHaveBeenCalled()
   })
 })
+
+// === v5-14: intervals accordion + Play chord + labelMode (plan §3.8) ===
+// jsdom <details> pattern: preferowane fireEvent.click(summary) → details.open=true
+// (verified empirycznie podczas FretboardVisualizer test runa; pinned dla całego v5-14).
+
+vi.mock('../audio-sequence', () => ({
+  playSequence: vi.fn(() => Promise.resolve()),
+}))
+
+describe('ChordAnalyzer — v5-14 accordion render', () => {
+  it('renders <details> collapsed by default', () => {
+    const { container } = renderWithTheme(
+      <ChordAnalyzer id="ca-acc-1" shape={[null, 3, 2, 0, 1, 0]} />,
+    )
+    const details = container.querySelector('details')
+    expect(details).not.toBeNull()
+    expect(details?.open).toBe(false)
+  })
+
+  it('expanded accordion shows notes + intervals + chord name + Play button', () => {
+    const { container, getByText, getByTestId } = renderWithTheme(
+      <ChordAnalyzer id="ca-acc-2" shape={[null, 3, 2, 0, 1, 0]} />,
+    )
+    fireEvent.click(getByText('Show intervals'))
+    expect(getByTestId('notes-row').textContent).toContain('C')
+    expect(getByTestId('notes-row').textContent).toContain('E')
+    expect(getByTestId('notes-row').textContent).toContain('G')
+    expect(getByTestId('intervals-row').textContent).toContain('R')
+    expect(getByTestId('detected-name-row').textContent).toMatch(/C\s*maj/)
+    expect(container.querySelector('[data-testid="play-chord-button"]')).not.toBeNull()
+  })
+})
+
+describe('ChordAnalyzer — v5-14 Play chord button', () => {
+  it('click Play chord → playSequence called z chord notes + interval=0', async () => {
+    const audioSeq = await import('../audio-sequence')
+    const { container, getByText } = renderWithTheme(
+      <ChordAnalyzer id="ca-play-1" shape={[null, 3, 2, 0, 1, 0]} />,
+    )
+    fireEvent.click(getByText('Show intervals'))
+    const playBtn = container.querySelector('[data-testid="play-chord-button"]')!
+    fireEvent.click(playBtn)
+    await Promise.resolve()
+    expect(audioSeq.playSequence).toHaveBeenCalledTimes(1)
+    const [notesArg, optionsArg] = vi.mocked(audioSeq.playSequence).mock.calls[0]!
+    expect(notesArg.length).toBe(5)   // C maj open voicing = 5 active notes
+    expect(optionsArg).toEqual({ interval: 0 })
+  })
+
+  it('enableAudio={false} → Play button hidden w accordion', () => {
+    const { container, getByText } = renderWithTheme(
+      <ChordAnalyzer id="ca-play-2" shape={[null, 3, 2, 0, 1, 0]} enableAudio={false} />,
+    )
+    fireEvent.click(getByText('Show intervals'))
+    const playButton = container.querySelector('[data-testid="play-chord-button"]')
+    expect(playButton).toBeNull()
+  })
+})
+
+describe('ChordAnalyzer — v5-14 v5-13 regression preservation', () => {
+  it('v5-13 inline degrees-list badges still rendered (showDegrees default true)', () => {
+    const { getByTestId } = renderWithTheme(
+      <ChordAnalyzer id="ca-reg-1" shape={[null, 3, 2, 0, 1, 0]} />,
+    )
+    expect(getByTestId('degrees-list')).not.toBeNull()
+    const items = getByTestId('degrees-list').querySelectorAll('li')
+    expect(items.length).toBeGreaterThan(0)
+  })
+})
+
+describe('ChordAnalyzer — v5-14 secondary reading w accordion', () => {
+  it('ambiguous Cadd9 voicing → DetectedNameRow zawiera "Other reading"', () => {
+    const { container, getByText, getByTestId } = renderWithTheme(
+      <ChordAnalyzer id="ca-sec-1" shape={[null, 3, 2, 0, 3, 3]} />,
+    )
+    // Sprawdź czy primary jest add9 (per v5-13 Sesja 20 deviation #1 voicing)
+    const chordName = container.querySelector('[data-testid="chord-name"]')?.textContent ?? ''
+    // Niezależnie od dokładnej formy primary, accordion DetectedNameRow musi pokazać secondary
+    fireEvent.click(getByText('Show intervals'))
+    const nameRow = getByTestId('detected-name-row')
+    // Per plan §3.8 Test #6: secondary reading present when Δ<0.2
+    expect(nameRow.textContent).toMatch(/Other reading/)
+    // Primary z chord-name UI matches accordion primary
+    if (chordName) {
+      expect(nameRow.textContent).toContain(chordName.split(' ')[0]!)
+    }
+  })
+})
+
+describe('ChordAnalyzer — v5-14 orthogonal labelMode × showDegrees (plan §3.8 #7-10)', () => {
+  it('State A: labelMode="note" + showDegrees=true (defaults) → notes na fretboard + badges visible', () => {
+    const { container, getByTestId } = renderWithTheme(
+      <ChordAnalyzer id="ca-ortho-A" shape={[null, 3, 2, 0, 1, 0]} />,
+    )
+    const svgText = container.querySelector('svg')?.textContent ?? ''
+    expect(svgText).not.toMatch(/R/)   // note mode (no R degree label)
+    expect(getByTestId('degrees-list')).not.toBeNull()
+  })
+
+  it('State B: labelMode="note" + showDegrees=false → notes na fretboard + badges hidden', () => {
+    const { container } = renderWithTheme(
+      <ChordAnalyzer id="ca-ortho-B" shape={[null, 3, 2, 0, 1, 0]} showDegrees={false} />,
+    )
+    const svgText = container.querySelector('svg')?.textContent ?? ''
+    expect(svgText).not.toMatch(/R/)
+    expect(container.querySelector('[data-testid="degrees-list"]')).toBeNull()
+  })
+
+  it('State C: labelMode="degree" + showDegrees=true → degrees na fretboard + badges visible', () => {
+    const { container, getByTestId } = renderWithTheme(
+      <ChordAnalyzer id="ca-ortho-C" shape={[null, 3, 2, 0, 1, 0]} labelMode="degree" />,
+    )
+    const svgText = container.querySelector('svg')?.textContent ?? ''
+    expect(svgText).toMatch(/R/)
+    expect(getByTestId('degrees-list')).not.toBeNull()
+  })
+
+  it('State D: labelMode="degree" + showDegrees=false → degrees na fretboard + badges hidden', () => {
+    const { container } = renderWithTheme(
+      <ChordAnalyzer id="ca-ortho-D" shape={[null, 3, 2, 0, 1, 0]} labelMode="degree" showDegrees={false} />,
+    )
+    const svgText = container.querySelector('svg')?.textContent ?? ''
+    expect(svgText).toMatch(/R/)
+    expect(container.querySelector('[data-testid="degrees-list"]')).toBeNull()
+  })
+})
+
+describe('ChordAnalyzer — v5-14 degree toggle button', () => {
+  it('click "Show degrees" → labelMode switches to degree (fretboard text changes)', () => {
+    const { container, getByText } = renderWithTheme(
+      <ChordAnalyzer id="ca-tog-1" shape={[null, 3, 2, 0, 1, 0]} />,
+    )
+    expect(getByText('Show degrees')).not.toBeNull()
+    fireEvent.click(getByText('Show degrees'))
+    expect(getByText('Show notes')).not.toBeNull()
+    const svgText = container.querySelector('svg')?.textContent ?? ''
+    expect(svgText).toMatch(/R/)
+  })
+})
