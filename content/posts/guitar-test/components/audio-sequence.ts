@@ -44,6 +44,19 @@ export type SequenceOptions = {
    */
   onNoteStart?: (index: number, scheduledTime: number) => void
   /**
+   * Optional absolute start times (seconds, relative to playSequence call) per note.
+   * v5-15 NEW per ADR-054 follow-up — enables scheduling cases gdy cumulative durations
+   * sum NIE matches desired note start (rest gaps, multi-voice parallel scheduling,
+   * tied-merged notes). When `startTimes` provided AND sequential mode active (interval=0
+   * + onNoteStart):
+   *   - Note i scheduled przy `setTimeout(... , startTimes[i] * 1000)`.
+   *   - `durations[i]` zachowuje semantykę SUSTAIN (playPitchedNote 3rd arg) NIE delay.
+   *   - Two notes mogą mieć same startTime (multi-voice parallel) — both setTimeouts
+   *     fire at same tick, both playPitchedNote called.
+   * Backward-compat: undefined startTimes → cumulative durations.sum (v5-15 baseline).
+   */
+  startTimes?: number[]
+  /**
    * Optional AbortSignal dla cancellation in-flight scheduled playback. v5-15 NEW per
    * ADR-054 — enables Notation widget Play→Stop toggle cancel queued setTimeout calls
    * przed fire (prevents continued audio post-Stop click). When `signal.aborted === true`:
@@ -119,10 +132,15 @@ export async function playSequence(
     const duration = options.durations?.[i] ?? 0.6
 
     if (usesSequential) {
-      // v5-15 sequential mode: cumulative ms from durations array
-      const delayMs = options.durations
-        ? options.durations.slice(0, i).reduce((sum, d) => sum + d * 1000, 0)
-        : 0
+      // v5-15 sequential mode delay computation:
+      // (a) startTimes[i] provided → absolute schedule offset (rest gaps + multi-voice
+      //     parallel handled). Notation widget v5-15 uses this path.
+      // (b) else cumulative durations[0..i-1] sum → backward-compat baseline.
+      const delayMs = options.startTimes !== undefined
+        ? (options.startTimes[i] ?? 0) * 1000
+        : options.durations
+          ? options.durations.slice(0, i).reduce((sum, d) => sum + d * 1000, 0)
+          : 0
       return new Promise<void>((resolve) => {
         // Pre-aborted signal: onAbort already fired → resolve immediately, skip schedule.
         if (signal?.aborted) { resolve(); return }

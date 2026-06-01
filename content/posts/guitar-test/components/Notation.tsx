@@ -24,7 +24,7 @@ import type {
 } from './types'
 import { playSequence } from './audio-sequence'
 import { ensureAudio, playPitchedNote } from './audio'
-import { notesToDurations } from './notation-timing'
+import { durationToMs } from './notation-timing'
 // VexFlow lazy import OK at module top — Notation.tsx samo jest behind LazyNotation HOC
 // (dynamic({ssr:false})). Per ADR-043: SSR boundary established w HOC, base widget free
 // to import browser-only libs at module top. Bravura entry = core + SMuFL Bravura font
@@ -71,6 +71,85 @@ function pitchToVexKey(p: NotePitch): string {
 function toPitchedNote(p: NotePitch): PitchedNote {
   const accSuffix = p.accidental === '#' ? '#' : p.accidental === 'b' ? 'b' : ''
   return { name: (p.letter + accSuffix) as NoteName, octave: p.octave }
+}
+
+// Scheduled playback entry — absolute startMs offset + sustain duration + pitches (chord)
+// + origIdx dla highlight visual data-vf-note-index mapping. Built per voice (independent
+// cursor), then flattened + sorted by startMs.
+type ScheduledEntry = {
+  origIdx: number
+  pitches: PitchedNote[]
+  startMs: number
+  sustainSec: number
+}
+
+// Build absolute playback schedule from Note[]. Handles:
+// - Rests (advance voice cursor by rest duration; no playback entry)
+// - Tied chains (merge consecutive same-pitch notes into single sustained entry)
+// - Chord-on-staff (Note.pitch: NotePitch[] → multi-pitch entry, fired as melodic+extras)
+// - Multi-voice (each voice has independent cursor starting at 0; flat schedule sorted
+//   by startMs → parallel-voiced notes play simultaneously)
+function buildPlaybackSchedule(allNotes: NoteData[], bpm: number): ScheduledEntry[] {
+  const schedule: ScheduledEntry[] = []
+
+  // Group notes per voice z preserved original index
+  const voiceMap = new Map<number, Array<{ note: NoteData; origIdx: number }>>()
+  for (let origIdx = 0; origIdx < allNotes.length; origIdx++) {
+    const n = allNotes[origIdx]!
+    const v = n.voice ?? 1
+    if (!voiceMap.has(v)) voiceMap.set(v, [])
+    voiceMap.get(v)!.push({ note: n, origIdx })
+  }
+
+  // Schedule per voice independently. Each voice cursor starts at 0 → voices play parallel.
+  for (const [, voiceNotes] of voiceMap) {
+    let cursorMs = 0
+    let i = 0
+    while (i < voiceNotes.length) {
+      const entry = voiceNotes[i]!
+      const n = entry.note
+      if (n.rest) {
+        cursorMs += durationToMs(n.duration, n.dotted, bpm, n.tuplet)
+        i += 1
+        continue
+      }
+      if (!n.pitch) { i += 1; continue }
+      const pitches = Array.isArray(n.pitch)
+        ? n.pitch.map(p => toPitchedNote(p))
+        : [toPitchedNote(n.pitch)]
+      // Walk tied chain — same single pitch required (chord-on-staff ties NOT v5-15)
+      let j = i
+      let sustainMs = durationToMs(n.duration, n.dotted, bpm, n.tuplet)
+      while (j < voiceNotes.length - 1 && voiceNotes[j]!.note.tied) {
+        const nextN = voiceNotes[j + 1]!.note
+        if (nextN.rest) break
+        const currPitch = voiceNotes[j]!.note.pitch
+        const nextPitch = nextN.pitch
+        if (Array.isArray(currPitch) || Array.isArray(nextPitch)) break
+        if (!currPitch || !nextPitch) break
+        if (
+          currPitch.letter !== nextPitch.letter
+          || (currPitch.accidental ?? null) !== (nextPitch.accidental ?? null)
+          || currPitch.octave !== nextPitch.octave
+        ) break
+        sustainMs += durationToMs(nextN.duration, nextN.dotted, bpm, nextN.tuplet)
+        j += 1
+      }
+      schedule.push({
+        origIdx: entry.origIdx,
+        pitches,
+        startMs: cursorMs,
+        sustainSec: sustainMs / 1000,
+      })
+      cursorMs += sustainMs
+      i = j + 1
+    }
+  }
+
+  // Sort by startMs — multi-voice parallel notes co-occur; ordering w playable[] match
+  // temporal scheduling. Stable sort: notes na same startMs preserve voice-insertion order.
+  schedule.sort((a, b) => a.startMs - b.startMs)
+  return schedule
 }
 
 // Read CSS vars from :root (resolved per palette/mode per ADR-041 dual-palette).
@@ -403,30 +482,22 @@ export default function Notation({
     setIsPlaying(true)
     setCurrentNoteIdx(null)
 
-    // Index mapping (Fix #2 reviewer Round 2): build playable entries z explicit origIdx.
-    // onNoteStart callback receives filtered index → map to original notes index dla
-    // highlight visual (data-vf-note-index targets original Note positions includes rests).
-    type PlayableEntry = { origIdx: number; group: PitchedNote[] }
-    const playable: PlayableEntry[] = []
-    for (let origIdx = 0; origIdx < notes.length; origIdx++) {
-      const n = notes[origIdx]!
-      if (n.rest) continue
-      if (!n.pitch) continue
-      const group = Array.isArray(n.pitch)
-        ? n.pitch.map(p => toPitchedNote(p))
-        : [toPitchedNote(n.pitch)]
-      playable.push({ origIdx, group })
-    }
-    if (playable.length === 0) {
+    // Build absolute playback schedule (per voice independent cursor + tied chain merge
+    // + rest gap accounting + chord-on-staff multi-pitch + sorted flat timeline).
+    // Plays multi-voice notes PARALLEL gdy startTimes coincide; rests jako audio silence
+    // (note's sustainSec NIE extends into rest period); tied chains as single sustained
+    // entry. Single sequence of {melodic primary pitch, startMs, sustainSec} per entry.
+    const schedule = buildPlaybackSchedule(notes, bpm)
+    if (schedule.length === 0) {
       setIsPlaying(false)
       return
     }
-    const melodicNotes = playable.map(e => e.group[0]!)
-    const durationsSec = notesToDurations(notes, bpm).map(ms => ms / 1000)
+    const melodicNotes = schedule.map(e => e.pitches[0]!)
+    const startTimes = schedule.map(e => e.startMs / 1000)
+    const sustainDurations = schedule.map(e => e.sustainSec)
 
-    // Pre-resolve ctx ONCE (Fix #2 reviewer Round 2) — eliminates ensureAudio().then(...)
-    // async race w onNoteStart callback. Chord extras fire synchronously at melodic note
-    // start timestamp z pre-resolved ctx, no microtask drift / flam attack.
+    // Pre-resolve ctx ONCE — eliminates ensureAudio().then(...) async race w onNoteStart
+    // callback. Chord extras fire synchronously z pre-resolved ctx, no microtask drift.
     let ctx: AudioContext
     try {
       ctx = await ensureAudio()
@@ -439,22 +510,23 @@ export default function Notation({
 
     playSequence(melodicNotes, {
       interval: 0,
-      durations: durationsSec,
+      durations: sustainDurations,
+      startTimes,
       signal: controller.signal,
       onNoteStart: (playIdx, scheduledMs) => {
         // scheduledMs unused obecnie — przyszli konsumenci (v5-18+ cross-widget cursor)
         // mogą używać dla precision sync. void-suppress per Mermaid Sesja 22 pattern.
         void scheduledMs
         try {
-          const entry = playable[playIdx]
+          const entry = schedule[playIdx]
           if (!entry) return
           setCurrentNoteIdx(entry.origIdx)
-          // Chord extras fire SYNCHRONOUSLY z pre-resolved ctx — no async drift.
-          const extras = entry.group.slice(1)
+          // Chord-on-staff extras fire SYNCHRONOUSLY z pre-resolved ctx — primary
+          // pitch via playSequence melodic line + extras via direct playPitchedNote.
+          const extras = entry.pitches.slice(1)
           if (extras.length > 0 && !controller.signal.aborted) {
-            const dur = durationsSec[playIdx] ?? 0.6
             for (const extra of extras) {
-              playPitchedNote(ctx, extra, dur).catch(() => {})
+              playPitchedNote(ctx, extra, entry.sustainSec).catch(() => {})
             }
           }
         } catch (err) {

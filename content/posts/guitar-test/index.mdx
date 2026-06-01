@@ -207,6 +207,8 @@ articulation, ornament, tuplet). Forward-compat: kolejna iteracja doda scale-on-
 konsumujący ten sam `Note[]` jako dwie projekcje (notation + fretboard graph). Poniższe
 demo pokazują wprowadzone rytmy + features.
 
+**D1 — Gama C-dur** (8 ćwierćnut C-D-E-F-G-A-B-C). Baseline: brak alteracji, 4/4, C major. Test sequential audio + per-note highlight.
+
 <Notation id="d1-c-major-scale" notes={[
   { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
   { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
@@ -217,6 +219,8 @@ demo pokazują wprowadzone rytmy + features.
   { pitch: { letter: 'B', octave: 4 }, duration: '1/4' },
   { pitch: { letter: 'C', octave: 5 }, duration: '1/4' },
 ]} />
+
+**D2 — Gama D-dur** (8 ćwierćnut, key signature 2 krzyżyki F♯/C♯). Test key signature rendering + explicit accidentals na F♯ + C♯.
 
 <Notation id="d2-d-major-scale" keySignature="D" notes={[
   { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
@@ -229,12 +233,16 @@ demo pokazują wprowadzone rytmy + features.
   { pitch: { letter: 'D', octave: 5 }, duration: '1/4' },
 ]} />
 
+**D3 — Rytm punktowany** (ćwierćnuta z kropką + ósemka × 2). Test dotted notation + 1.5× duration math.
+
 <Notation id="d3-dotted-rhythm" notes={[
   { pitch: { letter: 'C', octave: 4 }, duration: '1/4', dotted: true },
   { pitch: { letter: 'D', octave: 4 }, duration: '1/8' },
   { pitch: { letter: 'E', octave: 4 }, duration: '1/4', dotted: true },
   { pitch: { letter: 'F', octave: 4 }, duration: '1/8' },
 ]} />
+
+**D4 — Pauzy** (ćwierć C → ćwierć pauza → ćwierć E → ćwierć pauza). Test rest glyph + audio skip rests + scheduled time offset preserved.
 
 <Notation id="d4-rests" notes={[
   { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
@@ -243,6 +251,8 @@ demo pokazują wprowadzone rytmy + features.
   { duration: '1/4', rest: true },
 ]} />
 
+**D5 — Triola** (3 ósemki C-D-E w czasie 2 ósemek, ratio [3,2] + zwykła ćwierć F). Test tuplet bracket + tuplet ratio math + audio ~333ms per ósemka.
+
 <Notation id="d5-triplet" notes={[
   { pitch: { letter: 'C', octave: 4 }, duration: '1/8', tuplet: { ratio: [3, 2], group: 't1' } },
   { pitch: { letter: 'D', octave: 4 }, duration: '1/8', tuplet: { ratio: [3, 2], group: 't1' } },
@@ -250,10 +260,14 @@ demo pokazują wprowadzone rytmy + features.
   { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
 ]} />
 
+**D6 — Łuk legato (tie)** (półnuta C tied + półnuta C = 4-beat sustained). Test tie merge w audio (single 4-beat note zamiast 2× half).
+
 <Notation id="d6-tie-cross-bar" notes={[
   { pitch: { letter: 'C', octave: 4 }, duration: '1/2', tied: true },
   { pitch: { letter: 'C', octave: 4 }, duration: '1/2' },
 ]} />
+
+**D7 — Akord na pięciolinii** (C-E-G stacked jako ćwierć + 3× melodyczne ćwierć D-E-F). Test chord render (stacked noteheads) + audio chord (3 nuty simultaneously z pre-resolved ctx, NO flam).
 
 <Notation id="d7-chord-on-staff" notes={[
   { pitch: [{ letter: 'C', octave: 4 }, { letter: 'E', octave: 4 }, { letter: 'G', octave: 4 }], duration: '1/4' },
@@ -262,20 +276,26 @@ demo pokazują wprowadzone rytmy + features.
   { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
 ]} />
 
+**D8 — Multi-voice** (voice 1: 4× półnuta C5-D5-E5-F5 melody + voice 2: 2× cała nuta C3-G3 bass; oba voices po 8 beat = 2 takty 4/4). Test parallel voice playback (voice 1 melody + voice 2 bass simultaneously, NIE sequential).
+
 <Notation id="d8-multi-voice" notes={[
-  { pitch: { letter: 'C', octave: 5 }, duration: '1/4', voice: 1 },
-  { pitch: { letter: 'D', octave: 5 }, duration: '1/4', voice: 1 },
-  { pitch: { letter: 'E', octave: 5 }, duration: '1/4', voice: 1 },
-  { pitch: { letter: 'F', octave: 5 }, duration: '1/4', voice: 1 },
-  { pitch: { letter: 'C', octave: 3 }, duration: '1/2', voice: 2 },
-  { pitch: { letter: 'G', octave: 3 }, duration: '1/2', voice: 2 },
+  { pitch: { letter: 'C', octave: 5 }, duration: '1/2', voice: 1 },
+  { pitch: { letter: 'D', octave: 5 }, duration: '1/2', voice: 1 },
+  { pitch: { letter: 'E', octave: 5 }, duration: '1/2', voice: 1 },
+  { pitch: { letter: 'F', octave: 5 }, duration: '1/2', voice: 1 },
+  { pitch: { letter: 'C', octave: 3 }, duration: '1', voice: 2 },
+  { pitch: { letter: 'G', octave: 3 }, duration: '1', voice: 2 },
 ]} />
+
+**D9 — Ornament trill** (ćwierć C z `tr` symbolem + ćwierć D + półnuta E). Test ornament modifier (mała "tr" glyph nad nutą).
 
 <Notation id="d9-ornament-trill" notes={[
   { pitch: { letter: 'C', octave: 4 }, duration: '1/4', ornament: 'trill' },
   { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
   { pitch: { letter: 'E', octave: 4 }, duration: '1/2' },
 ]} />
+
+**D10 — Metrum złożone 6/8** (6 ósemek C-D-E-F-G-A w 6/8). Test compound metre time signature + 6 nut w jednym takcie.
 
 <Notation id="d10-compound-metre-6-8" timeSignature={{ numerator: 6, denominator: 8 }} notes={[
   { pitch: { letter: 'C', octave: 4 }, duration: '1/8' },
