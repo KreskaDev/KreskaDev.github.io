@@ -86,23 +86,27 @@ For every example I picked one running domain: a public library. Books, members,
     Returned --> [*]
 `} />
 
-### 2.4 ER — data schema
+### 2.4 ER — data schemas (modular monolith)
+
+A modular monolith splits the data layer into **per-module schemas** — usually separate PostgreSQL `SCHEMA`s in one database, or logically separate databases sharing one host. The contract: each module owns its tables exclusively; **cross-module references use ID-only, never foreign keys**. That isolation is what lets a module ship as its own service later without ripping the schema apart.
+
+Below: three schemas of the library — **Lending** (operational state), **Catalog** (book metadata), **Billing** (fines & payments). External references are annotated in comments.
 
 <Mermaid
   diagramKind="er"
-  caption="Relational schema sketch — Member, Loan, BookCopy, Reservation"
+  caption="Lending schema — operational state: who borrowed what, when, due dates, reservations. References Catalog only by ID."
   chart={`erDiagram
     MEMBER ||--o{ LOAN : "borrows"
     MEMBER ||--o{ RESERVATION : "places"
-    BOOK_COPY ||--o{ LOAN : "lent_as"
-    BOOK_COPY ||--o{ RESERVATION : "reserved_as"
-    BOOK ||--o{ BOOK_COPY : "has copies"
+    BOOK_COPY ||--o{ LOAN : "lent as"
+    BOOK_COPY ||--o{ RESERVATION : "reserved as"
 
     MEMBER {
       uuid id PK
       string name
-      string email
+      string email UK
       enum tier
+      int active_loans_limit
     }
     LOAN {
       uuid id PK
@@ -110,13 +114,108 @@ For every example I picked one running domain: a public library. Books, members,
       uuid copy_id FK
       timestamp borrowed_at
       timestamp due_at
+      timestamp returned_at
+      enum status
+    }
+    RESERVATION {
+      uuid id PK
+      uuid member_id FK
+      uuid copy_id FK
+      timestamp placed_at
       enum status
     }
     BOOK_COPY {
       uuid id PK
-      uuid book_id FK
+      uuid book_id "ref Catalog.BOOK.id (no FK)"
       string shelf
       enum condition
+    }
+`} />
+
+<Mermaid
+  diagramKind="er"
+  caption="Catalog schema — book metadata: titles, editions, authors, publishers, genres. Zero knowledge of loans or members."
+  chart={`erDiagram
+    BOOK ||--o{ BOOK_EDITION : "published as"
+    BOOK ||--o{ BOOK_AUTHOR : "written by"
+    AUTHOR ||--o{ BOOK_AUTHOR : "wrote"
+    PUBLISHER ||--o{ BOOK_EDITION : "publishes"
+    BOOK ||--o{ BOOK_GENRE : "classified as"
+    GENRE ||--o{ BOOK_GENRE : "groups"
+
+    BOOK {
+      uuid id PK
+      string title
+      string original_language
+      year first_published
+    }
+    BOOK_EDITION {
+      uuid id PK
+      uuid book_id FK
+      uuid publisher_id FK
+      string isbn UK
+      year published_year
+    }
+    AUTHOR {
+      uuid id PK
+      string name
+      string bio
+    }
+    BOOK_AUTHOR {
+      uuid book_id FK
+      uuid author_id FK
+    }
+    PUBLISHER {
+      uuid id PK
+      string name
+      string country
+    }
+    GENRE {
+      uuid id PK
+      string name UK
+    }
+    BOOK_GENRE {
+      uuid book_id FK
+      uuid genre_id FK
+    }
+`} />
+
+<Mermaid
+  diagramKind="er"
+  caption="Billing schema — fines and payments. References Lending.LOAN and Lending.MEMBER by ID only — strict module boundary."
+  chart={`erDiagram
+    MEMBER_ACCOUNT ||--o{ FINE : "owes"
+    MEMBER_ACCOUNT ||--o{ PAYMENT : "settles via"
+    PAYMENT ||--o{ PAYMENT_ALLOCATION : "covers"
+    FINE ||--o{ PAYMENT_ALLOCATION : "paid by"
+
+    MEMBER_ACCOUNT {
+      uuid id PK
+      uuid member_id UK "ref Lending.MEMBER.id (no FK)"
+      decimal balance
+      timestamp opened_at
+    }
+    FINE {
+      uuid id PK
+      uuid account_id FK
+      uuid loan_id "ref Lending.LOAN.id (no FK)"
+      decimal amount
+      enum reason
+      timestamp incurred_at
+      enum status
+    }
+    PAYMENT {
+      uuid id PK
+      uuid account_id FK
+      decimal amount
+      enum method
+      timestamp paid_at
+    }
+    PAYMENT_ALLOCATION {
+      uuid id PK
+      uuid payment_id FK
+      uuid fine_id FK
+      decimal allocated_amount
     }
 `} />
 
