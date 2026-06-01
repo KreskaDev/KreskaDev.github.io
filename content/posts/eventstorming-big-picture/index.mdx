@@ -1,0 +1,292 @@
+---
+title: "EventStorming Big Picture — mapping the Library domain in stickies"
+subtitle: "Why Alberto Brandolini's workshop method works, and how to read your first wall of orange notes"
+date: 2026-06-15
+author: KreskaDev
+slug: eventstorming-big-picture
+summary: "EventStorming is the fastest way to align a team on what a system actually does — when each event is a sticky note and each color is a methodology lesson. This post walks through the Big Picture level on a running example: a public library. Members, books, reservations, loans, fines, overdue handling. By the end you'll know how to read a Big Picture wall, where the hot-spots live, and what the colors actually mean."
+tags:
+  - ddd
+  - eventstorming
+  - methodology
+  - v6-series
+---
+
+## 1. Your team writes tickets that nobody understands
+
+Backlog refinement, Wednesday morning. Someone reads out a Jira ticket: *"Add a checkbox 'picked up' to the reservation view"*. Everyone nods. Two weeks later, it turns out the frontend developer thought "picked up" meant "book taken from shelf"; the librarian expected "logged into the system"; the accountant needs it for the fines report. Three interpretations of one phrase — visible only in **production**.
+
+The problem isn't in the tickets. It's that **the team has no shared model** of what actually happens in the system. There's no language that's precise, shared, and verifiable in practice. EventStorming is **the fastest technique I know** to build that model — in one morning, on a wall, without code.
+
+This is the first post in a longer series on Domain-Driven Design and the patterns that orbit it: aggregates, CQRS, sagas, mediators, integration events. They all assume one thing — that you have a domain model that the whole team agrees on. EventStorming is how you get there.
+
+## 2. What EventStorming actually is
+
+EventStorming is **a workshop format for mapping complex business domains**, invented by Alberto Brandolini around 2013. Brandolini describes it like this: *"EventStorming is a flexible workshop format for complex business domain exploration"* (*Introducing EventStorming*, ch. 1). The key insight: **events carry the meaning**. Each orange sticky = one fact that happened in the domain. Time flows left to right. Everything else — commands, aggregates, policies, read models, external systems — hangs around the events.
+
+Three reasons the method works in practice:
+
+1. **Everyone sees the same wall at the same time** — a spatial brain-on-the-wall instead of sequential slides. The domain expert, the developer, the analyst and the support lead are all looking at the same picture.
+2. **A sticky note is a low barrier** — the domain expert doesn't have to draw UML. Writing *"Book returned"* on a piece of paper is something a librarian will do. Drawing a class diagram is not.
+3. **Conflict becomes visible** — when two people place contradictory events on the timeline, the discussion lands on what actually matters: *who* sees the event, *when* it counts, *what* changes after it.
+
+Frame it carefully: **EventStorming is NOT a framework, NOT UML, and NOT a database schema**. It's a **discovery technique**. The artifact is the conversation; the wall is just the medium.
+
+## 3. Three levels — Big Picture, Process, Design
+
+Brandolini distinguishes three levels of EventStorming. They are different workshops with different goals:
+
+| Level | Goal | What you use it for |
+|---|---|---|
+| **Big Picture** | Map the whole domain — events end-to-end across the business | Onboarding, finding areas of interest, scoping bounded contexts |
+| **Process Modeling** | Detail one specific process — commands, policies, sagas | Identifying aggregate boundaries, naming processes |
+| **Design Level** | Specify a single aggregate — invariants, decision tables | Going into code, designing the type system |
+
+This post covers **Big Picture** only. Process Modeling and Design Level get their own posts later in this series (see the v6 roadmap).
+
+A useful mental frame: **Big Picture doesn't produce code**. It produces a **ubiquitous language** and a **list of questions for further exploration**. If you leave a Big Picture workshop with code on your mind, you skipped a step.
+
+## 4. Big Picture in action — the Library domain
+
+The running example for the rest of this post is a **public library**. Members borrow books; reservations form a queue; loans can be extended; overdue returns generate fines; lost books trigger a replacement policy. Everyday enough that you can jump in without backstory, rich enough to host every sticky color we need.
+
+We'll build the wall progressively. Each widget below is a snapshot of "what the wall looks like after this round of the workshop".
+
+### 4.1 Round one — only events
+
+First pass. The facilitator asks: *"what happens at the library, in time order?"*. The room writes orange stickies and arranges them left to right.
+
+<EventStorming
+  layout="timeline"
+  caption="The first wall: just orange events in time order"
+  notes={[
+    { type: 'event', label: 'Member registered' },
+    { type: 'event', label: 'Book searched' },
+    { type: 'event', label: 'Reservation placed' },
+    { type: 'event', label: 'Book picked up' },
+    { type: 'event', label: 'Loan extended' },
+    { type: 'event', label: 'Book returned' },
+    { type: 'event', label: 'Late fee charged' },
+  ]}
+/>
+
+Two things to notice. First, the events are **in past tense** ("Member registered", not "Register member"). Each event = a **fact** that already happened. Second, instead of seven hours of debate about *"how should this work"*, the team has produced seven sticky notes saying *"what happens when it works"*. That asymmetry is the whole trick.
+
+This first wall is also a great place to spot **missing events**. Did we forget the "Book added to catalog" event? Did we forget "Membership expired"? The wall is loud about gaps, because the timeline visibly skips.
+
+### 4.2 Round two — adding commands
+
+Each event has an "earlier moment" — someone's **command** that caused it. The grammar is fixed by Brandolini: command = intent (imperative mood), event = fact (past tense). Blue stickies above the orange line:
+
+<EventStorming
+  layout="timeline"
+  caption="Commands (blue) cause events (orange): intent above, fact below"
+  notes={[
+    { type: 'command', label: 'Register member' },
+    { type: 'command', label: 'Search book' },
+    { type: 'command', label: 'Reserve book' },
+    { type: 'command', label: 'Pick up book' },
+    { type: 'command', label: 'Extend loan' },
+    { type: 'command', label: 'Return book' },
+    { type: 'event', label: 'Member registered' },
+    { type: 'event', label: 'Book searched' },
+    { type: 'event', label: 'Reservation placed' },
+    { type: 'event', label: 'Book picked up' },
+    { type: 'event', label: 'Loan extended' },
+    { type: 'event', label: 'Book returned' },
+    { type: 'event', label: 'Late fee charged' },
+  ]}
+/>
+
+Now look at the last event: **"Late fee charged"**. There's no command for it. Why? Because it's a **policy-driven event** — the system itself issues the fee in response to "Book returned after due date". That single missing blue sticky is the first clue that *"there's something more here than a user-driven flow"*. We'll come back to it in round four (hot-spots) and again in the complete picture.
+
+### 4.3 Round three — actors
+
+Who triggers the commands? EventStorming workshop convention here is **one sticky per role**, not per command. The role is shared across many commands in the mental model. For this slice we have two:
+
+<EventStorming
+  layout="timeline"
+  caption="Actors (yellow): two roles drive the flow — Member triggers most user-facing commands, Librarian handles registration and edge cases"
+  notes={[
+    { type: 'actor', label: 'Librarian' },
+    { type: 'actor', label: 'Member' },
+    { type: 'command', label: 'Register member' },
+    { type: 'command', label: 'Search book' },
+    { type: 'command', label: 'Reserve book' },
+    { type: 'command', label: 'Pick up book' },
+    { type: 'command', label: 'Extend loan' },
+    { type: 'command', label: 'Return book' },
+    { type: 'event', label: 'Member registered' },
+    { type: 'event', label: 'Book searched' },
+    { type: 'event', label: 'Reservation placed' },
+    { type: 'event', label: 'Book picked up' },
+    { type: 'event', label: 'Loan extended' },
+    { type: 'event', label: 'Book returned' },
+    { type: 'event', label: 'Late fee charged' },
+  ]}
+/>
+
+**Two roles**, not seven duplicates of "Member". The Member dominates the user-facing flow; the Librarian is "registrar + edge-case handler". And here's the first **open question** for the domain expert: *"Pick up book — does the member do it on their own, or does the librarian have to confirm?"* Both answers are valid; they imply different auth models. Mental hint: **roles map to your security boundaries**. Member ≠ Librarian at the authentication layer; the wall already tells you that.
+
+> **Convention note:** in a physical workshop a facilitator might place five physical Member stickies, one above each command, so the reader-eye sees "the same actor sits above five commands". In a static visualization grouped by type, duplicates would just look chaotic. The widget renders one sticky per role; prose explains the mental model.
+
+### 4.4 Round four — hot-spots
+
+A red sticky = **a problem or an open question**. This is where EventStorming pays off the most, because it makes invisible uncertainty visible and ownable:
+
+<EventStorming
+  layout="grid"
+  caption="Hot spots (red): the questions that derail timelines and require domain-expert input"
+  notes={[
+    { type: 'event',   label: 'Reservation placed',  x: 0, y: 0 },
+    { type: 'hotspot', label: 'What if the book is already reserved by someone else?', x: 0, y: 1 },
+    { type: 'event',   label: 'Book picked up',       x: 1, y: 0 },
+    { type: 'hotspot', label: "What if the member doesn't show up?",                   x: 1, y: 1 },
+    { type: 'event',   label: 'Book returned',        x: 2, y: 0 },
+    { type: 'hotspot', label: 'What if the book is damaged?',                          x: 2, y: 1 },
+    { type: 'event',   label: 'Late fee charged',     x: 3, y: 0 },
+    { type: 'hotspot', label: 'What if the member refuses to pay?',                    x: 3, y: 1 },
+  ]}
+/>
+
+These four red stickies are **four sub-processes** nobody had consciously modeled until now. Each one will spawn either a policy (*"reservations form a FIFO queue"*), a timeout-based event (*"Reservation expired"*), a manual flow (*"Damaged book intake"*), or an escalation (*"Account suspension after N unpaid fees"*).
+
+EventStorming **doesn't answer the hot-spots**. EventStorming **shows that you have to ask them** — and points the team at exactly who can answer. Brandolini: *"Hot spots are gold. They mark the boundary between what we know and what we should ask the domain expert"* (*Introducing EventStorming*, ch. 5).
+
+### 4.5 Round five — the complete picture
+
+The final wall sketches everything: events + commands + actors + hot-spots + aggregates (yellow large) + policies (purple) + read models (green) + external systems (pink). This is also the round where the reader sees **why Big Picture is only a starting point** — Process Modeling will zoom into each yellow boundary in a later post.
+
+<EventStorming
+  layout="grid"
+  caption="Complete Big Picture sketch — aggregates (yellow large), policies (purple), read models (green), external systems (pink). Process Modeling zooms into each yellow boundary in the next post."
+  notes={[
+    { type: 'actor',     label: 'Member',                  x: 0, y: 0 },
+    { type: 'command',   label: 'Reserve book',            x: 1, y: 0 },
+    { type: 'aggregate', label: 'Reservation',             x: 1, y: 1 },
+    { type: 'event',     label: 'Reservation placed',      x: 2, y: 1 },
+    { type: 'policy',    label: 'When reservation placed, notify member',  x: 2, y: 2 },
+    { type: 'external',  label: 'Email Service',           x: 3, y: 2 },
+    { type: 'event',     label: 'Book picked up',          x: 3, y: 1 },
+    { type: 'aggregate', label: 'Loan',                    x: 3, y: 0 },
+    { type: 'event',     label: 'Loan extended',           x: 4, y: 1 },
+    { type: 'event',     label: 'Book returned',           x: 5, y: 1 },
+    { type: 'policy',    label: 'When return overdue, charge fee',         x: 5, y: 2 },
+    { type: 'event',     label: 'Late fee charged',        x: 6, y: 1 },
+    { type: 'aggregate', label: 'Member Fines',            x: 6, y: 0 },
+    { type: 'readmodel', label: 'My active loans (UI)',    x: 4, y: 3 },
+    { type: 'readmodel', label: 'Overdue list (admin)',    x: 5, y: 3 },
+    { type: 'hotspot',   label: 'What if Email Service is down?',          x: 3, y: 3 },
+  ]}
+/>
+
+At the end of Big Picture we have:
+
+- **3 aggregates** (Reservation, Loan, Member Fines) — early hints for aggregate boundaries; Process Modeling will confirm or refine
+- **2 policies** (notify on reservation, charge on overdue) — candidates for Sagas / Process Managers
+- **1 external system** (Email Service) — the boundary with the out-of-context world; this is where an Anti-Corruption Layer will live
+- **2 read models** (active loans UI, overdue list admin) — query side, separated from the command side (CQRS preview, a flagship topic later in this series)
+- **1 hot-spot** in the middle of the policy flow ("Email Service down") — arguably the most critical sticky on the wall, because it's an *integration concern*, not a domain concern, and those tend to bite hardest in production
+
+### 4.6 Saga preview — overdue handling across aggregates
+
+The last event on the wall ("Late fee charged") doesn't have a command — it's policy-driven. Tracing what *actually* happens between "Book returned after due date" and "the fee is on the member's account" reveals a small **Saga** that spans three aggregates and one notification side-effect. Process Modeling (next post) will draw this in full; here's a teaser:
+
+<Mermaid
+  diagramKind="sequence"
+  caption="Saga preview — overdue handling spans the Loan, an Overdue Policy, and the Fines aggregate. Full Process Modeling in the next post."
+  chart={`sequenceDiagram
+    participant L as Loan Aggregate
+    participant P as Overdue Policy
+    participant F as Fines Aggregate
+    participant N as Notification
+    L->>L: Book returned (after due date)
+    L-->>P: LoanReturnedLate event
+    P->>F: chargeLateFee(memberId, amount)
+    F-->>P: FeeAssessed event
+    P->>N: notifyMemberOfFine(memberId)
+    Note over F,N: If fee unpaid >30 days,<br/>escalate to collection policy
+`} />
+
+The point of the teaser isn't the syntax. The point is that a single yellow sticky on the Big Picture wall ("Member Fines") will, in Process Modeling, expand into the choreography above — and that choreography is what we usually call a **saga**.
+
+### 4.7 Aggregate sketch preview
+
+Same story for the code side. The Big Picture wall identifies "Reservation" as an aggregate, but it doesn't say *what's inside*. The Aggregate deep-dive post will. Here's the sketch we'll start from:
+
+<CodeTabs
+  caption="Reservation aggregate sketch — full implementation in the upcoming Aggregate deep-dive post"
+  snippets={[
+    {
+      lang: 'csharp',
+      filename: 'Reservation.cs',
+      code: `public class Reservation
+{
+    public ReservationId Id { get; private set; }
+    public MemberId MemberId { get; private set; }
+    public BookId BookId { get; private set; }
+    public ReservationStatus Status { get; private set; }
+    private readonly List<IDomainEvent> _events = new();
+
+    public static Reservation Place(MemberId member, BookId book)
+    {
+        var reservation = new Reservation
+        {
+            Id = ReservationId.New(),
+            MemberId = member,
+            BookId = book,
+            Status = ReservationStatus.Placed
+        };
+        reservation._events.Add(new ReservationPlaced(reservation.Id, member, book));
+        return reservation;
+    }
+
+    // PickUp, Expire, Cancel — methods that enforce invariants
+    // and emit the corresponding domain events.
+}`,
+    },
+  ]}
+/>
+
+Nothing about this code is final. It's a sketch — a translation of one yellow sticky into a starting type. The point is that the wall and the code are talking about the same thing under the same name (*"Reservation"*). That alignment is what Big Picture gives you.
+
+## 5. What you actually get after Big Picture
+
+Not code. Not a database schema. Not a microservices design. You get:
+
+1. **Ubiquitous language** — "Reservation placed" is now a term **everyone** uses. The frontend dev speaks the same way as the librarian and the accountant. This is Evans' original DDD insight, but EventStorming gets you there in a morning rather than over weeks of glossary maintenance.
+2. **Initial aggregate boundaries** — yellow large stickies are **candidates** (Reservation, Loan, Member Fines), not a verdict. Process Modeling confirms or corrects them.
+3. **A list of open questions** — red stickies are the **agenda** for the domain expert for the next week. They're also, in my experience, the best estimate-confidence indicator a team can produce.
+4. **A list of integration points** — pink stickies (External Systems) show where an Anti-Corruption Layer will be needed. The wall makes integration boundaries visible without you having to argue about them.
+
+Brandolini repeats: *"Big Picture is not a deliverable. It's a conversation made visible"* (ch. 4). The wall lasts a few hours; the language lasts the lifetime of the system.
+
+## 6. Anti-patterns — how teams ruin EventStorming
+
+Every methodology post needs a "when this goes wrong" section. Brandolini's list, lightly paraphrased:
+
+1. **"Workshop with PowerPoint slides"** — kills the workshop. Without a wall + stickies + markers, the spatial-thinking magic disappears. A flipchart is fine; a Miro board is fine *as a recording medium*; a deck of slides is not a workshop.
+2. **"Tech-led modeling"** — developers write events as `UserDtoCreated` or `BookEntityPersisted`. Events are **domain language**, not class names. "Member registered" beats "MemberAggregateInitialized" every time.
+3. **"Skip hot-spots, go straight to design"** — the most common failure. Hot-spots are exactly **where knowledge is missing**. Skipping them just defers the bug to production six months later.
+4. **"Tools instead of stickies"** — Miro and Lucidchart are great **after** a workshop, terrible **inside** one. Tools slow the conversation down (mouse, keyboard, layout decisions); a sticky note is the lowest possible barrier to participation.
+5. **"Big Picture as a one-shot"** — Big Picture **iterates**. Every month or quarter you add new events as the product roadmap shifts. It's a **living artifact**, not a milestone deliverable.
+
+## 7. Related patterns — where this connects
+
+| Pattern | Connection to Big Picture | Future post in this series |
+|---|---|---|
+| **Domain Event** | Orange sticky = Domain Event in code | Domain vs Integration Events deep-dive |
+| **Aggregate** | Yellow large sticky = Aggregate Root | Aggregate deep-dive |
+| **Bounded Context** | The whole wall ≈ one Bounded Context | Bounded Contexts post |
+| **Policy / Saga** | Purple sticky = Policy → Saga / Process Manager | Mediator / Saga series |
+| **Read Model** | Green sticky = CQRS query side | CQRS flagship post |
+| **Anti-Corruption Layer** | Pink (External) bordering the domain | Integrations post |
+
+Every entry on this list is a sticky **color** on the wall. That's the trick: EventStorming uses a tiny vocabulary of visual markers to encode a large vocabulary of patterns. Once you've seen the wall, the patterns stop being abstract.
+
+## 8. Sources
+
+- Alberto Brandolini, *Introducing EventStorming* (Leanpub, in progress 2017-present) — the primary source. Read at least chapters 1, 3, 4, and 5.
+- Vaughn Vernon, [virtualddd.com](https://virtualddd.com/) — EventStorming community examples and recorded workshops.
+- Vlad Khononov, *Learning Domain-Driven Design* (O'Reilly 2021) — chapter 11 covers EventStorming in a wider DDD context.
+- Eric Evans, *Domain-Driven Design* (Addison-Wesley 2003) — the foundation: Ubiquitous Language, Bounded Context. EventStorming is the technique; Evans gives you the vocabulary.
