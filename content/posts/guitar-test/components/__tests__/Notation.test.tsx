@@ -56,6 +56,7 @@ vi.mock('vexflow/bravura', () => {
           Articulation: vi.fn(() => ({})),
           Ornament: vi.fn(() => ({})),
           Tuplet: vi.fn(() => ({})),
+          StaveTie: vi.fn(() => ({})),
           draw: drawSpy,
         })
       }),

@@ -267,6 +267,10 @@ export default function Notation({
           const tupletGroups = new Map<string, StaveNote[]>()
           // Per-note ratio dla each tuplet group key (potrzebne dla factory.Tuplet options).
           const tupletGroupRatio = new Map<string, [number, number]>()
+          // Tie pairs — gdy poprzednia nuta ma tied:true, łączymy ją z bieżącą via
+          // factory.StaveTie({from, to}). Track prevTied → connect przy następnej StaveNote.
+          const tiePairs: Array<[StaveNote, StaveNote]> = []
+          let prevTied: StaveNote | null = null
 
           // Pre-compute implicit tuplet group keys via consecutive-same-ratio walker.
           // Naive `indexOf`-as-key produced unique per-note keys → wszystkie implicit
@@ -314,6 +318,15 @@ export default function Notation({
             if (isRest) durationStr += 'r'
 
             const staveNote = factory.StaveNote({ keys, duration: durationStr })
+
+            // Tie connection: jeśli poprzednia nuta miała tied:true, łączymy ją z bieżącą.
+            // VexFlow StaveTie rysuje łuk legato między dwoma StaveNote. Reset prevTied
+            // po użyciu — chain ties (3× tied notes) generuje sekwencję par (n0-n1, n1-n2)
+            // w wielokrotnych iteracjach.
+            if (prevTied && !isRest) {
+              tiePairs.push([prevTied, staveNote])
+            }
+            prevTied = n.tied && !isRest ? staveNote : null
 
             // Apply per-pitch accidentals explicit. VexFlow auto-handles key sig matching
             // ale explicit modifier zapewnia że pochylenie pojawi się gdy NotePitch.accidental
@@ -382,6 +395,13 @@ export default function Notation({
               notes: groupNotes,
               options: { numNotes: ratio[0], notesOccupied: ratio[1] },
             })
+          }
+
+          // Ties — instantiate StaveTie per pair. VexFlow renderuje łuk legato między
+          // dwoma StaveNote. factory.StaveTie() dodaje element do renderQ → auto-draw
+          // przy factory.draw(). Multi-tie chain (3× tied notes) = 2 par (n0-n1, n1-n2).
+          for (const [from, to] of tiePairs) {
+            factory.StaveTie({ from, to })
           }
 
           // setStrict(false) — Voice domyślnie strict: total ticks MUST equal exactly
