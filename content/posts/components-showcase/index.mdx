@@ -1,0 +1,299 @@
+---
+title: "Diagramy i kod — narzędzia tej serii"
+subtitle: "Mermaid + CodeTabs na sucho, domena Library/Lending"
+date: 2026-06-08
+author: KreskaDev
+slug: components-showcase
+summary: "Krótki techniczny pokaz dwóch widgetów, których będę używał w nadchodzących postach o wzorcach: Mermaid do diagramów (sekwencja, klasa, stan, ER, C4, flow) i CodeTabs do prezentacji kodu w czterech językach (C#, TypeScript, Python, PowerShell). Na przykładach z domeny Library/Lending."
+tags:
+  - meta
+  - tooling
+  - v6-series
+language: pl
+---
+
+## 1. Po co ten post
+
+Każdy projekt programistyczny żyje w napięciu między abstrakcją a kodem. Diagram tłumaczy "co dlaczego", kod pokazuje "jak naprawdę". W nadchodzących postach z serii o wzorcach programistycznych — DDD, CQRS, EventStorming, mediatorzy, integracje — będę żonglował obu warstwami. Ten krótki post jest technicznym pokazem narzędzi, których będę używał.
+
+Dla wszystkich przykładów wziąłem jeden running example: bibliotekę publiczną. Książki, czytelnicy, wypożyczenia, kary, rezerwacje — domena dostatecznie znajoma żeby nie tłumaczyć słownika, dostatecznie bogata żeby pokazać każdy wzorzec.
+
+## 2. Mermaid — sześć typów diagramów
+
+### 2.1 Sekwencja — Member wypożycza książkę
+
+<Mermaid
+  diagramKind="sequence"
+  caption="Wypożyczenie książki — flow request-response między Member, Library API i Loan service"
+  chart={`sequenceDiagram
+    actor M as Member
+    participant API as Library API
+    participant L as Loan Service
+    participant DB as Loan DB
+    M->>API: POST /loans { bookId, memberId }
+    API->>L: createLoan(cmd)
+    L->>DB: findActiveByMember(memberId)
+    DB-->>L: count = 2
+    L->>DB: insert(Loan{Active, dueAt: +14d})
+    DB-->>L: ok
+    L-->>API: Loan{id, dueAt}
+    API-->>M: 201 Created
+`} />
+
+### 2.2 Klasy — Loan / Member / BookCopy
+
+<Mermaid
+  diagramKind="class"
+  caption="Model agregatów: Loan, Member, BookCopy (sketch wstępny — pełna mapa w późniejszych postach)"
+  chart={`classDiagram
+    class Loan {
+      +LoanId id
+      +MemberId borrower
+      +BookCopyId copy
+      +DateTime borrowedAt
+      +DateTime dueAt
+      +LoanStatus status
+      +renew(days) Result
+      +returnCopy(at) Result
+    }
+    class Member {
+      +MemberId id
+      +string name
+      +MembershipTier tier
+      +int activeLoansLimit
+    }
+    class BookCopy {
+      +BookCopyId id
+      +ISBN isbn
+      +Shelf location
+      +CopyCondition condition
+    }
+    Loan "*" --> "1" Member : borrower
+    Loan "*" --> "1" BookCopy : copy
+`} />
+
+### 2.3 Stan — Loan lifecycle
+
+<Mermaid
+  diagramKind="state"
+  caption="Cykl życia wypożyczenia — od rezerwacji do zamknięcia"
+  chart={`stateDiagram-v2
+    [*] --> Reserved : reserve()
+    Reserved --> Active : pickUp()
+    Reserved --> [*] : cancel() / expire()
+    Active --> Returned : returnCopy() before dueAt
+    Active --> Overdue : tick() past dueAt
+    Overdue --> Returned : returnCopy() with fee
+    Returned --> [*]
+`} />
+
+### 2.4 ER — schemat danych
+
+<Mermaid
+  diagramKind="er"
+  caption="Relacyjny szkic schematu — Member, Loan, BookCopy, Reservation"
+  chart={`erDiagram
+    MEMBER ||--o{ LOAN : "borrows"
+    MEMBER ||--o{ RESERVATION : "places"
+    BOOK_COPY ||--o{ LOAN : "lent_as"
+    BOOK_COPY ||--o{ RESERVATION : "reserved_as"
+    BOOK ||--o{ BOOK_COPY : "has copies"
+
+    MEMBER {
+      uuid id PK
+      string name
+      string email
+      enum tier
+    }
+    LOAN {
+      uuid id PK
+      uuid member_id FK
+      uuid copy_id FK
+      timestamp borrowed_at
+      timestamp due_at
+      enum status
+    }
+    BOOK_COPY {
+      uuid id PK
+      uuid book_id FK
+      string shelf
+      enum condition
+    }
+`} />
+
+### 2.5 C4 Context — system landscape
+
+<Mermaid
+  diagramKind="c4"
+  caption="C4 Context — Library system jako black box między aktorami (Mermaid C4 syntax)"
+  chart={`C4Context
+    title Library System Context
+    Person(member, "Member", "Wypożycza książki, składa rezerwacje")
+    Person(librarian, "Librarian", "Obsługuje wypożyczenia, zwroty, kary")
+    System(library, "Library System", "API + bazy + read-modele")
+    System_Ext(payments, "Payment Gateway", "Pobiera kary za przetrzymanie")
+    System_Ext(catalog, "External Catalog", "ISBN lookup, BookInfo enrichment")
+    Rel(member, library, "Browses, borrows, reserves")
+    Rel(librarian, library, "Manages loans, returns, fines")
+    Rel(library, payments, "Charge late fees")
+    Rel(library, catalog, "Lookup book metadata")
+`} />
+
+### 2.6 Flowchart — decyzja "czy mogę wypożyczyć?"
+
+<Mermaid
+  diagramKind="flow"
+  caption="Decyzja: czy Member może wypożyczyć kolejną książkę?"
+  chart={`flowchart TD
+    Start([Member klika 'Borrow']) --> CheckActive{activeLoans < limit?}
+    CheckActive -- nie --> RejectLimit[/Odmowa: limit przekroczony/]
+    CheckActive -- tak --> CheckOverdue{any overdue?}
+    CheckOverdue -- tak --> RejectOverdue[/Odmowa: zwróć overdue najpierw/]
+    CheckOverdue -- nie --> CheckCopy{copy available?}
+    CheckCopy -- nie --> Reserve[Zaproponuj rezerwację]
+    CheckCopy -- tak --> Create[Utwórz Loan]
+    Create --> End([Pokaż confirmation])
+    RejectLimit --> End
+    RejectOverdue --> End
+    Reserve --> End
+`} />
+
+## 3. CodeTabs — cztery języki, te same kawałki domeny
+
+### 3.1 Repository Loan — C# vs TypeScript
+
+<CodeTabs
+  caption="Repository agregatu Loan — C# (EF Core) i TypeScript (Drizzle). Te same operacje, idiom typu stacka."
+  snippets={[
+    {
+      lang: 'csharp',
+      filename: 'LoanRepository.cs',
+      code: `public sealed class LoanRepository : ILoanRepository
+{
+    private readonly LibraryDbContext _db;
+
+    public LoanRepository(LibraryDbContext db) => _db = db;
+
+    public async Task<Loan?> GetById(LoanId id, CancellationToken ct)
+        => await _db.Loans
+            .Include(l => l.Borrower)
+            .Include(l => l.Copy)
+            .SingleOrDefaultAsync(l => l.Id == id, ct);
+
+    public async Task<int> CountActiveByMember(MemberId memberId, CancellationToken ct)
+        => await _db.Loans
+            .CountAsync(l => l.BorrowerId == memberId && l.Status == LoanStatus.Active, ct);
+
+    public async Task Add(Loan loan, CancellationToken ct)
+    {
+        await _db.Loans.AddAsync(loan, ct);
+        await _db.SaveChangesAsync(ct);
+    }
+}`
+    },
+    {
+      lang: 'typescript',
+      filename: 'loanRepository.ts',
+      code: `import { db } from './db'
+import { loans } from './schema'
+import { and, count, eq } from 'drizzle-orm'
+import type { Loan, LoanId, MemberId } from './types'
+
+export const loanRepository = {
+  async getById(id: LoanId): Promise<Loan | null> {
+    const rows = await db
+      .select()
+      .from(loans)
+      .where(eq(loans.id, id))
+      .limit(1)
+    return rows[0] ?? null
+  },
+
+  async countActiveByMember(memberId: MemberId): Promise<number> {
+    const rows = await db
+      .select({ count: count() })
+      .from(loans)
+      .where(and(eq(loans.borrowerId, memberId), eq(loans.status, 'active')))
+    return rows[0]?.count ?? 0
+  },
+
+  async add(loan: Loan): Promise<void> {
+    await db.insert(loans).values(loan)
+  },
+}`
+    },
+  ]}
+/>
+
+### 3.2 Python single — analiza wypożyczeń overdue
+
+<CodeTabs
+  caption="Analiza wypożyczeń przeterminowanych — Python z pandas. Naturalny idiom dla zadań data."
+  snippets={[
+    {
+      lang: 'python',
+      filename: 'overdue_analytics.py',
+      code: `import pandas as pd
+from datetime import datetime
+
+def overdue_summary(loans_csv: str, as_of: datetime) -> pd.DataFrame:
+    df = pd.read_csv(loans_csv, parse_dates=['borrowed_at', 'due_at', 'returned_at'])
+    active = df[df['returned_at'].isna()].copy()
+    active['overdue_days'] = (as_of - active['due_at']).dt.days
+    overdue = active[active['overdue_days'] > 0]
+    by_tier = (overdue
+        .groupby('member_tier')
+        .agg(count=('id', 'size'), avg_days=('overdue_days', 'mean'))
+        .round(1))
+    return by_tier.sort_values('count', ascending=False)
+
+if __name__ == '__main__':
+    summary = overdue_summary('loans.csv', datetime(2026, 6, 1))
+    print(summary)
+`
+    },
+  ]}
+/>
+
+### 3.3 PowerShell single — seed lokalnej bazy
+
+<CodeTabs
+  caption="Skrypt seedujący lokalną bazę książkami z pliku JSON. Naturalny idiom dla dev tooling."
+  snippets={[
+    {
+      lang: 'powershell',
+      filename: 'Seed-Library.ps1',
+      code: `<#
+.SYNOPSIS
+  Seeduje lokalną bazę book_copies z books.json + losowych shelf/condition.
+#>
+param(
+    [Parameter(Mandatory)][string]$ConnectionString,
+    [string]$BooksJsonPath = './data/books.json',
+    [int]$CopiesPerBook = 3
+)
+
+$shelves = @('A1', 'A2', 'B1', 'B2', 'C1', 'C2')
+$conditions = @('New', 'Good', 'Fair', 'Worn')
+
+$books = Get-Content $BooksJsonPath | ConvertFrom-Json
+
+foreach ($book in $books) {
+    Write-Host "Seeding copies for: $($book.title)" -ForegroundColor Cyan
+    1..$CopiesPerBook | ForEach-Object {
+        $copyId = [guid]::NewGuid()
+        $shelf = Get-Random -InputObject $shelves
+        $condition = Get-Random -InputObject $conditions
+        $sql = "INSERT INTO book_copies (id, book_id, shelf, condition) VALUES ('$copyId', '$($book.id)', '$shelf', '$condition');"
+        Invoke-SqlCmd -ConnectionString $ConnectionString -Query $sql
+    }
+}
+Write-Host "Done. Seeded $($books.Count * $CopiesPerBook) copies." -ForegroundColor Green
+`
+    },
+  ]}
+/>
+
+## 4. Co dalej
+
+Te dwa widgety są fundamentem warsztatu, którym będę pisał o wzorcach. W kolejnym poście wejdziemy w EventStorming i pierwszą prawdziwą domain story — wykorzystując już znajomy Mermaid + CodeTabs. Jeśli widzisz potrzebę innego narzędzia (state machine playground? hexagonal visualizer? wiadomościowy splitter z animacją?), backlog jest otwarty — DM.
