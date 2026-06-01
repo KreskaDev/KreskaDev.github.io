@@ -92,3 +92,51 @@ export type FretboardProps = {
   onFretClick?: (pos: FretPosition) => void                       // v5-09 ignoruje (v5-13)
   onPlayNote?: (note: PitchedNote) => void
 }
+
+// === Music vertical shared types (v5-15+, ADR-053 binding declaration) ===
+// types.ts staje się modifiable w v5-15 dla cross-component music-vertical primitives.
+// Iteracje v5-16/17/19 mogą rozszerzać types.ts dalej bez extra ADR — precedent
+// established w ADR-053 "Music Vertical Shared Types" subsection. Modyfikacje muszą być
+// additive (zero rename/removal) i w scope music vertical.
+
+export type Duration = '1' | '1/2' | '1/4' | '1/8' | '1/16' | '1/32'
+
+export type TimeSignature = { numerator: number; denominator: number }
+
+export type KeySignature = NoteName  // 'C' = no accidentals; 'G' = 1 sharp; 'Bb' = 2 flats; etc.
+
+export type Articulation = 'staccato' | 'accent' | 'tenuto' | 'marcato'
+
+export type Ornament = 'trill' | 'mordent' | 'turn' | 'fermata'
+
+// ratio = [numNotes, notesOccupied] — triplet = [3, 2] (3 nuty w czasie 2).
+// group = opcjonalny explicit ID dla bundle multi-tuplet boundaries; consecutive
+// same-ratio bez explicit group implicit-grouping heuristic w notation-timing.ts.
+export type Tuplet = { ratio: [number, number]; group?: string }
+
+// Notation domain pitch (strukturalny letter + accidental + octave). Distinct od
+// audio-domain `PitchedNote { name: NoteName; octave }` — conversion via lokalny helper
+// w Notation.tsx (letter + accidental → NoteName). Domain separation: notation potrzebuje
+// structured pitch dla key signature inference + rendering; audio potrzebuje NoteName
+// enum dla sample lookup.
+export type NotePitch = {
+  letter: 'C' | 'D' | 'E' | 'F' | 'G' | 'A' | 'B'
+  accidental?: '#' | 'b' | 'natural'
+  octave: number  // scientific pitch (middle C = C4)
+}
+
+// Constraint runtime-validated (Notation.tsx render): `pitch` REQUIRED OR `rest: true`.
+// `pitch` array = chord-on-staff (stacked notes single beat). `position` = v5-16/17
+// forward-compat hook (fretboard graph + tab) — IGNORED w v5-15 Notation widget.
+export type Note = {
+  pitch?: NotePitch | NotePitch[]
+  position?: FretPosition
+  duration: Duration
+  dotted?: boolean
+  rest?: boolean
+  tied?: boolean
+  voice?: 1 | 2
+  articulation?: Articulation
+  ornament?: Ornament
+  tuplet?: Tuplet
+}
