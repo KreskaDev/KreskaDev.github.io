@@ -186,6 +186,35 @@ export default function Notation({
         for (const [, voiceNotes] of voicesEntries) {
           const staveNotes: StaveNote[] = []
           const tupletGroups = new Map<string, StaveNote[]>()
+          // Per-note ratio dla each tuplet group key (potrzebne dla factory.Tuplet options).
+          const tupletGroupRatio = new Map<string, [number, number]>()
+
+          // Pre-compute implicit tuplet group keys via consecutive-same-ratio walker.
+          // Naive `indexOf`-as-key produced unique per-note keys → wszystkie implicit
+          // tuplets pozostawały jako single-note groups (length<2 skip downstream).
+          // Reset group state na non-tuplet note OR explicit-group note OR ratio change.
+          const implicitGroupIds = new Map<NoteData, string>()
+          let currentImplicitGroup: string | null = null
+          let currentImplicitRatio: [number, number] | null = null
+          let implicitGroupCounter = 0
+          for (const n of voiceNotes) {
+            if (!n.tuplet || n.tuplet.group) {
+              currentImplicitGroup = null
+              currentImplicitRatio = null
+              continue
+            }
+            const r = n.tuplet.ratio
+            if (
+              !currentImplicitGroup
+              || !currentImplicitRatio
+              || currentImplicitRatio[0] !== r[0]
+              || currentImplicitRatio[1] !== r[1]
+            ) {
+              currentImplicitGroup = `implicit-${implicitGroupCounter++}-${r[0]}-${r[1]}`
+              currentImplicitRatio = r
+            }
+            implicitGroupIds.set(n, currentImplicitGroup)
+          }
 
           for (const n of voiceNotes) {
             // Resolve global original index w `notes` (NIE per-voice). Multi-voice case:
@@ -238,15 +267,19 @@ export default function Notation({
               if (code) staveNote.addModifier(factory.Ornament(code), 0)
             }
 
-            // Group dla tuplet — explicit `group` ID lub implicit (consecutive same ratio).
+            // Group dla tuplet — explicit `group` ID lub implicit (consecutive same ratio
+            // per pre-computed implicitGroupIds map). Ratio zapisany per groupKey dla
+            // downstream factory.Tuplet({ options: { numNotes, notesOccupied } }) call.
             if (n.tuplet) {
-              const groupKey = n.tuplet.group
-                ?? `implicit-${n.tuplet.ratio[0]}-${n.tuplet.ratio[1]}-${voiceNotes.indexOf(n)}`
-              const existing = tupletGroups.get(groupKey)
-              if (existing) {
-                existing.push(staveNote)
-              } else {
-                tupletGroups.set(groupKey, [staveNote])
+              const groupKey = n.tuplet.group ?? implicitGroupIds.get(n)
+              if (groupKey) {
+                const existing = tupletGroups.get(groupKey)
+                if (existing) {
+                  existing.push(staveNote)
+                } else {
+                  tupletGroups.set(groupKey, [staveNote])
+                  tupletGroupRatio.set(groupKey, n.tuplet.ratio)
+                }
               }
             }
 
@@ -259,11 +292,12 @@ export default function Notation({
           }
 
           // Tuplets — instantiate per group. VexFlow Tuplet groups MUST be created PRZED
-          // formatter.format() (modifies note tickContexts).
-          for (const [, groupNotes] of tupletGroups) {
+          // formatter.format() (modifies note tickContexts). Ratio z tupletGroupRatio map
+          // (recorded gdy group key first encountered) — direct O(1) lookup zamiast O(n²)
+          // walk through notes array.
+          for (const [groupKey, groupNotes] of tupletGroups) {
             if (groupNotes.length < 2) continue // tuplet needs ≥2 notes
-            const firstNote = groupNotes[0]
-            const ratio = (notes.find(n => allStaveNotes.find(asn => asn.staveNote === firstNote)?.origIdx === notes.indexOf(n)))?.tuplet?.ratio
+            const ratio = tupletGroupRatio.get(groupKey)
             if (!ratio) continue
             factory.Tuplet({
               notes: groupNotes,
