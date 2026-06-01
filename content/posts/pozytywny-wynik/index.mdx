@@ -15,8 +15,12 @@ language: pl
 
 Wyobraź sobie test diagnostyczny z dwoma reklamowanymi liczbami:
 
+<div className="callout-list not-prose" data-variant="neutral">
+
 - **Czułość 85%** — zdolność testu medycznego lub diagnostycznego do prawidłowego rozpoznawania osób chorych. Z każdych 100 osób chorych test zakwalifikuje 15 chorych błędnie jako wynik negatywny.
 - **Swoistość 90%** — zdolność testu medycznego lub diagnostycznego do prawidłowego rozpoznawania osób zdrowych. Z każdych 100 osób zdrowych test zakwalifikuje 10 zdrowych błędnie jako wynik pozytywny.
+
+</div>
 
 Wydaje się solidnie. Lekarz — albo inny ekspert — uruchamia test, dostaje wynik pozytywny i komunikuje diagnozę. Naturalna reakcja obserwatora to przyznać tej diagnozie wysoką pewność. Może 80%, może 85% — w okolicach reklamowanej "dokładności" testu.
 
@@ -26,9 +30,13 @@ Ten post pokazuje, że **w bardzo wielu realistycznych sytuacjach ta intuicja je
 
 Wyobraź sobie trzy strony jednego problemu diagnostycznego:
 
+<div className="callout-list not-prose" data-variant="neutral">
+
 - **Osoba X** — testowana, dostaje **nagrodę** jeśli diagnoza wyjdzie pozytywna. Racjonalna, dobrze poinformowana o naturze testu, **nic jej nie grozi za próbę kłamstwa**, subiektywnie przekonana że nagroda jej się należy. Próbuje wpłynąć na wynik tam, gdzie to możliwe.
 - **Obserwator** — czytelnik diagnozy (sąd, ubezpieczyciel, kolega, rodzina, opinia publiczna). Nie ma własnej nagrody w grze — ma tylko zadanie *poprawnie oszacować pewność* diagnozy. Post śledzi rozjazd między naiwną oceną obserwatora, [kotwiczącą](#glos-kotwica) na reklamowanej swoistości testu, a realną — uwzględniającą presję oszustwa.
 - **System diagnostyczny** — klinika (kompozytowy test: narzędzia + opinia klinicysty). Wyrok binarny: pozytyw / negatyw.
+
+</div>
 
 **Centralna teza:** *naiwny obserwator*, traktujący reklamowane parametry testu (czułość X%, swoistość Y%) jako prawdę o realnej sytuacji, **systematycznie zawyża pewność pozytywnej diagnozy**. Powód: reklamowane parametry walidowano na *uczciwych* respondentach. Pod presją oszustwa współczynnik fałszywych alarmów — [FPR](#glos-fpr) — rośnie wielokrotnie — i to nie dlatego, że klinicysta jest słaby, tylko dlatego że *narzędzie* opiera się na zaufaniu do treści odpowiedzi.
 
@@ -247,8 +255,12 @@ Oskarżony o ciężkie przestępstwo (zabójstwo, agresja seksualna) wnioskuje o
 
 **Co naiwny obserwator zakłada.** Dwie skrajne pozycje:
 
+<div className="callout-list not-prose" data-variant="neutral">
+
 - **Opinia publiczna:** „każdy psychopata twierdzi że jest chory" — drastyczne zawyżenie $f_1$, posteriori subiektywne ~0%
 - **Obrona / część prawników:** „dwóch biegłych potwierdziło = pewność" — posteriori subiektywne 95-99%
+
+</div>
 
 Obie skrajności to warianty znanych heurystyk: pierwsza — *[heurystyka reprezentatywności](#glos-reprezentatywnosc)* („psychopata = każdy oskarżony"; Tversky & Kahneman 1974), druga — BRN nałożony na zaufanie do liczby ekspertów („dwóch biegłych ≈ 2× pewność").
 
@@ -298,9 +310,13 @@ To wystarczy, by posteriori spadło z intuicyjnych "70-85% pewności" do faktycz
 
 Pod każdą diagnozą krążą *trzy różne* poziomy pewności o całkowicie różnym statusie poznawczym:
 
+<div className="callout-list not-prose" data-variant="neutral">
+
 - **Intuicja-kotwica** — laik kotwiczy na "swoistości testu" lub na liczbie podanej przez ekspertkę. Bez rachunku Bayesa. To liczba, którą podaje większość respondentów w eksperymentach BRN (Casscells 1978).
 - **Naiwny Bayes** — ktoś użył wzoru, ale z reklamowanymi $s_0, f_0$. Formalnie poprawnie, ale z parametrami z walidacji na uczciwej próbie. To liczba, którą da student statystyki, gdy "uwzględni częstość bazową".
 - **Realny Bayes** — ten sam wzór, ale z $s_1, f_1$ z adversarialnej populacji. To prawdopodobieństwo, którego *naprawdę* powinniśmy używać.
+
+</div>
 
 Konkretnie dla czterech scenariuszy posta (kolumna "Intuicja-kotwica" odnosi się do **pojedynczej** pozytywnej ekspertyzy — tak samo jak "Realny Bayes", żeby trzy kolumny były porównywalne):
 
@@ -313,9 +329,13 @@ Konkretnie dla czterech scenariuszy posta (kolumna "Intuicja-kotwica" odnosi si�
 
 *Trzy różne mechanizmy psychologiczne* generują kolumnę "Intuicja-kotwica":
 
+<div className="callout-list not-prose" data-variant="neutral">
+
 - **BRN (base rate neglect)** dla ADHD i whiplash — laik kotwiczy na reklamowanej swoistości testu, ignorując priori.
 - **Anchoring liczbowy** dla AI-detection — laik kotwiczy na konkretnej liczbie podanej przez detektor ("87% AI-probability"), niezależnie od tego, czy jest sensowna.
 - **Zaufanie do liczby ekspertów** dla niepoczytalności — laik kotwiczy na fakcie "biegły specjalista potwierdził", traktując pojedynczą ekspertyzę jako quasi-pewność (mechanizm pokrewny BRN, ale nałożony na status epistemiczny eksperta, nie na swoistość testu).
+
+</div>
 
 Rozjazd ma **dwa źródła**: pierwszy skok (intuicja → naiwny Bayes) jest tłumaczony mechanizmami z ramki wyżej; drugi skok (naiwny Bayes → realny Bayes) jest tłumaczony niedoszacowaniem $f_1$ przez naiwnego analityka. Większość komentarza posta używa porównań *intuicja vs realny* (bo wizualnie dramatyczniej), ale matematycznie cały rozjazd składa się z dwóch warstw — nie jednej. Sekcja niżej rozbija oba.
 

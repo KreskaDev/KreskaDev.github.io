@@ -383,26 +383,39 @@ h4:hover .heading-anchor { opacity: 1; }
 .no-scrollbar { scrollbar-width: none; }
 
 /* Callout list — semantic card styling dla "list of insights" prose blocks
-   (e.g. "Why it works", "What you get", "Anti-patterns"). Variants:
-   positive = green accent, negative = burgundy accent. Używaj z `not-prose`
-   wrapper żeby opt-out z @tailwindcss/typography ol/li defaults. */
-.callout-list ol {
+   (e.g. "Why it works", "What you get", "Anti-patterns", definicje).
+   Variants:
+   - positive = green accent (gains, benefits, things that work)
+   - negative = burgundy accent (anti-patterns, warnings, things to avoid)
+   - neutral  = text-tertiary accent (definicje, typologie, observations)
+   Wspiera <ol> (custom counter) i <ul> (bez markera). Używaj z `not-prose`
+   wrapper żeby opt-out z @tailwindcss/typography list defaults. */
+.callout-list ol,
+.callout-list ul {
   list-style: none;
-  counter-reset: cl;
   padding-left: 0;
   margin: 1.5rem 0;
 }
-.callout-list ol > li {
+.callout-list ol {
+  counter-reset: cl;
+}
+.callout-list ol > li,
+.callout-list ul > li {
   background: var(--color-bg-secondary);
   border-radius: 0 0.375rem 0.375rem 0;
-  padding: 0.875rem 1rem 0.875rem 2.75rem;
   margin: 0.5rem 0;
   font-family: var(--font-sans);
   font-size: 0.95rem;
   line-height: 1.6;
   color: var(--color-text-secondary);
-  counter-increment: cl;
   position: relative;
+}
+.callout-list ol > li {
+  padding: 0.875rem 1rem 0.875rem 2.75rem;
+  counter-increment: cl;
+}
+.callout-list ul > li {
+  padding: 0.875rem 1rem;
 }
 .callout-list ol > li::before {
   content: counter(cl) ".";
@@ -412,16 +425,24 @@ h4:hover .heading-anchor { opacity: 1; }
   font-weight: 600;
   color: var(--color-text-primary);
 }
-.callout-list ol > li strong {
+.callout-list ol > li strong,
+.callout-list ul > li strong {
   color: var(--color-text-primary);
   font-weight: 600;
 }
-.callout-list ol > li p {
+.callout-list ol > li p,
+.callout-list ul > li p {
   margin: 0;
 }
-.callout-list[data-variant="positive"] ol > li {
+.callout-list[data-variant="positive"] ol > li,
+.callout-list[data-variant="positive"] ul > li {
   border-left: 3px solid var(--color-green);
 }
-.callout-list[data-variant="negative"] ol > li {
+.callout-list[data-variant="negative"] ol > li,
+.callout-list[data-variant="negative"] ul > li {
   border-left: 3px solid var(--color-burgundy);
+}
+.callout-list[data-variant="neutral"] ol > li,
+.callout-list[data-variant="neutral"] ul > li {
+  border-left: 3px solid var(--color-text-tertiary);
 }
