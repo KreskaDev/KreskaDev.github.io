@@ -434,6 +434,10 @@ h4:hover .heading-anchor { opacity: 1; }
 .callout-list ul > li p {
   margin: 0;
 }
+.callout-list ol > li p ~ p,
+.callout-list ul > li p ~ p {
+  margin-top: 0.6rem;
+}
 .callout-list[data-variant="positive"] ol > li,
 .callout-list[data-variant="positive"] ul > li {
   border-left: 3px solid var(--color-green);
