@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { AboutIdentity } from '@/components/about/AboutIdentity'
 import LazyMermaid from '@/components/lazy/LazyMermaid'
 import CodeTabs from '@/components/post/CodeTabs'
+import EventStorming from '@/components/post/EventStorming'
 
 // rehype-slug + rehype-autolink-headings dodają id + anchor link icons w pipeline,
 // tutaj tylko styling przez className.
@@ -104,6 +105,7 @@ const mdxComponents: MDXComponents = {
   AboutIdentity,
   Mermaid: LazyMermaid,
   CodeTabs,
+  EventStorming,
 }
 
 export default mdxComponents
