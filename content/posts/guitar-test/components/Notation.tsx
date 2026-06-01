@@ -326,16 +326,32 @@ export default function Notation({
 
         factory.draw()
 
-        // Post-render: stave line color override (VexFlow default = black; reactive z palette).
-        // Workaround dla Stave.setStyle nie kolorując ledger lines reliably — direct SVG mutate.
+        // Post-render: stave frame color override (VexFlow default = black hard-coded
+        // dla clef/time-sig/key-sig glyphs + stave lines). StaveNote.setStyle pokrywa
+        // tylko note glyphs (vf-stavenote groups). Workaround: walk SVG + set fill/stroke
+        // na elementach POZA vf-stavenote groups. Empirical lesson z live dev smoke
+        // 2026-06-01 — dark theme + default black = nieczytelne.
         const svgEl = setupHost.querySelector('svg')
         if (svgEl) {
-          // Style stave lines via attribute (VexFlow renders stave lines jako <line> elements).
-          // Note glyphs already colored via per-StaveNote setStyle.
-          const svgRoot = svgEl as SVGSVGElement
-          svgRoot.style.color = colors.textColor
-          // Make sure SVG inherits text color for stave clef/time sig glyphs which may
-          // use `currentColor` lub default fill.
+          // Paths/text/rects outside note groups = stave frame (clef, time sig, key sig,
+          // stave lines, barlines). Color textColor dla full contrast.
+          svgEl.querySelectorAll('path, text').forEach((el) => {
+            if (!el.closest('g.vf-stavenote')) {
+              el.setAttribute('fill', colors.textColor)
+              // stroke only for stave lines (path z stroke attribute); zostaw bez stroke
+              // gdy inline fill-only (text glyphs).
+              if (el.tagName === 'path' && el.hasAttribute('stroke')) {
+                el.setAttribute('stroke', colors.textColor)
+              }
+            }
+          })
+          // <line> elements = stave lines (5 horizontal) — VexFlow uses lines OR paths
+          // dependent on renderer version. Cover both.
+          svgEl.querySelectorAll('line').forEach((el) => {
+            if (!el.closest('g.vf-stavenote')) {
+              el.setAttribute('stroke', colors.staveLineColor)
+            }
+          })
         }
 
         // Assign data-vf-note-index na rendered SVG `g.vf-stavenote` elements w document order.
