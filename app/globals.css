@@ -381,3 +381,47 @@ h4:hover .heading-anchor { opacity: 1; }
    pokazywać native scrollbar (Tailwind 4 nie ma `no-scrollbar` w default). */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
+
+/* Callout list — semantic card styling dla "list of insights" prose blocks
+   (e.g. "Why it works", "What you get", "Anti-patterns"). Variants:
+   positive = green accent, negative = burgundy accent. Używaj z `not-prose`
+   wrapper żeby opt-out z @tailwindcss/typography ol/li defaults. */
+.callout-list ol {
+  list-style: none;
+  counter-reset: cl;
+  padding-left: 0;
+  margin: 1.5rem 0;
+}
+.callout-list ol > li {
+  background: var(--color-bg-secondary);
+  border-radius: 0 0.375rem 0.375rem 0;
+  padding: 0.875rem 1rem 0.875rem 2.75rem;
+  margin: 0.5rem 0;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  counter-increment: cl;
+  position: relative;
+}
+.callout-list ol > li::before {
+  content: counter(cl) ".";
+  position: absolute;
+  left: 1rem;
+  top: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.callout-list ol > li strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+.callout-list ol > li p {
+  margin: 0;
+}
+.callout-list[data-variant="positive"] ol > li {
+  border-left: 3px solid var(--color-green);
+}
+.callout-list[data-variant="negative"] ol > li {
+  border-left: 3px solid var(--color-burgundy);
+}

@@ -26,9 +26,13 @@ EventStorming is **a workshop format for mapping complex business domains**, inv
 
 Three reasons the method works in practice:
 
+<div className="callout-list not-prose" data-variant="positive">
+
 1. **Everyone sees the same wall at the same time** — a spatial brain-on-the-wall instead of sequential slides. The domain expert, the developer, the analyst and the support lead are all looking at the same picture.
 2. **A sticky note is a low barrier** — the domain expert doesn't have to draw UML. Writing *"Book returned"* on a piece of paper is something a librarian will do. Drawing a class diagram is not.
 3. **Conflict becomes visible** — when two people place contradictory events on the timeline, the discussion lands on what actually matters: *who* sees the event, *when* it counts, *what* changes after it.
+
+</div>
 
 Frame it carefully: **EventStorming is NOT a framework, NOT UML, and NOT a database schema**. It's a **discovery technique**. The artifact is the conversation; the wall is just the medium.
 
@@ -286,10 +290,14 @@ When you scan a wall **left to right**, you're following time. When you scan **t
 
 Not code. Not a database schema. Not a microservices design. You get:
 
+<div className="callout-list not-prose" data-variant="positive">
+
 1. **Ubiquitous language** — "Reservation placed" is now a term **everyone** uses. The frontend dev speaks the same way as the librarian and the accountant. This is Evans' original DDD insight, but EventStorming gets you there in a morning rather than over weeks of glossary maintenance.
 2. **Initial aggregate boundaries** — yellow large stickies are **candidates** (Reservation, Loan, Member Fines), not a verdict. Process Modeling confirms or corrects them.
 3. **A list of open questions** — red stickies are the **agenda** for the domain expert for the next week. They're also, in my experience, the best estimate-confidence indicator a team can produce.
 4. **A list of integration points** — pink stickies (External Systems) show where an Anti-Corruption Layer will be needed. The wall makes integration boundaries visible without you having to argue about them.
+
+</div>
 
 Brandolini repeats: *"Big Picture is not a deliverable. It's a conversation made visible"* (ch. 4). The wall lasts a few hours; the language lasts the lifetime of the system.
 
@@ -297,11 +305,15 @@ Brandolini repeats: *"Big Picture is not a deliverable. It's a conversation made
 
 Every methodology post needs a "when this goes wrong" section. Brandolini's list, lightly paraphrased:
 
+<div className="callout-list not-prose" data-variant="negative">
+
 1. **"Workshop with PowerPoint slides"** — kills the workshop. Without a wall + stickies + markers, the spatial-thinking magic disappears. A flipchart is fine; a Miro board is fine *as a recording medium*; a deck of slides is not a workshop.
 2. **"Tech-led modeling"** — developers write events as `UserDtoCreated` or `BookEntityPersisted`. Events are **domain language**, not class names. "Member registered" beats "MemberAggregateInitialized" every time.
 3. **"Skip hot-spots, go straight to design"** — the most common failure. Hot-spots are exactly **where knowledge is missing**. Skipping them just defers the bug to production six months later.
 4. **"Tools instead of stickies"** — Miro and Lucidchart are great **after** a workshop, terrible **inside** one. Tools slow the conversation down (mouse, keyboard, layout decisions); a sticky note is the lowest possible barrier to participation.
 5. **"Big Picture as a one-shot"** — Big Picture **iterates**. Every month or quarter you add new events as the product roadmap shifts. It's a **living artifact**, not a milestone deliverable.
+
+</div>
 
 ## 8. Related patterns — where this connects
 
