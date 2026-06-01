@@ -19,12 +19,31 @@ export interface MermaidProps {
 }
 
 // Module-scope singleton state ponad wszystkimi Mermaid instancjami w drzewie.
-// Multi-instance race: 6 useEffects firing ~równocześnie po hydration, każdy woła
+// Multi-instance race: useEffects firing ~równocześnie po hydration, każdy woła
 // mermaid.initialize() (config mutator). Bez guarda concurrent initialize calls mogą
 // nadpisać config w trakcie pending render() z innego diagramu. Strategia: lazy import
 // + flag per theme-key — pierwszy effect inicjalizuje dla theme'u, pozostałe skip.
 let initializedForTheme: string | null = null
 let mermaidLib: typeof import('mermaid').default | null = null
+
+// Mermaid theme:'base' deriva attributeBackgroundColorOdd/Even z primaryColor regardless
+// of themeVariables overrides (empirically verified — row-rect-odd path fill = HSL hue
+// matching primary z lighten 70%). Same problem dotyczy edgeLabel bg, labelBkg, entity
+// header etc. Workaround: themeCSS wstrzykuje CSS rules do SVG <style> które nadpisują
+// SVG attribute presentation fills CSS specificity rules. Bonus: var(--color-*) refs
+// są reactive na palette flip bez re-render Mermaid (CSS vars handle dual-palette flip
+// instant via dom class change).
+const THEME_CSS = `
+  .row-rect-odd > path:first-child { fill: var(--color-bg-secondary); }
+  .row-rect-even > path:first-child { fill: var(--color-bg-primary); }
+  .er.entityBox { fill: var(--color-bg-secondary); stroke: var(--color-accent); }
+  .er.attributeBoxOdd { fill: var(--color-bg-secondary); }
+  .er.attributeBoxEven { fill: var(--color-bg-primary); }
+  .edgeLabel { background-color: var(--color-bg-primary); }
+  .edgeLabel rect { fill: var(--color-bg-primary); }
+  .edgeLabel .label text { fill: var(--color-text-primary); }
+  .labelBkg { background-color: var(--color-bg-primary); }
+`
 
 async function ensureMermaidInitialized(
   themeKey: string,
@@ -38,6 +57,7 @@ async function ensureMermaidInitialized(
       startOnLoad: false,
       theme: 'base',
       themeVariables,
+      themeCSS: THEME_CSS,
       securityLevel: 'strict',
     })
     initializedForTheme = themeKey
@@ -51,19 +71,35 @@ function readThemeVariables(): Record<string, string> {
   if (typeof document === 'undefined') return {}
   const css = getComputedStyle(document.documentElement)
   const v = (name: string) => css.getPropertyValue(name).trim()
+  const textPrimary = v('--color-text-primary')
+  const bgSecondary = v('--color-bg-secondary')
+  const bgPrimary = v('--color-bg-primary')
   return {
+    // Core (sequence/class/flow shared)
     primaryColor: v('--color-accent-soft'),
     primaryBorderColor: v('--color-accent'),
-    primaryTextColor: v('--color-text-primary'),
+    primaryTextColor: textPrimary,
     lineColor: v('--color-text-secondary'),
     secondaryColor: v('--color-surface-elevated'),
-    tertiaryColor: v('--color-bg-secondary'),
-    background: v('--color-bg-primary'),
+    tertiaryColor: bgSecondary,
+    background: bgPrimary,
     mainBkg: v('--color-accent-soft'),
     nodeBorder: v('--color-accent'),
-    clusterBkg: v('--color-bg-secondary'),
+    clusterBkg: bgSecondary,
+    // Note (sequenceDiagram note blocks + classDiagram note nodes)
     noteBkgColor: v('--color-burgundy-soft'),
     noteBorderColor: v('--color-burgundy'),
+    noteTextColor: textPrimary,
+    nodeTextColor: textPrimary,
+    // ER diagram — attribute rows MUSZĄ kontrastować z text-primary w obu trybach.
+    // Bez explicit override Mermaid używa baked-in defaults (jasne stripes) które
+    // konfliktują z light text w dark mode (uuid PK FK → nieczytelne).
+    attributeBackgroundColorOdd: bgSecondary,
+    attributeBackgroundColorEven: bgPrimary,
+    // Relation labels (ER + classDiagram edges)
+    relationColor: v('--color-text-secondary'),
+    relationLabelColor: textPrimary,
+    relationLabelBackground: bgPrimary,
   }
 }
 
@@ -84,11 +120,18 @@ export default function Mermaid({ chart, caption, className, diagramKind }: Merm
     if (!mounted) return
     let cancelled = false
     const themeKey = resolvedTheme ?? 'dark-cool'
-    const themeVariables = readThemeVariables()
     renderCount.current += 1
     const id = `mermaid-${reactId.replace(/:/g, '')}-${renderCount.current}`
 
-    ;(async () => {
+    // requestAnimationFrame defer dla CSS var read: React useEffect order = child-first,
+    // więc Mermaid useEffect fires PRZED next-themes ThemeProvider useEffect który updatuje
+    // html className. Bez rAF defer readThemeVariables() czyta CSS vars z STAREJ palety
+    // (html class jeszcze nie zsync'owany) → diagramy renderują się z one-palette-behind
+    // colors. rAF callback runs PO current commit's useEffects → html class current →
+    // getComputedStyle() zwraca aktualne CSS vars. Empirically verified Playwright eval.
+    const rafId = requestAnimationFrame(async () => {
+      if (cancelled) return
+      const themeVariables = readThemeVariables()
       try {
         const lib = await ensureMermaidInitialized(themeKey, themeVariables)
         const { svg } = await lib.render(id, chart)
@@ -102,10 +145,11 @@ export default function Mermaid({ chart, caption, className, diagramKind }: Merm
         console.error('Mermaid render failed:', err)
         setError(err instanceof Error ? err.message : String(err))
       }
-    })()
+    })
 
     return () => {
       cancelled = true
+      cancelAnimationFrame(rafId)
     }
   }, [mounted, resolvedTheme, chart, reactId])
 

@@ -1,30 +1,29 @@
 ---
-title: "Diagramy i kod — narzędzia tej serii"
-subtitle: "Mermaid + CodeTabs na sucho, domena Library/Lending"
+title: "Diagrams and code — tools of this series"
+subtitle: "Mermaid + CodeTabs on a dry run, Library/Lending domain"
 date: 2026-06-08
 author: KreskaDev
 slug: components-showcase
-summary: "Krótki techniczny pokaz dwóch widgetów, których będę używał w nadchodzących postach o wzorcach: Mermaid do diagramów (sekwencja, klasa, stan, ER, C4, flow) i CodeTabs do prezentacji kodu w czterech językach (C#, TypeScript, Python, PowerShell). Na przykładach z domeny Library/Lending."
+summary: "A short technical preview of the two widgets I'll lean on in upcoming pattern posts: Mermaid for diagrams (sequence, class, state, ER, flowchart) and CodeTabs for code samples across four languages (C#, TypeScript, Python, PowerShell). All examples come from one running domain: a public library."
 tags:
   - meta
   - tooling
   - v6-series
-language: pl
 ---
 
-## 1. Po co ten post
+## 1. Why this post exists
 
-Każdy projekt programistyczny żyje w napięciu między abstrakcją a kodem. Diagram tłumaczy "co dlaczego", kod pokazuje "jak naprawdę". W nadchodzących postach z serii o wzorcach programistycznych — DDD, CQRS, EventStorming, mediatorzy, integracje — będę żonglował obu warstwami. Ten krótki post jest technicznym pokazem narzędzi, których będę używał.
+Every software project lives in tension between abstraction and code. Diagrams answer "what and why"; code answers "how, exactly". In the upcoming series on programming patterns — DDD, CQRS, EventStorming, mediators, integrations — I'll juggle both layers. This short post is a technical preview of the tools I'll use.
 
-Dla wszystkich przykładów wziąłem jeden running example: bibliotekę publiczną. Książki, czytelnicy, wypożyczenia, kary, rezerwacje — domena dostatecznie znajoma żeby nie tłumaczyć słownika, dostatecznie bogata żeby pokazać każdy wzorzec.
+For every example I picked one running domain: a public library. Books, members, loans, fines, reservations — familiar enough to skip the glossary, rich enough to demonstrate every pattern.
 
-## 2. Mermaid — sześć typów diagramów
+## 2. Mermaid — five diagram types
 
-### 2.1 Sekwencja — Member wypożycza książkę
+### 2.1 Sequence — Member borrows a book
 
 <Mermaid
   diagramKind="sequence"
-  caption="Wypożyczenie książki — flow request-response między Member, Library API i Loan service"
+  caption="Borrowing a book — request/response flow between Member, Library API, and Loan service"
   chart={`sequenceDiagram
     actor M as Member
     participant API as Library API
@@ -40,11 +39,11 @@ Dla wszystkich przykładów wziąłem jeden running example: bibliotekę publicz
     API-->>M: 201 Created
 `} />
 
-### 2.2 Klasy — Loan / Member / BookCopy
+### 2.2 Class — Loan / Member / BookCopy
 
 <Mermaid
   diagramKind="class"
-  caption="Model agregatów: Loan, Member, BookCopy (sketch wstępny — pełna mapa w późniejszych postach)"
+  caption="Aggregate model: Loan, Member, BookCopy (initial sketch — full map lands in later posts)"
   chart={`classDiagram
     class Loan {
       +LoanId id
@@ -72,11 +71,11 @@ Dla wszystkich przykładów wziąłem jeden running example: bibliotekę publicz
     Loan "*" --> "1" BookCopy : copy
 `} />
 
-### 2.3 Stan — Loan lifecycle
+### 2.3 State — Loan lifecycle
 
 <Mermaid
   diagramKind="state"
-  caption="Cykl życia wypożyczenia — od rezerwacji do zamknięcia"
+  caption="Loan lifecycle — from reservation to closing"
   chart={`stateDiagram-v2
     [*] --> Reserved : reserve()
     Reserved --> Active : pickUp()
@@ -87,11 +86,11 @@ Dla wszystkich przykładów wziąłem jeden running example: bibliotekę publicz
     Returned --> [*]
 `} />
 
-### 2.4 ER — schemat danych
+### 2.4 ER — data schema
 
 <Mermaid
   diagramKind="er"
-  caption="Relacyjny szkic schematu — Member, Loan, BookCopy, Reservation"
+  caption="Relational schema sketch — Member, Loan, BookCopy, Reservation"
   chart={`erDiagram
     MEMBER ||--o{ LOAN : "borrows"
     MEMBER ||--o{ RESERVATION : "places"
@@ -121,49 +120,31 @@ Dla wszystkich przykładów wziąłem jeden running example: bibliotekę publicz
     }
 `} />
 
-### 2.5 C4 Context — system landscape
-
-<Mermaid
-  diagramKind="c4"
-  caption="C4 Context — Library system jako black box między aktorami (Mermaid C4 syntax)"
-  chart={`C4Context
-    title Library System Context
-    Person(member, "Member", "Wypożycza książki, składa rezerwacje")
-    Person(librarian, "Librarian", "Obsługuje wypożyczenia, zwroty, kary")
-    System(library, "Library System", "API + bazy + read-modele")
-    System_Ext(payments, "Payment Gateway", "Pobiera kary za przetrzymanie")
-    System_Ext(catalog, "External Catalog", "ISBN lookup, BookInfo enrichment")
-    Rel(member, library, "Browses, borrows, reserves")
-    Rel(librarian, library, "Manages loans, returns, fines")
-    Rel(library, payments, "Charge late fees")
-    Rel(library, catalog, "Lookup book metadata")
-`} />
-
-### 2.6 Flowchart — decyzja "czy mogę wypożyczyć?"
+### 2.5 Flowchart — "can I borrow another book?"
 
 <Mermaid
   diagramKind="flow"
-  caption="Decyzja: czy Member może wypożyczyć kolejną książkę?"
+  caption="Decision: can the Member borrow another book?"
   chart={`flowchart TD
-    Start([Member klika 'Borrow']) --> CheckActive{activeLoans < limit?}
-    CheckActive -- nie --> RejectLimit[/Odmowa: limit przekroczony/]
-    CheckActive -- tak --> CheckOverdue{any overdue?}
-    CheckOverdue -- tak --> RejectOverdue[/Odmowa: zwróć overdue najpierw/]
-    CheckOverdue -- nie --> CheckCopy{copy available?}
-    CheckCopy -- nie --> Reserve[Zaproponuj rezerwację]
-    CheckCopy -- tak --> Create[Utwórz Loan]
-    Create --> End([Pokaż confirmation])
+    Start([Member clicks 'Borrow']) --> CheckActive{activeLoans < limit?}
+    CheckActive -- no --> RejectLimit[/Reject: limit exceeded/]
+    CheckActive -- yes --> CheckOverdue{any overdue?}
+    CheckOverdue -- yes --> RejectOverdue[/Reject: return overdue first/]
+    CheckOverdue -- no --> CheckCopy{copy available?}
+    CheckCopy -- no --> Reserve[Offer reservation]
+    CheckCopy -- yes --> Create[Create Loan]
+    Create --> End([Show confirmation])
     RejectLimit --> End
     RejectOverdue --> End
     Reserve --> End
 `} />
 
-## 3. CodeTabs — cztery języki, te same kawałki domeny
+## 3. CodeTabs — four languages, same slices of the domain
 
-### 3.1 Repository Loan — C# vs TypeScript
+### 3.1 Loan repository — C# vs TypeScript
 
 <CodeTabs
-  caption="Repository agregatu Loan — C# (EF Core) i TypeScript (Drizzle). Te same operacje, idiom typu stacka."
+  caption="Repository for the Loan aggregate — C# (EF Core) and TypeScript (Drizzle). Same operations, idiom of each stack."
   snippets={[
     {
       lang: 'csharp',
@@ -225,10 +206,10 @@ export const loanRepository = {
   ]}
 />
 
-### 3.2 Python single — analiza wypożyczeń overdue
+### 3.2 Python single — overdue loan analytics
 
 <CodeTabs
-  caption="Analiza wypożyczeń przeterminowanych — Python z pandas. Naturalny idiom dla zadań data."
+  caption="Overdue loan analytics — Python with pandas. The natural idiom for data tasks."
   snippets={[
     {
       lang: 'python',
@@ -255,17 +236,17 @@ if __name__ == '__main__':
   ]}
 />
 
-### 3.3 PowerShell single — seed lokalnej bazy
+### 3.3 PowerShell single — local database seed
 
 <CodeTabs
-  caption="Skrypt seedujący lokalną bazę książkami z pliku JSON. Naturalny idiom dla dev tooling."
+  caption="Script seeding a local book_copies table from a JSON file. The natural idiom for dev tooling."
   snippets={[
     {
       lang: 'powershell',
       filename: 'Seed-Library.ps1',
       code: `<#
 .SYNOPSIS
-  Seeduje lokalną bazę book_copies z books.json + losowych shelf/condition.
+  Seeds the local book_copies table from books.json with random shelf/condition.
 #>
 param(
     [Parameter(Mandatory)][string]$ConnectionString,
@@ -294,6 +275,6 @@ Write-Host "Done. Seeded $($books.Count * $CopiesPerBook) copies." -ForegroundCo
   ]}
 />
 
-## 4. Co dalej
+## 4. What's next
 
-Te dwa widgety są fundamentem warsztatu, którym będę pisał o wzorcach. W kolejnym poście wejdziemy w EventStorming i pierwszą prawdziwą domain story — wykorzystując już znajomy Mermaid + CodeTabs. Jeśli widzisz potrzebę innego narzędzia (state machine playground? hexagonal visualizer? wiadomościowy splitter z animacją?), backlog jest otwarty — DM.
+These two widgets are the foundation of the workshop I'll write patterns with. In the next post we dive into EventStorming and the first real domain story — leveraging the now-familiar Mermaid + CodeTabs. If you see a need for another tool (state machine playground? hexagonal visualizer? animated message splitter?), the backlog is open — DM.
