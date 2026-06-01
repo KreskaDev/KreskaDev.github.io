@@ -22,7 +22,7 @@ This is the first post in a longer series on Domain-Driven Design and the patter
 
 ## 2. What EventStorming actually is
 
-EventStorming is **a workshop format for mapping complex business domains**, invented by Alberto Brandolini around 2013. Brandolini describes it like this: *"EventStorming is a flexible workshop format for complex business domain exploration"* (*Introducing EventStorming*, ch. 1). The key insight: **events carry the meaning**. Each orange sticky = one fact that happened in the domain. Time flows left to right. Everything else — commands, aggregates, policies, read models, external systems — hangs around the events.
+EventStorming is **a workshop format for mapping complex business domains**, invented by Alberto Brandolini around 2013. Brandolini is an Italian software architect and DDD practitioner; he refined the technique through years of public workshops and conference talks, and it's since become a standard tool in the DDD community. He describes the method like this: *"EventStorming is a flexible workshop format for complex business domain exploration"* (*Introducing EventStorming*, ch. 1). The key insight: **events carry the meaning**. Each orange sticky = one fact that happened in the domain. Time flows left to right. Everything else — commands, aggregates, policies, read models, external systems — hangs around the events.
 
 Three reasons the method works in practice:
 
@@ -52,7 +52,9 @@ A useful mental frame: **Big Picture doesn't produce code**. It produces a **ubi
 
 ## 4. Big Picture in action — the Library domain
 
-The running example for the rest of this post is a **public library**. Members borrow books; reservations form a queue; loans can be extended; overdue returns generate fines; lost books trigger a replacement policy. Everyday enough that you can jump in without backstory, rich enough to host every sticky color we need.
+The running example for the rest of this post is a **public library**. Members borrow books; reservations form a queue; loans can be extended; overdue returns generate fines. Everyday enough that you can jump in without backstory, rich enough to host every sticky color we need.
+
+The happy path a member walks through goes **register → search → reserve → pick up → loan** (extended if needed) **→ return**. Return has two flavors: on-time (routine) and overdue (triggers a late fee). Lost books, damaged books, and replacement policies exist in the real domain but stay out of scope for this post — we focus on the lifecycle that demonstrates every sticky color cleanly.
 
 We'll build the wall progressively. Each widget below is a snapshot of "what the wall looks like after this round of the workshop".
 
@@ -104,6 +106,8 @@ Each event has an "earlier moment" — someone's **command** that caused it. The
 
 Now look at the last event: **"Late fee charged"**. There's no command for it. Why? Because it's a **policy-driven event** — the system itself issues the fee in response to "Book returned after due date". That single missing blue sticky is the first clue that *"there's something more here than a user-driven flow"*. We'll come back to it in round four (hot-spots) and again in the complete picture.
 
+Why this matters in practice: missing commands mark the places where **the system itself acts** — automatic rules reacting to state, scheduled jobs, timeouts, reactions to other events. In code these grow into sagas, process managers, and policy handlers. Spotting them this early on the wall is gold; they're the parts of the domain that don't show up in a user-facing requirements doc but bite hardest in production.
+
 ### 4.3 Round three — actors
 
 Who triggers the commands? EventStorming workshop convention here is **one sticky per role**, not per command. The role is shared across many commands in the mental model. For this slice we have two:
@@ -132,11 +136,13 @@ Who triggers the commands? EventStorming workshop convention here is **one stick
 
 **Two roles**, not seven duplicates of "Member". The Member dominates the user-facing flow; the Librarian is "registrar + edge-case handler". And here's the first **open question** for the domain expert: *"Pick up book — does the member do it on their own, or does the librarian have to confirm?"* Both answers are valid; they imply different auth models. Mental hint: **roles map to your security boundaries**. Member ≠ Librarian at the authentication layer; the wall already tells you that.
 
+We don't answer the question here — that's deliberate. Big Picture **surfaces** ambiguity; Process Modeling is where the domain expert helps us pick which model wins. The unanswered question stays parked as a flag, not a blocker.
+
 > **Convention note:** in a physical workshop a facilitator might place five physical Member stickies, one above each command, so the reader-eye sees "the same actor sits above five commands". In a static visualization grouped by type, duplicates would just look chaotic. The widget renders one sticky per role; prose explains the mental model.
 
 ### 4.4 Round four — hot-spots
 
-A red sticky = **a problem or an open question**. This is where EventStorming pays off the most, because it makes invisible uncertainty visible and ownable:
+A red sticky = **a problem or an open question**. This is where EventStorming pays off the most, because it makes invisible uncertainty visible and ownable. The widget switches to a **grid layout** to make the pairing visible — each column = one event from the timeline (top row), the hot-spot question hangs directly below (bottom row). Vertical proximity reads as "this question lives next to this event":
 
 <EventStorming
   layout="grid"
@@ -160,6 +166,8 @@ EventStorming **doesn't answer the hot-spots**. EventStorming **shows that you h
 ### 4.5 Round five — the complete picture
 
 The final wall sketches everything: events + commands + actors + hot-spots + aggregates (yellow large) + policies (purple) + read models (green) + external systems (pink). This is also the round where the reader sees **why Big Picture is only a starting point** — Process Modeling will zoom into each yellow boundary in a later post.
+
+Read this grid like the real wall: time flows **left-to-right** (Reserve → Reservation placed → Book picked up → Loan extended → Book returned → Late fee charged), and **vertical stacking shows causation**. Actors and aggregates sit on the top; events run along the middle row; policies and external systems drop one row below; read models and integration hot-spots sit at the bottom. The hot-spot ("Email Service down") hangs off the policy that talks to the external system — an integration risk surfacing exactly where it lives.
 
 <EventStorming
   layout="grid"
@@ -260,6 +268,7 @@ Each color on the wall encodes one concept. Here's the full vocabulary in one pl
 
 <EventStorming
   layout="grid"
+  ariaLabel="Sticky type legend — full reference in table below"
   caption="The eight sticky types used across this series."
   notes={[
     { type: 'event',     label: 'Domain Event',     x: 0, y: 0 },
@@ -295,7 +304,7 @@ Not code. Not a database schema. Not a microservices design. You get:
 1. **Ubiquitous language** — "Reservation placed" is now a term **everyone** uses. The frontend dev speaks the same way as the librarian and the accountant. This is Evans' original DDD insight, but EventStorming gets you there in a morning rather than over weeks of glossary maintenance.
 2. **Initial aggregate boundaries** — yellow large stickies are **candidates** (Reservation, Loan, Member Fines), not a verdict. Process Modeling confirms or corrects them.
 3. **A list of open questions** — red stickies are the **agenda** for the domain expert for the next week. They're also, in my experience, the best estimate-confidence indicator a team can produce.
-4. **A list of integration points** — pink stickies (External Systems) show where an Anti-Corruption Layer will be needed. The wall makes integration boundaries visible without you having to argue about them.
+4. **A list of integration points** — pink stickies (External Systems) show where an **Anti-Corruption Layer** (a translation boundary that maps the external system's vocabulary into your domain's language so external concepts don't leak inside) will be needed. The wall makes integration boundaries visible without you having to argue about them.
 
 </div>
 

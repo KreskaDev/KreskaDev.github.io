@@ -116,7 +116,7 @@ describe('EventStorming', () => {
         ]}
       />,
     )
-    const fig = screen.getByRole('group')
+    const fig = screen.getByRole('region')
     expect(fig.getAttribute('aria-label')).toBe(
       'EventStorming diagram. Events: Member registered, Book searched. Commands: Register member.',
     )
@@ -129,7 +129,7 @@ describe('EventStorming', () => {
         notes={[{ type: 'event', label: 'X' }]}
       />,
     )
-    const fig = screen.getByRole('group')
+    const fig = screen.getByRole('region')
     expect(fig.getAttribute('aria-label')).toBe('Library Big Picture')
   })
 
@@ -159,7 +159,7 @@ describe('EventStorming', () => {
 
   it('(j) edge case notes=[] + brak caption → aria-label = "EventStorming diagram (empty)."', () => {
     render(<EventStorming notes={[]} />)
-    const fig = screen.getByRole('group')
+    const fig = screen.getByRole('region')
     expect(fig.getAttribute('aria-label')).toBe('EventStorming diagram (empty).')
   })
 })

@@ -202,8 +202,9 @@ export default function EventStorming({
   return (
     <figure
       className={`my-8 -mx-4 sm:mx-0 overflow-x-auto md:relative md:left-1/2 md:-translate-x-1/2 md:w-fit md:max-w-[min(80rem,calc(100vw-2rem))] md:overflow-x-auto md:flex md:flex-col md:items-center md:bg-bg-secondary md:rounded-lg md:border md:border-border md:p-6 ${className ?? ''}`}
-      role="group"
+      role="region"
       aria-label={label}
+      tabIndex={0}
     >
       <div className="es-canvas inline-block min-w-full p-4 md:min-w-0 md:w-fit md:flex-none md:p-0">
         {resolvedLayout === 'grid' ? (
