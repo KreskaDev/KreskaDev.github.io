@@ -173,3 +173,24 @@ fretboardzie między nazwami nut (C, E, G) a stopniami od pierwiastka (R, 3, 5).
 W ChordAnalyzer akordeon pokazuje też przycisk `▶ Play chord` — odgrywa wszystkie
 nuty akordu jednocześnie. Akordeon i przełącznik etykiet są niezależne — możesz
 mieć rozwinięty akordeon bez stopni na fretboardzie i odwrotnie.
+
+## v5-14 UC — Sweet Home Chicago (Robert Johnson, 1936)
+
+Klasyczne 12-bar blues w tonacji **E**, nagrane przez Roberta Johnsona w San Antonio
+listopad 1936. Forma I-IV-V z dominantami siódemkowymi (E7-A7-B7) jako szkielet
+oraz drobnymi wariantami (Am jako passing chord w niektórych aranżach, oraz
+alternatywne wyższe voicings dla shuffle pattern w refrenie). Poniżej osiem voicings
+występujących w typowej interpretacji — każdy widget pokazuje kropki, akordeon
+ujawnia interwały (`R, 3, 5, b7` dla siódemek), a `▶ Play chord` odgrywa pełne
+brzmienie.
+
+<div className="space-y-6">
+  <ChordAnalyzer id="shc-e"        shape={[0, 2, 2, 1, 0, 0]} />
+  <ChordAnalyzer id="shc-e7"       shape={[0, 2, 0, 1, 0, 0]} />
+  <ChordAnalyzer id="shc-a"        shape={[null, 0, 2, 2, 2, 0]} />
+  <ChordAnalyzer id="shc-am"       shape={[null, 0, 2, 2, 1, 0]} />
+  <ChordAnalyzer id="shc-b7"       shape={[null, 2, 1, 2, 0, 2]} />
+  <ChordAnalyzer id="shc-a7"       shape={[null, 0, 2, 0, 2, 0]} />
+  <ChordAnalyzer id="shc-e7-opt2"  shape={[0, 2, 2, 1, 3, 0]} />
+  <ChordAnalyzer id="shc-a7-opt2"  shape={[null, 0, 2, 2, 2, 3]} />
+</div>
