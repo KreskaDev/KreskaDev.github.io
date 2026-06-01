@@ -194,3 +194,94 @@ brzmienie.
   <ChordAnalyzer id="shc-e7-opt2"  shape={[0, 2, 2, 1, 3, 0]} />
   <ChordAnalyzer id="shc-a7-opt2"  shape={[null, 0, 2, 2, 2, 3]} />
 </div>
+
+## v5-15 — Notation widget (VexFlow)
+
+Drugi widget w music vertical: read-only renderowanie nutacji muzycznej (pięciolinia +
+nuty z rytmem, key signature, time signature). Pod nutami slider BPM (40-240, default 90
+*moderato*) + przycisk ▶ Play który odtwarza ciąg nut sekwencyjnie z timing wynikającym
+z notation durations. Podczas odtwarzania aktualnie grana nuta jest podświetlana —
+edukacyjny mapping rytmu ↔ pozycji wizualnej. Notation jest **data-driven**: autor wpisuje
+JSON `Note[]` bezpośrednio w MDX (struktura: pitch, duration, dotted, rest, tied, voice,
+articulation, ornament, tuplet). Forward-compat: kolejna iteracja doda scale-on-fretboard
+konsumujący ten sam `Note[]` jako dwie projekcje (notation + fretboard graph). Poniższe
+demo pokazują wprowadzone rytmy + features.
+
+<Notation id="d1-c-major-scale" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 5 }, duration: '1/4' },
+]} />
+
+<Notation id="d2-d-major-scale" keySignature="D" notes={[
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', accidental: '#', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'C', accidental: '#', octave: 5 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 5 }, duration: '1/4' },
+]} />
+
+<Notation id="d3-dotted-rhythm" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4', dotted: true },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/8' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4', dotted: true },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/8' },
+]} />
+
+<Notation id="d4-rests" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { duration: '1/4', rest: true },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { duration: '1/4', rest: true },
+]} />
+
+<Notation id="d5-triplet" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/8', tuplet: { ratio: [3, 2], group: 't1' } },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/8', tuplet: { ratio: [3, 2], group: 't1' } },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/8', tuplet: { ratio: [3, 2], group: 't1' } },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+]} />
+
+<Notation id="d6-tie-cross-bar" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/2', tied: true },
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/2' },
+]} />
+
+<Notation id="d7-chord-on-staff" notes={[
+  { pitch: [{ letter: 'C', octave: 4 }, { letter: 'E', octave: 4 }, { letter: 'G', octave: 4 }], duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+]} />
+
+<Notation id="d8-multi-voice" notes={[
+  { pitch: { letter: 'C', octave: 5 }, duration: '1/4', voice: 1 },
+  { pitch: { letter: 'D', octave: 5 }, duration: '1/4', voice: 1 },
+  { pitch: { letter: 'E', octave: 5 }, duration: '1/4', voice: 1 },
+  { pitch: { letter: 'F', octave: 5 }, duration: '1/4', voice: 1 },
+  { pitch: { letter: 'C', octave: 3 }, duration: '1/2', voice: 2 },
+  { pitch: { letter: 'G', octave: 3 }, duration: '1/2', voice: 2 },
+]} />
+
+<Notation id="d9-ornament-trill" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4', ornament: 'trill' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/2' },
+]} />
+
+<Notation id="d10-compound-metre-6-8" timeSignature={{ numerator: 6, denominator: 8 }} notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/8' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/8' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/8' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/8' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/8' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/8' },
+]} />
