@@ -201,11 +201,11 @@ export default function EventStorming({
   const label = ariaLabel ?? synthesizeAriaLabel(notes, caption)
   return (
     <figure
-      className={`my-8 -mx-4 sm:mx-0 overflow-x-auto ${className ?? ''}`}
+      className={`my-8 -mx-4 sm:mx-0 overflow-x-auto md:relative md:left-1/2 md:-translate-x-1/2 md:w-[min(80rem,calc(100vw-2rem))] md:overflow-x-auto md:flex md:flex-col md:items-center md:bg-bg-secondary md:rounded-lg md:border md:border-border md:p-6 ${className ?? ''}`}
       role="group"
       aria-label={label}
     >
-      <div className="es-canvas inline-block min-w-full p-4">
+      <div className="es-canvas inline-block min-w-full p-4 md:min-w-0 md:w-fit md:flex-none md:p-0">
         {resolvedLayout === 'grid' ? (
           <GridRender notes={notes} />
         ) : (
@@ -213,7 +213,7 @@ export default function EventStorming({
         )}
       </div>
       {caption && (
-        <figcaption className="text-sm text-text-tertiary text-center mt-2">
+        <figcaption className="text-sm text-text-tertiary text-center mt-3 md:max-w-3xl md:px-4">
           {caption}
         </figcaption>
       )}

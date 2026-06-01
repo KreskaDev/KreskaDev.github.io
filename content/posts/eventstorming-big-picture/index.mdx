@@ -250,7 +250,39 @@ Same story for the code side. The Big Picture wall identifies "Reservation" as a
 
 Nothing about this code is final. It's a sketch — a translation of one yellow sticky into a starting type. The point is that the wall and the code are talking about the same thing under the same name (*"Reservation"*). That alignment is what Big Picture gives you.
 
-## 5. What you actually get after Big Picture
+## 5. The sticky color legend
+
+Each color on the wall encodes one concept. Here's the full vocabulary in one place — useful as a quick reference while reading the rest of this series.
+
+<EventStorming
+  layout="grid"
+  caption="The eight sticky types used across this series."
+  notes={[
+    { type: 'event',     label: 'Domain Event',     x: 0, y: 0 },
+    { type: 'command',   label: 'Command',          x: 1, y: 0 },
+    { type: 'actor',     label: 'Actor',            x: 2, y: 0 },
+    { type: 'aggregate', label: 'Aggregate',        x: 0, y: 1 },
+    { type: 'policy',    label: 'Policy',           x: 1, y: 1 },
+    { type: 'readmodel', label: 'Read Model',       x: 2, y: 1 },
+    { type: 'external',  label: 'External System',  x: 0, y: 2 },
+    { type: 'hotspot',   label: 'Hot Spot',         x: 1, y: 2 },
+  ]}
+/>
+
+| Sticky | What it represents | Grammar | Code-side analogue |
+|---|---|---|---|
+| **Domain Event** (orange) | A fact that happened in the domain | Past tense — *"Member registered"* | `IDomainEvent` published by an aggregate |
+| **Command** (blue) | An intent to change state | Imperative — *"Register member"* | Handler input / method call |
+| **Actor** (light yellow) | A role that triggers commands | Noun — *"Member"*, *"Librarian"* | Security principal / auth context |
+| **Aggregate** (large yellow) | A consistency boundary that protects invariants | Noun phrase — *"Reservation"* | Aggregate Root class |
+| **Policy** (lilac / purple) | A rule that reacts to events and issues commands | *"Whenever X, do Y"* | Saga / Process Manager |
+| **Read Model** (green) | A view projection optimized for one query | Noun phrase — *"My active loans"* | CQRS query side / projection table |
+| **External System** (pink) | Something outside the bounded context | Noun — *"Email Service"* | Anti-Corruption Layer boundary |
+| **Hot Spot** (red) | A problem or open question | Question — *"What if...?"* | TODO + domain-expert ticket |
+
+When you scan a wall **left to right**, you're following time. When you scan **top to bottom**, you're following causation: actor invokes command, command produces event, event triggers policy, policy issues another command.
+
+## 6. What you actually get after Big Picture
 
 Not code. Not a database schema. Not a microservices design. You get:
 
@@ -261,7 +293,7 @@ Not code. Not a database schema. Not a microservices design. You get:
 
 Brandolini repeats: *"Big Picture is not a deliverable. It's a conversation made visible"* (ch. 4). The wall lasts a few hours; the language lasts the lifetime of the system.
 
-## 6. Anti-patterns — how teams ruin EventStorming
+## 7. Anti-patterns — how teams ruin EventStorming
 
 Every methodology post needs a "when this goes wrong" section. Brandolini's list, lightly paraphrased:
 
@@ -271,7 +303,7 @@ Every methodology post needs a "when this goes wrong" section. Brandolini's list
 4. **"Tools instead of stickies"** — Miro and Lucidchart are great **after** a workshop, terrible **inside** one. Tools slow the conversation down (mouse, keyboard, layout decisions); a sticky note is the lowest possible barrier to participation.
 5. **"Big Picture as a one-shot"** — Big Picture **iterates**. Every month or quarter you add new events as the product roadmap shifts. It's a **living artifact**, not a milestone deliverable.
 
-## 7. Related patterns — where this connects
+## 8. Related patterns — where this connects
 
 | Pattern | Connection to Big Picture | Future post in this series |
 |---|---|---|
@@ -284,7 +316,7 @@ Every methodology post needs a "when this goes wrong" section. Brandolini's list
 
 Every entry on this list is a sticky **color** on the wall. That's the trick: EventStorming uses a tiny vocabulary of visual markers to encode a large vocabulary of patterns. Once you've seen the wall, the patterns stop being abstract.
 
-## 8. Sources
+## 9. Sources
 
 - Alberto Brandolini, *Introducing EventStorming* (Leanpub, in progress 2017-present) — the primary source. Read at least chapters 1, 3, 4, and 5.
 - Vaughn Vernon, [virtualddd.com](https://virtualddd.com/) — EventStorming community examples and recorded workshops.

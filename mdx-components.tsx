@@ -46,13 +46,29 @@ const mdxComponents: MDXComponents = {
   ),
   // Table wrapper: bleed-edge -mx-4 sm:-mx-6 daje tabeli pełną szerokość
   // container'a, scroll overflow w wrapperze. `not-prose` resetuje prose
-  // typography styling (border-collapse + spacing per Tailwind base).
+  // typography styling. th/td borders zamiast tr (border-collapse compatibility).
   table: ({ children, ...props }) => (
-    <div className="not-prose my-6 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto">
+    <div className="not-prose my-8 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto">
       <table className="min-w-full text-sm font-sans border-collapse" {...props}>
         {children}
       </table>
     </div>
+  ),
+  th: ({ children, ...props }) => (
+    <th
+      className="text-left font-semibold text-text-primary py-3 px-4 align-top border-b-2 border-border-strong"
+      {...props}
+    >
+      {children}
+    </th>
+  ),
+  td: ({ children, ...props }) => (
+    <td
+      className="py-3 px-4 text-text-secondary align-top border-b border-border"
+      {...props}
+    >
+      {children}
+    </td>
   ),
   a: ({ href, children, ...props }) => {
     if (typeof href !== 'string' || href.length === 0) {
