@@ -102,3 +102,130 @@ describe('playSequence — edge cases', () => {
     ).rejects.toThrow('audio-unavailable')
   })
 })
+
+describe('playSequence — onNoteStart callback (v5-15 ADR-054)', () => {
+  it('sequential mode (interval=0 + durations + onNoteStart) → fires callback per-note z cumulative scheduledTime', async () => {
+    vi.useFakeTimers()
+    const notes = [
+      { name: 'C' as const, octave: 4 },
+      { name: 'D' as const, octave: 4 },
+      { name: 'E' as const, octave: 4 },
+    ]
+    const onNoteStart = vi.fn()
+    const promise = playSequence(notes, {
+      interval: 0,
+      durations: [0.5, 0.5, 1.0],
+      onNoteStart,
+    })
+    // Flush ensureAudio + initial map setup
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onNoteStart).toHaveBeenCalledTimes(1)
+    expect(onNoteStart).toHaveBeenNthCalledWith(1, 0, 0)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(onNoteStart).toHaveBeenCalledTimes(2)
+    expect(onNoteStart).toHaveBeenNthCalledWith(2, 1, 500)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(onNoteStart).toHaveBeenCalledTimes(3)
+    expect(onNoteStart).toHaveBeenNthCalledWith(3, 2, 1000)
+    await promise
+    vi.useRealTimers()
+  })
+
+  it('legacy mode (interval>0 + onNoteStart) → fires callback per-note z i*interval delay', async () => {
+    vi.useFakeTimers()
+    const notes = [
+      { name: 'C' as const, octave: 4 },
+      { name: 'D' as const, octave: 4 },
+    ]
+    const onNoteStart = vi.fn()
+    const promise = playSequence(notes, { interval: 150, onNoteStart })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onNoteStart).toHaveBeenCalledTimes(1)
+    expect(onNoteStart).toHaveBeenNthCalledWith(1, 0, 0)
+    await vi.advanceTimersByTimeAsync(150)
+    expect(onNoteStart).toHaveBeenCalledTimes(2)
+    expect(onNoteStart).toHaveBeenNthCalledWith(2, 1, 150)
+    await promise
+    vi.useRealTimers()
+  })
+
+  it('onNoteStart throw → playback NIE breaks; console.error logged', async () => {
+    vi.useFakeTimers()
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const onNoteStart = vi.fn(() => { throw new Error('boom') })
+    const promise = playSequence(
+      [{ name: 'C', octave: 4 }],
+      { interval: 0, durations: [0.5], onNoteStart }
+    )
+    await vi.advanceTimersByTimeAsync(0)
+    expect(playPitchedNote).toHaveBeenCalledTimes(1)
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[audio-sequence] onNoteStart callback threw:'),
+      expect.any(Error)
+    )
+    await promise
+    consoleErrorSpy.mockRestore()
+    vi.useRealTimers()
+  })
+
+  it('backward-compat regression — interval=0 + durations + NO onNoteStart → hits chord codepath (synchronous)', async () => {
+    // CRITICAL: replicates v5-14 test "durations per-note propagation" semantics.
+    // Without onNoteStart presence, detection rule usesSequential=false → chord
+    // codepath → 2× synchronous playPitchedNote calls (no setTimeout, no scheduling).
+    await playSequence(
+      [{ name: 'C', octave: 4 }, { name: 'E', octave: 4 }],
+      { interval: 0, durations: [0.5, 1.0] }
+    )
+    expect(playPitchedNote).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(playPitchedNote).mock.calls[0]?.[2]).toBe(0.5)
+    expect(vi.mocked(playPitchedNote).mock.calls[1]?.[2]).toBe(1.0)
+  })
+
+  it('AbortSignal mid-flight cancellation → clears pending setTimeouts; onNoteStart skipped post-abort', async () => {
+    vi.useFakeTimers()
+    const controller = new AbortController()
+    const onNoteStart = vi.fn()
+    const promise = playSequence(
+      [
+        { name: 'C', octave: 4 },
+        { name: 'D', octave: 4 },
+        { name: 'E', octave: 4 },
+      ],
+      {
+        interval: 0,
+        durations: [0.5, 0.5, 1.0],
+        onNoteStart,
+        signal: controller.signal,
+      }
+    )
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onNoteStart).toHaveBeenCalledTimes(1)
+    expect(playPitchedNote).toHaveBeenCalledTimes(1)
+    controller.abort()
+    await vi.advanceTimersByTimeAsync(1000)
+    // Post-abort: onNoteStart NIE fires dla indices 1,2; playPitchedNote count stays 1
+    expect(onNoteStart).toHaveBeenCalledTimes(1)
+    expect(playPitchedNote).toHaveBeenCalledTimes(1)
+    await expect(promise).resolves.toBeUndefined()
+    vi.useRealTimers()
+  })
+
+  it('AbortSignal pre-aborted → playSequence resolves cleanly without firing callbacks', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    const onNoteStart = vi.fn()
+    await expect(
+      playSequence(
+        [{ name: 'C', octave: 4 }],
+        {
+          interval: 0,
+          durations: [0.5],
+          onNoteStart,
+          signal: controller.signal,
+        }
+      )
+    ).resolves.toBeUndefined()
+    expect(onNoteStart).not.toHaveBeenCalled()
+    expect(playPitchedNote).not.toHaveBeenCalled()
+  })
+})
