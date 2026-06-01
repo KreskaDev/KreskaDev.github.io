@@ -2,6 +2,7 @@ import type { MDXComponents } from 'mdx/types'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { AboutIdentity } from '@/components/about/AboutIdentity'
+import LazyNotation from '@/components/lazy/LazyNotation'
 
 // rehype-slug + rehype-autolink-headings dodają id + anchor link icons w pipeline,
 // tutaj tylko styling przez className.
@@ -100,6 +101,7 @@ const mdxComponents: MDXComponents = {
     </div>
   ),
   AboutIdentity,
+  Notation: LazyNotation,
 }
 
 export default mdxComponents
