@@ -30,6 +30,7 @@ const makeStave = () => {
 
 const makeVoice = () => ({
   addTickables: vi.fn(function (this: unknown) { return this }),
+  setStrict: vi.fn(function (this: unknown) { return this }),
 })
 
 const makeFormatter = () => ({
