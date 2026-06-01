@@ -162,3 +162,14 @@ zawsze realny voicing change, czasem tylko reinterpretacja basu.
   <ChordAnalyzer id="inv-c-over-e" shape={{ frets: [null, 3, 2, 0, 1, 0], rootStringIndex: 2 }} />
   <ChordAnalyzer id="inv-c-over-g" shape={{ frets: [null, 3, 2, 0, 1, 0], rootStringIndex: 3 }} />
 </div>
+
+## v5-14 — Intervals accordion + degree labels
+
+Każdy widget powyżej dostał teraz dwie nowe funkcje. Pod fretboardem znajdziesz
+`Show intervals` — kliknięcie rozwija akordeon z listą nut, interwałami od pierwiastka
+i wykrytą nazwą skali/akordu (a jeśli detekcja jest niejednoznaczna, zobaczysz też
+alternatywne odczytanie). Obok jest przycisk `Show degrees` — przełącza etykiety na
+fretboardzie między nazwami nut (C, E, G) a stopniami od pierwiastka (R, 3, 5).
+W ChordAnalyzer akordeon pokazuje też przycisk `▶ Play chord` — odgrywa wszystkie
+nuty akordu jednocześnie. Akordeon i przełącznik etykiet są niezależne — możesz
+mieć rozwinięty akordeon bez stopni na fretboardzie i odwrotnie.

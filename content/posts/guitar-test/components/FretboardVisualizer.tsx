@@ -11,15 +11,21 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useTheme } from 'next-themes'
 import type {
-  NoteName, FretPosition, FretboardNote,
+  NoteName, FretPosition, FretboardNote, IntervalName,
   ScaleSpec, ChordSpec, Tuning, PitchedNote,
 } from './types'
 import { DEFAULT_FRET_COUNT } from './types'
 import {
   scaleNotes, chordNotes, positionsOfNote, noteAtPosition, STANDARD_TUNING,
+  intervalBetween, spellChordDegrees,
 } from './music-theory'
 import Fretboard from './Fretboard'
 import { ensureAudio, playPitchedNote } from './audio'
+import { NotesRow, IntervalsRow, DetectedNameRow } from './accordion-rows'
+
+// v5-14 labelMode — wrapper-API enum, NIE shared do types.ts dopóki v5-16 notation
+// wprowadza cross-component shared. ChordAnalyzer ma własny identyczny lokalny type.
+type LabelMode = 'note' | 'degree'
 
 // === FretboardVisualizer props (discriminated union — task.md §"Kontekst" wzór) ===
 
@@ -28,6 +34,7 @@ type SharedProps = {
   tuning?: Tuning                         // default STANDARD_TUNING
   fretCount?: number                      // default DEFAULT_FRET_COUNT (12)
   enableAudio?: boolean                   // default true (Pre-confirmed #3)
+  labelMode?: LabelMode                   // v5-14, default 'note' (Pre-confirmed #4)
 }
 
 export type FretboardVisualizerProps = SharedProps & (
@@ -173,6 +180,13 @@ export default function FretboardVisualizer(props: FretboardVisualizerProps) {
     enableAudio = true,
   } = props
 
+  // v5-14 labelMode state (per ADR-011 per-instance React state). Default 'note'
+  // (Pre-confirmed #4 — pierwsza impresja = note names). Toggle button niezależny
+  // od accordion expand state (Pre-confirmed #3).
+  const [labelMode, setLabelMode] = useState<LabelMode>(props.labelMode ?? 'note')
+  const toggleLabelMode = () =>
+    setLabelMode(prev => prev === 'note' ? 'degree' : 'note')
+
   // useTheme + mounted guard — precedent BayesAnalyzer.tsx + Fretboard.tsx:80-86.
   // resolvedTheme undefined w SSR → hydration mismatch jeśli inline'owany. setState
   // jednorazowy, NIE cascading.
@@ -232,6 +246,34 @@ export default function FretboardVisualizer(props: FretboardVisualizerProps) {
     'chord' in props && props.chord ? props.chord.root :
     undefined
 
+  // v5-14 accordion content — wrapper computes (Decyzja planisty #2 = B generic dumb-display).
+  // notes variant: brak deterministycznej note list bez root context → accordion hidden
+  // entirely (§3.4 edge case lock).
+  const hasAccordionContent = 'scale' in props || 'chord' in props
+
+  const accordionNoteNames = useMemo<NoteName[]>(() => {
+    if ('scale' in props && props.scale) return scaleNotes(props.scale.root, props.scale.type)
+    if ('chord' in props && props.chord) return chordNotes(props.chord.root, props.chord.type)
+    return []
+  }, [props])
+
+  const accordionDegrees = useMemo<IntervalName[]>(() => {
+    if ('scale' in props && props.scale) {
+      const root = props.scale.root
+      return accordionNoteNames.map(n => intervalBetween(root, n))
+    }
+    if ('chord' in props && props.chord) {
+      return spellChordDegrees({ root: props.chord.root, type: props.chord.type })
+    }
+    return []
+  }, [props, accordionNoteNames])
+
+  const displayName = useMemo<string | null>(() => {
+    if ('scale' in props && props.scale) return `${props.scale.root} ${props.scale.type}`
+    if ('chord' in props && props.chord) return `${props.chord.root} ${props.chord.type}`
+    return null
+  }, [props])
+
   // Wrapper-level geometry — duplikowane z SelectedOverlay (oba muszą znać svgWidth
   // żeby inner div miał poprawny width dla layered SVG sibling alignment).
   const stringCount = tuning.strings.length
@@ -271,6 +313,7 @@ export default function FretboardVisualizer(props: FretboardVisualizerProps) {
           fretCount={fretCount}
           notes={baseNotes}
           rootNote={rootNote}
+          showDegrees={labelMode === 'degree'}
           // onPlayNote left at default noop — wrapper handles click via overlay sibling.
         />
         <SelectedOverlay
@@ -282,6 +325,35 @@ export default function FretboardVisualizer(props: FretboardVisualizerProps) {
           mounted={mounted}
           onNoteClick={handleNoteClick}
         />
+      </div>
+
+      {/* v5-14 accordion + degree toggle button row (Pre-confirmed #9 native <details>;
+          accordion + toggle są niezależne — Pre-confirmed #3). notes variant: accordion
+          hidden (no semantic root → puste notes/intervals), toggle button widoczny tylko
+          jeśli rootNote dostępny (degree mode wymaga root). */}
+      <div className="mx-auto max-w-prose mt-3 px-4 sm:px-0 not-prose flex flex-wrap items-center gap-3">
+        {hasAccordionContent && (
+          <details className="w-full sm:w-auto">
+            <summary className="cursor-pointer py-3 px-4 text-sm text-text-secondary hover:text-text-primary transition-colors">
+              Show intervals
+            </summary>
+            <div className="mt-3 pl-4 space-y-2 text-sm">
+              <NotesRow notes={accordionNoteNames} />
+              <IntervalsRow degrees={accordionDegrees} />
+              <DetectedNameRow name={displayName} />
+            </div>
+          </details>
+        )}
+        {rootNote && (
+          <button
+            type="button"
+            onClick={toggleLabelMode}
+            data-testid="label-mode-toggle"
+            className="py-3 px-4 text-sm text-text-secondary hover:text-text-primary border border-border-default rounded transition-colors"
+          >
+            {labelMode === 'note' ? 'Show degrees' : 'Show notes'}
+          </button>
+        )}
       </div>
     </div>
   )
