@@ -305,9 +305,15 @@ export default function Notation({
             })
           }
 
-          const voice = factory
-            .Voice({ time: `${ts.numerator}/${ts.denominator}` })
-            .addTickables(staveNotes)
+          // setStrict(false) — Voice domyślnie strict: total ticks MUST equal exactly
+          // one bar of time signature. Empirycznie ujawnione przy live dev smoke:
+          // D1/D2 (8 quarters w 4/4 = 2 bars) + D5 (triplet+quarter = 2 beats) hit
+          // "Too many ticks"/"Too few ticks". v5-15 demos są edukacyjnie krótkie sekwencje
+          // które NIE zawsze fit jednego bar → soft mode tolerable; downside: brak runtime
+          // validation autorskich błędów. Plan §10.1 deferred do implementer empirical.
+          const voice = factory.Voice({ time: `${ts.numerator}/${ts.denominator}` })
+          voice.setStrict(false)
+          voice.addTickables(staveNotes)
           voiceObjs.push(voice)
         }
 
