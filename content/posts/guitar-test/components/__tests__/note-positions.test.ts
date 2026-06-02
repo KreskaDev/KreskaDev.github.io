@@ -5,7 +5,7 @@
 import { describe, test, expect, beforeEach } from 'vitest'
 import { getPositions, __resetPositionsCacheForTests } from '../note-positions'
 import { noteAtPosition, STANDARD_TUNING } from '../music-theory'
-import { DROP_D } from '../tunings'
+import { DROP_D, DADGAD } from '../tunings'
 import type { FretPosition, NotePitch, Tuning, NoteName } from '../types'
 
 // Derive expected positions empirically via shipped noteAtPosition (DRY z music-theory).
@@ -121,6 +121,35 @@ describe('note-positions.getPositions', () => {
   test('Drop D tuning: low D2 = single open string position [string:0, fret:0]', () => {
     const out = getPositions({ letter: 'D', octave: 2 }, { tuning: DROP_D })
     expect(out).toEqual([{ string: 0, fret: 0 }])
+  })
+
+  // v5-17 ADR-062 extension — multi-tuning consumer convention real-world coverage.
+  test('STANDARD_TUNING D2 returns empty (low E open=E2; D2 unreachable) — DROP_D differentiation', () => {
+    const out = getPositions({ letter: 'D', octave: 2 }, { tuning: STANDARD_TUNING })
+    expect(out).toEqual([])
+  })
+
+  test('Drop D tuning D3: multi-position w DROP_D różni się od STANDARD', () => {
+    const dropD = getPositions({ letter: 'D', octave: 3 }, { tuning: DROP_D })
+    const standard = getPositions({ letter: 'D', octave: 3 }, { tuning: STANDARD_TUNING })
+    const expectedDropD = deriveExpected(DROP_D, 12, 'D', undefined, 3)
+    const expectedStandard = deriveExpected(STANDARD_TUNING, 12, 'D', undefined, 3)
+    expect(dropD).toEqual(expectedDropD)
+    expect(standard).toEqual(expectedStandard)
+    // First-pos identical (oba tunings mają D3 jako string:2 open — D-string identycznie
+    // tuned na string 2). DIFFERENTIATION leży w low-string positions: STANDARD string:0
+    // (low E2) → D3 = fret 10; DROP_D string:0 (low D2) → D3 = fret 12. Distinct sets.
+    expect(dropD[0]).toEqual({ string: 2, fret: 0 })
+    expect(dropD).not.toEqual(standard)
+    expect(dropD).toContainEqual({ string: 0, fret: 12 })   // DROP_D low D2 + octave
+    expect(standard).toContainEqual({ string: 0, fret: 10 }) // STANDARD low E2 + 10 semi
+  })
+
+  test('DADGAD tuning A4: sanity check że tuning param propaguje przez non-STANDARD non-DROP_D path', () => {
+    const out = getPositions({ letter: 'A', octave: 4 }, { tuning: DADGAD })
+    const expected = deriveExpected(DADGAD, 12, 'A', undefined, 4)
+    expect(out).toEqual(expected)
+    expect(out.length).toBeGreaterThan(0)
   })
 
   test('NoteName chromatic root coverage — all 12 pitch classes return non-empty in octave 3', () => {

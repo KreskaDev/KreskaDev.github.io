@@ -5,6 +5,8 @@ import { AboutIdentity } from '@/components/about/AboutIdentity'
 import LazyNotation from '@/components/lazy/LazyNotation'
 import LazyScaleOnFretboard from '@/components/lazy/LazyScaleOnFretboard'
 import LazyNotationScaleLink from '@/components/lazy/LazyNotationScaleLink'
+import LazyTablature from '@/components/lazy/LazyTablature'
+import NotationLink from '@/content/posts/guitar-test/components/NotationLink'
 
 // rehype-slug + rehype-autolink-headings dodają id + anchor link icons w pipeline,
 // tutaj tylko styling przez className.
@@ -106,6 +108,11 @@ const mdxComponents: MDXComponents = {
   Notation: LazyNotation,
   ScaleOnFretboard: LazyScaleOnFretboard,
   NotationScaleLink: LazyNotationScaleLink,
+  // v5-17 (ADR-060 + ADR-061). NotationLink NIE lazy bo wrapper light-weight; jego
+  // children są lazy (LazyNotation/LazyTablature/LazyScaleOnFretboard) → VexFlow chunk
+  // shared. LazyTablature mirror LazyNotation pattern (ADR-043 dynamic ssr:false).
+  Tablature: LazyTablature,
+  NotationLink,
 }
 
 export default mdxComponents
