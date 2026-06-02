@@ -305,3 +305,126 @@ demo pokazują wprowadzone rytmy + features.
   { pitch: { letter: 'G', octave: 4 }, duration: '1/8' },
   { pitch: { letter: 'A', octave: 4 }, duration: '1/8' },
 ]} />
+
+## v5-16 ScaleOnFretboard — wizualizacja skal na gryfie
+
+Widget `<ScaleOnFretboard/>` mapuje sekwencję nut (`Note[]`, ten sam shape co `<Notation/>`)
+na pozycje fretboardu. Strzałki łączą kolejne pozycje (default `showArrows=true`); Play
+odgrywa skalę z BPM-driven timing reuse'ując shipped `notation-timing` + `audio-sequence`
+(ADR-049 + ADR-054 third consumer chain). Gdy `Note.position` jest pominięte, widget
+używa `note-positions.ts` naïve first-match (lowest fret); explicit `position` w MDX
+nadpisuje auto-pick (D7 demo). Per-instance state (ADR-011) — wiele widgetów na stronie
+ma osobne BPM, playback i highlight.
+
+Mobile: fretboard >10 fretów wymaga horizontal scroll na 360px viewport (analog v5-09
+Fretboard); overlay strzałek + highlight ring scroll'ują razem z base SVG (single
+overflow container).
+
+**D1 — Gama C-dur 1 oktawa** (8 ćwierćnut C3→C4, naïve auto-positions). Root note C
+podświetlone burgundy (ADR-037 root token), pozostałe scale tones w neutral palette.
+Klik Play uruchamia sekwencję ~5.3s @BPM=90.
+
+<ScaleOnFretboard id="d1-c-major" notes={[
+  { pitch: { letter: 'C', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+]} rootNote="C" />
+
+**D2 — Gama A-moll naturalna** (8 ćwierćnut A3→A4, relative-major = C). Brak alteracji;
+root A.
+
+<ScaleOnFretboard id="d2-a-natural-minor" notes={[
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+]} rootNote="A" />
+
+**D3 — E moll harmoniczna** (raised 7th = D♯). Test enharmonic accidental
+(D♯ canonical pc=3 sharps spelling) + naïve position derivation.
+
+<ScaleOnFretboard id="d3-e-harmonic-minor" notes={[
+  { pitch: { letter: 'E', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'F', accidental: '#', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', accidental: '#', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+]} rootNote="E" />
+
+**D4 — D moll melodyczna (ascending)** (raised 6th i 7th = B + C♯). Demonstruje
+"melodic minor up = major except b3" pattern.
+
+<ScaleOnFretboard id="d4-d-melodic-minor" notes={[
+  { pitch: { letter: 'D', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'C', accidental: '#', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+]} rootNote="D" />
+
+**D5 — G dorian** (mode od F-dur od II stopnia: G A B♭ C D E F G). Demonstruje dorian
+b3 + major 6th charakter.
+
+<ScaleOnFretboard id="d5-g-dorian" notes={[
+  { pitch: { letter: 'G', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', accidental: 'b', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+]} rootNote="G" />
+
+**D6 — F mixolydian** (mode od B♭-dur od V stopnia: F G A B♭ C D E♭ F). Demonstruje
+mixolydian b7 (E♭) — bluesy major scale character.
+
+<ScaleOnFretboard id="d6-f-mixolydian" notes={[
+  { pitch: { letter: 'F', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', accidental: 'b', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', accidental: 'b', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+]} rootNote="F" />
+
+**D7 — A pentatonika durowa, 5th position** (explicit `position` na każdej nucie —
+wymusza fingering w 5th position zamiast naïve lowest-fret). Demonstruje override
+naïve auto-pick.
+
+<ScaleOnFretboard id="d7-a-pent-major-5th" notes={[
+  { pitch: { letter: 'A', octave: 3 }, position: { string: 2, fret: 7 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 3 }, position: { string: 2, fret: 9 }, duration: '1/4' },
+  { pitch: { letter: 'C', accidental: '#', octave: 4 }, position: { string: 3, fret: 6 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, position: { string: 3, fret: 9 }, duration: '1/4' },
+  { pitch: { letter: 'F', accidental: '#', octave: 4 }, position: { string: 4, fret: 7 }, duration: '1/4' },
+]} rootNote="A" />
+
+**D8 — E blues minor** (pentatonika minor + b5 "blue note": E G A B♭ B D). 6 nut w 1
+oktawie z dodatkową b5 (B♭) między 4 i 5 stopniem.
+
+<ScaleOnFretboard id="d8-e-blues-minor" notes={[
+  { pitch: { letter: 'E', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', accidental: 'b', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+]} rootNote="E" />
