@@ -15,8 +15,12 @@ language: pl
 
 Wyobraź sobie test diagnostyczny z dwoma reklamowanymi liczbami:
 
+<Callouts>
+
 - **Czułość 85%** — zdolność testu medycznego lub diagnostycznego do prawidłowego rozpoznawania osób chorych. Z każdych 100 osób chorych test zakwalifikuje 15 chorych błędnie jako wynik negatywny.
 - **Swoistość 90%** — zdolność testu medycznego lub diagnostycznego do prawidłowego rozpoznawania osób zdrowych. Z każdych 100 osób zdrowych test zakwalifikuje 10 zdrowych błędnie jako wynik pozytywny.
+
+</Callouts>
 
 Wydaje się solidnie. Lekarz — albo inny ekspert — uruchamia test, dostaje wynik pozytywny i komunikuje diagnozę. Naturalna reakcja obserwatora to przyznać tej diagnozie wysoką pewność. Może 80%, może 85% — w okolicach reklamowanej "dokładności" testu.
 
@@ -26,9 +30,13 @@ Ten post pokazuje, że **w bardzo wielu realistycznych sytuacjach ta intuicja je
 
 Wyobraź sobie trzy strony jednego problemu diagnostycznego:
 
+<Callouts>
+
 - **Osoba X** — testowana, dostaje **nagrodę** jeśli diagnoza wyjdzie pozytywna. Racjonalna, dobrze poinformowana o naturze testu, **nic jej nie grozi za próbę kłamstwa**, subiektywnie przekonana że nagroda jej się należy. Próbuje wpłynąć na wynik tam, gdzie to możliwe.
 - **Obserwator** — czytelnik diagnozy (sąd, ubezpieczyciel, kolega, rodzina, opinia publiczna). Nie ma własnej nagrody w grze — ma tylko zadanie *poprawnie oszacować pewność* diagnozy. Post śledzi rozjazd między naiwną oceną obserwatora, [kotwiczącą](#glos-kotwica) na reklamowanej swoistości testu, a realną — uwzględniającą presję oszustwa.
 - **System diagnostyczny** — klinika (kompozytowy test: narzędzia + opinia klinicysty). Wyrok binarny: pozytyw / negatyw.
+
+</Callouts>
 
 **Centralna teza:** *naiwny obserwator*, traktujący reklamowane parametry testu (czułość X%, swoistość Y%) jako prawdę o realnej sytuacji, **systematycznie zawyża pewność pozytywnej diagnozy**. Powód: reklamowane parametry walidowano na *uczciwych* respondentach. Pod presją oszustwa współczynnik fałszywych alarmów — [FPR](#glos-fpr) — rośnie wielokrotnie — i to nie dlatego, że klinicysta jest słaby, tylko dlatego że *narzędzie* opiera się na zaufaniu do treści odpowiedzi.
 
@@ -36,20 +44,29 @@ Wyobraź sobie trzy strony jednego problemu diagnostycznego:
 
 Cały model siedzi w **pięciu liczbach**, każda od 0 do 1 (procent w przebraniu). Zanim wejdziemy w symbole, każda po polsku — bo czytelnik bez statystycznego background'u nie zatrzyma się na cudzych literach greckich.
 
-**$\pi$ *(priori)* — jak częste jest zaburzenie w grupie, która się po taki test zgłasza.**
-Nie w populacji ogólnej. W *grupie, która trafia do gabinetu*. Jeśli zgłasza się głównie osoba, która sama siebie podejrzewa, ta liczba bywa wyższa niż "1% populacji". Ale często wciąż jest niska — 5%, 10%, 15%. Niskie priori bezlitośnie obniża pewność diagnozy, **niezależnie od tego, jak dobry jest test**.
+<Callouts>
 
-**$s_0$ *(czułość reklamowana)* — jak często test wykrywa rzeczywistą chorobę u osoby, która nie próbuje wpływać na wynik.**
-To liczba z broszury producenta lub paperu walidacyjnego. Typowo 0.80–0.95. „Test wykrywa 85% przypadków" — to $s_0$.
+- **$\pi$ *(priori)* — jak częste jest zaburzenie w grupie, która się po taki test zgłasza.**
 
-**$s_1$ *(czułość pod presją)* — jak często test wykrywa chorobę u osoby chorej, która *chce* tej diagnozy.**
-Zwykle nieco wyższa niż $s_0$ — chora osoba, która chce diagnozy, odpowiada w sposób który jeszcze bardziej potwierdza chorobę. W praktyce 0.90–0.97.
+  Nie w populacji ogólnej. W *grupie, która trafia do gabinetu*. Jeśli zgłasza się głównie osoba, która sama siebie podejrzewa, ta liczba bywa wyższa niż "1% populacji". Ale często wciąż jest niska — 5%, 10%, 15%. Niskie priori bezlitośnie obniża pewność diagnozy, **niezależnie od tego, jak dobry jest test**.
 
-**$f_0$ *(FPR reklamowana, false positive rate)* — jak często test daje fałszywy alarm u zdrowej osoby, która nie próbuje wpływać na wynik.**
-Typowo 0.05–0.15. Mała liczba — bo na niej opiera się zaufanie do testu. *„90% swoistości"* znaczy $f_0 = 0.10$.
+- **$s_0$ *(czułość reklamowana)* — jak często test wykrywa rzeczywistą chorobę u osoby, która nie próbuje wpływać na wynik.**
 
-**$f_1$ *(skuteczność oszustwa)* — jak często zdrowa osoba przekonuje test, że jest chora, gdy świadomie próbuje.**
-**To kluczowa liczba w prawie każdym realnym przypadku.** Im łatwiej zmanipulować test, tym wyżej $f_1$. Self-report psychometria (kwestionariusze ADHD, depresji, lęku): $f_1$ rzędu 0.6–0.9 — kandydat zna wzorzec oczekiwanych odpowiedzi ("jeśli zaznaczę 'często gubię przedmioty', to punkt na rzecz ADHD") i może odpowiadać strategicznie, pytanie po pytaniu. Testy z silnymi skalami walidacyjnymi: 0.15–0.30 — narzędzie wbudowuje pytania-pułapki, których strategiczna odpowiedź zdradza. Testy obiektywne (pomiary fizyczne lub neurokognitywne, nie self-report): 0.05–0.15 — manipulacja wymaga kontroli reakcji których kandydat zwykle nie zna.
+  To liczba z broszury producenta lub paperu walidacyjnego. Typowo 0.80–0.95. „Test wykrywa 85% przypadków" — to $s_0$.
+
+- **$s_1$ *(czułość pod presją)* — jak często test wykrywa chorobę u osoby chorej, która *chce* tej diagnozy.**
+
+  Zwykle nieco wyższa niż $s_0$ — chora osoba, która chce diagnozy, odpowiada w sposób który jeszcze bardziej potwierdza chorobę. W praktyce 0.90–0.97.
+
+- **$f_0$ *(FPR reklamowana, false positive rate)* — jak często test daje fałszywy alarm u zdrowej osoby, która nie próbuje wpływać na wynik.**
+
+  Typowo 0.05–0.15. Mała liczba — bo na niej opiera się zaufanie do testu. *„90% swoistości"* znaczy $f_0 = 0.10$.
+
+- **$f_1$ *(skuteczność oszustwa)* — jak często zdrowa osoba przekonuje test, że jest chora, gdy świadomie próbuje.**
+
+  **To kluczowa liczba w prawie każdym realnym przypadku.** Im łatwiej zmanipulować test, tym wyżej $f_1$. Self-report psychometria (kwestionariusze ADHD, depresji, lęku): $f_1$ rzędu 0.6–0.9 — kandydat zna wzorzec oczekiwanych odpowiedzi ("jeśli zaznaczę 'często gubię przedmioty', to punkt na rzecz ADHD") i może odpowiadać strategicznie, pytanie po pytaniu. Testy z silnymi skalami walidacyjnymi: 0.15–0.30 — narzędzie wbudowuje pytania-pułapki, których strategiczna odpowiedź zdradza. Testy obiektywne (pomiary fizyczne lub neurokognitywne, nie self-report): 0.05–0.15 — manipulacja wymaga kontroli reakcji których kandydat zwykle nie zna.
+
+</Callouts>
 
 Te pięć liczb wystarczy do reszty.
 
@@ -193,9 +210,13 @@ Po stłuczce komunikacyjnej (rear-end collision, 30-50 km/h) poszkodowany zgłas
 
 **Multi-klinika natywnie wpisana w proces:** ortopeda poszkodowanego (kierowany przez kancelarię odszkodowawczą), biegły powołany przez ubezpieczyciela, biegły sądowy "neutralny". Trzy opinie, **różne strukturalne odporności na faking**:
 
+<Callouts>
+
 - *Ortopeda poszkodowanego* — wybierany przez kancelarię odszkodowawczą, badanie krótkie, bez baterii testów walidacyjnych; rzetelność ograniczona przez konflikt interesów. $f_1 \approx 0{,}80$.
 - *Biegły ubezpieczyciela* — ma dostęp do **testów walidacyjności objawu** ([SVT](#glos-svt) — Symptom Validity Tests) i pełnego obrazowania; szuka aktywnie inkonsekwencji. $f_1 \approx 0{,}20$.
 - *Biegły sądowy* — pozycja pośrednia: pełen wywiad i analiza dokumentacji, ale rzadziej [SVT](#glos-svt). $f_1 \approx 0{,}50$.
+
+</Callouts>
 
 <BayesAnalyzer preset="whiplash" view="single" editable={false} />
 
@@ -247,8 +268,12 @@ Oskarżony o ciężkie przestępstwo (zabójstwo, agresja seksualna) wnioskuje o
 
 **Co naiwny obserwator zakłada.** Dwie skrajne pozycje:
 
+<Callouts>
+
 - **Opinia publiczna:** „każdy psychopata twierdzi że jest chory" — drastyczne zawyżenie $f_1$, posteriori subiektywne ~0%
 - **Obrona / część prawników:** „dwóch biegłych potwierdziło = pewność" — posteriori subiektywne 95-99%
+
+</Callouts>
 
 Obie skrajności to warianty znanych heurystyk: pierwsza — *[heurystyka reprezentatywności](#glos-reprezentatywnosc)* („psychopata = każdy oskarżony"; Tversky & Kahneman 1974), druga — BRN nałożony na zaufanie do liczby ekspertów („dwóch biegłych ≈ 2× pewność").
 
@@ -298,9 +323,13 @@ To wystarczy, by posteriori spadło z intuicyjnych "70-85% pewności" do faktycz
 
 Pod każdą diagnozą krążą *trzy różne* poziomy pewności o całkowicie różnym statusie poznawczym:
 
+<Callouts>
+
 - **Intuicja-kotwica** — laik kotwiczy na "swoistości testu" lub na liczbie podanej przez ekspertkę. Bez rachunku Bayesa. To liczba, którą podaje większość respondentów w eksperymentach BRN (Casscells 1978).
 - **Naiwny Bayes** — ktoś użył wzoru, ale z reklamowanymi $s_0, f_0$. Formalnie poprawnie, ale z parametrami z walidacji na uczciwej próbie. To liczba, którą da student statystyki, gdy "uwzględni częstość bazową".
 - **Realny Bayes** — ten sam wzór, ale z $s_1, f_1$ z adversarialnej populacji. To prawdopodobieństwo, którego *naprawdę* powinniśmy używać.
+
+</Callouts>
 
 Konkretnie dla czterech scenariuszy posta (kolumna "Intuicja-kotwica" odnosi się do **pojedynczej** pozytywnej ekspertyzy — tak samo jak "Realny Bayes", żeby trzy kolumny były porównywalne):
 
@@ -313,9 +342,13 @@ Konkretnie dla czterech scenariuszy posta (kolumna "Intuicja-kotwica" odnosi si�
 
 *Trzy różne mechanizmy psychologiczne* generują kolumnę "Intuicja-kotwica":
 
+<Callouts>
+
 - **BRN (base rate neglect)** dla ADHD i whiplash — laik kotwiczy na reklamowanej swoistości testu, ignorując priori.
 - **Anchoring liczbowy** dla AI-detection — laik kotwiczy na konkretnej liczbie podanej przez detektor ("87% AI-probability"), niezależnie od tego, czy jest sensowna.
 - **Zaufanie do liczby ekspertów** dla niepoczytalności — laik kotwiczy na fakcie "biegły specjalista potwierdził", traktując pojedynczą ekspertyzę jako quasi-pewność (mechanizm pokrewny BRN, ale nałożony na status epistemiczny eksperta, nie na swoistość testu).
+
+</Callouts>
 
 Rozjazd ma **dwa źródła**: pierwszy skok (intuicja → naiwny Bayes) jest tłumaczony mechanizmami z ramki wyżej; drugi skok (naiwny Bayes → realny Bayes) jest tłumaczony niedoszacowaniem $f_1$ przez naiwnego analityka. Większość komentarza posta używa porównań *intuicja vs realny* (bo wizualnie dramatyczniej), ale matematycznie cały rozjazd składa się z dwóch warstw — nie jednej. Sekcja niżej rozbija oba.
 
@@ -331,9 +364,13 @@ Dwa uprzedzenia poznawcze **współgrają**: pierwsze przeszacowuje precyzję te
 
 **Model bayesowski jest uniwersalny.** Mimo że cztery scenariusze różnią się prawie wszystkim — priori 4%→25%, $f_1$ 0.20→0.85, kierunki motywacji — ten sam wzór stosuje się wszędzie tam, gdzie:
 
+<Callouts>
+
 1. Istnieje binarny (lub zwarty) test diagnostyczny
 2. Osoba testowana ma motyw uzyskania określonego wyniku
 3. Konsekwencje za próbę manipulacji są niewielkie lub żadne
+
+</Callouts>
 
 — matematyka w tym poście ma zastosowanie. Drobne presety trzeba dobrać, ale struktura argumentu jest niezmienna.
 
@@ -341,10 +378,14 @@ Dwa uprzedzenia poznawcze **współgrają**: pierwsze przeszacowuje precyzję te
 
 **Praktyczne implikacje (poziom: narzędzie).** Reguły poniżej są słuszne *pod założeniami modelu* (trwała decyzja o oszustwie, warunkowa niezależność klinik, parametry testu sensownie szacowalne — [pełna lista założeń w math.md](./math)):
 
+<Callouts>
+
 - *Druga opinia* od **innego typu narzędzia** ma znacznie większą siłę informacyjną niż powtórzenie tego samego testu — gdy "ten sam test" znaczy *ten sam protokół z ograniczoną walidacją* (jak wywiad psychiatryczny w ADHD: $LR^+ \approx 1{,}2$). Wyjątek: niezależne assessments z **bogatą metodologią walidacyjną** (M-FAST, MMPI-2-RF, EEG w niepoczytalności) zachowują wysoki $LR^+ \approx 5$ per ekspert, nawet jeśli nominalnie "ten sam typ" (psychiatra). Decyduje **struktura metodologii**, nie nazwa dyscypliny.
 - *Konflikt opinii* powinien skłaniać do podejrzenia $D$ (motywacji do oszustwa), nie do automatycznego wyboru "tej co ci pasuje" (lekcja z whiplash).
 - *Niskie priori* (rzadkie zaburzenie) wymaga **bardzo wielu zgodnych pozytywów** by osiągnąć pewność, którą system zwykle zakłada od jednej ekspertyzy (lekcja z niepoczytalności).
 - *Model jest agnostyczny co do kierunku motywacji* — podmiana etykiet przenosi go z psychiatrii do detekcji treści AI-generowanych bez utraty matematycznej spójności (lekcja ze scenariusza detekcji AI).
+
+</Callouts>
 
 ## Playground
 
@@ -363,11 +404,19 @@ Jeśli pamiętasz tylko jedno z tego posta: *pojedyncza pozytywna diagnoza w war
 ## Słowniczek
 
 ### Skróty pojęciowe
+
+<Callouts>
+
 - <span id="glos-brn"></span>**BRN** — ignorowanie częstości bazowej. Tendencja do oceniania trafności testu bez uwzględnienia rzadkości testowanej cechy w populacji.
 - <span id="glos-fpr"></span>**FPR** — współczynnik fałszywych alarmów. Jak często test daje pozytyw u osoby zdrowej (parametr $f$ w modelu).
 - <span id="glos-lr"></span>**LR⁺ / LR⁻** — iloraz wiarygodności pozytywu/negatywu. Mnożnik szans, którym wynik testu przekształca priori na posteriori.
 
+</Callouts>
+
 ### Terminologia
+
+<Callouts>
+
 - <span id="glos-priori"></span>**priori** — prawdopodobieństwo wstępne; jak częste zaburzenie jest w grupie, która zgłasza się po test.
 - <span id="glos-posteriori"></span>**posteriori** — prawdopodobieństwo końcowe po uwzględnieniu wyniku testu.
 - <span id="glos-kotwica"></span>**kotwica** — efekt poznawczy: początkowy szacunek ciągnie do siebie kolejne oceny. Tu: laik kotwiczy pewność diagnozy na reklamowanej swoistości testu.
@@ -377,7 +426,12 @@ Jeśli pamiętasz tylko jedno z tego posta: *pojedyncza pozytywna diagnoza w war
 - <span id="glos-reprezentatywnosc"></span>**heurystyka reprezentatywności** — ocena prawdopodobieństwa na podstawie podobieństwa do stereotypu.
 - <span id="glos-podmiana"></span>**podmiana etykiet** — zmiana etykiet zmiennych w modelu (np. *H = "esej jest AI-generowany"* zamiast *H = "osoba naprawdę chora"*).
 
+</Callouts>
+
 ### Narzędzia psychometryczne
+
+<Callouts>
+
 - <span id="glos-dsm"></span>**DSM-5** — amerykańska klasyfikacja zaburzeń psychicznych (wyd. 5).
 - <span id="glos-adhd-kwestionariusze"></span>**ASRS-v1.1 / BAARS-IV / CAARS** — kwestionariusze samoopisowe ADHD u dorosłych.
 - <span id="glos-uwaga"></span>**CPT / TOVA** — obiektywne testy uwagi używane w diagnostyce ADHD.
@@ -386,12 +440,22 @@ Jeśli pamiętasz tylko jedno z tego posta: *pojedyncza pozytywna diagnoza w war
 - <span id="glos-pai"></span>**PAI** — inwentarz oceny osobowości.
 - <span id="glos-eeg"></span>**EEG** — elektroencefalografia.
 
+</Callouts>
+
 ### Klasyfikacje medyczne / prawne
+
+<Callouts>
+
 - <span id="glos-wad"></span>**WAD II/III** — klasyfikacja kliniczna whiplash, stopnie II–III.
 - <span id="glos-kpk-kk"></span>**KPK / KK** — Kodeks postępowania karnego / Kodeks karny (Polska).
 - <span id="glos-icd"></span>**ICD-10/11** — międzynarodowa klasyfikacja chorób WHO; w Polsce klasyfikacja urzędowa, równolegle z DSM-5 w pracy klinicznej.
 
+</Callouts>
+
 ### Diagnostyka medyczna
+
+<Callouts>
+
 - <span id="glos-mri"></span>**MRI** — rezonans magnetyczny (obrazowanie wykorzystujące silne pole magnetyczne).
 - <span id="glos-rtg"></span>**RTG** — rentgen (obrazowanie wykorzystujące promieniowanie X).
 - <span id="glos-ct"></span>**CT** — tomografia komputerowa.
@@ -399,8 +463,15 @@ Jeśli pamiętasz tylko jedno z tego posta: *pojedyncza pozytywna diagnoza w war
 - <span id="glos-vas"></span>**VAS** — Visual Analogue Scale, skala wzrokowo-analogowa bólu (0-10).
 - <span id="glos-svt"></span>**SVT** — Symptom Validity Tests, testy walidacyjności objawów; baterie pytań projektowanych do wykrywania symulacji.
 
+</Callouts>
+
 ### Inne
+
+<Callouts>
+
 - <span id="glos-nejm"></span>**NEJM** — czasopismo medyczne *New England Journal of Medicine*.
+
+</Callouts>
 
 ## Jeśli chcesz głębiej
 

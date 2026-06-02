@@ -111,6 +111,81 @@
   --color-surface-elevated: rgba(255, 255, 255, 0.06);
 }
 
+/* === EventStorming tokens — palette-agnostic, mode-aware (Brandolini methodology).
+   8 sticky types × bg/fg/border. Te same kolory w warm i cool palette: orange-event
+   musi być orange w obu (methodology correctness — cross-reference do
+   Brandolini *Introducing EventStorming* ch. 3). Patrz plan v6-03 §4.3 + ADR-052. === */
+:root,
+:root.light-cool,
+:root.light-warm {
+  --es-event-bg: #f0a85a;
+  --es-event-fg: #2a1a0a;
+  --es-event-border: #c87a3a;
+
+  --es-command-bg: #5290bd;
+  --es-command-fg: #ffffff;
+  --es-command-border: #356d97;
+
+  --es-aggregate-bg: #fae57a;
+  --es-aggregate-fg: #2a2410;
+  --es-aggregate-border: #c9b850;
+
+  --es-actor-bg: #fff5a0;
+  --es-actor-fg: #2a2410;
+  --es-actor-border: #c9b850;
+
+  --es-policy-bg: #c8a8e0;
+  --es-policy-fg: #1f1530;
+  --es-policy-border: #9a7ab4;
+
+  --es-readmodel-bg: #9adba0;
+  --es-readmodel-fg: #0e2a14;
+  --es-readmodel-border: #6aa572;
+
+  --es-external-bg: #f5b5d4;
+  --es-external-fg: #2a0e1f;
+  --es-external-border: #c785a8;
+
+  --es-hotspot-bg: #e85a5a;
+  --es-hotspot-fg: #ffffff;
+  --es-hotspot-border: #b53a3a;
+}
+
+:root.dark-cool,
+:root.dark-warm {
+  --es-event-bg: #c87a3a;
+  --es-event-fg: #fef0e0;
+  --es-event-border: #f0a85a;
+
+  --es-command-bg: #356d97;
+  --es-command-fg: #e6f0f8;
+  --es-command-border: #5290bd;
+
+  --es-aggregate-bg: #c9b850;
+  --es-aggregate-fg: #fff8d0;
+  --es-aggregate-border: #fae57a;
+
+  --es-actor-bg: #a89640;
+  --es-actor-fg: #fef4c2;
+  --es-actor-border: #fff5a0;
+
+  --es-policy-bg: #9a7ab4;
+  --es-policy-fg: #f0e0ff;
+  --es-policy-border: #c8a8e0;
+
+  --es-readmodel-bg: #6aa572;
+  --es-readmodel-fg: #e0f5e0;
+  --es-readmodel-border: #9adba0;
+
+  --es-external-bg: #c785a8;
+  --es-external-fg: #ffe0f0;
+  --es-external-border: #f5b5d4;
+
+  --es-hotspot-bg: #b53a3a;
+  --es-hotspot-fg: #ffe0e0;
+  --es-hotspot-border: #e85a5a;
+}
+
 /* TopNav height (Tailwind h-16 = 64px per ADR-017) + 16px breathing.
    Single source of truth dla `scroll-padding-top` na <html>. Magic 80px
    dokumentowany inline — jeśli TopNav `h-16` się zmieni, sync tutaj. */
@@ -306,3 +381,72 @@ h4:hover .heading-anchor { opacity: 1; }
    pokazywać native scrollbar (Tailwind 4 nie ma `no-scrollbar` w default). */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
+
+/* Callout list — semantic card styling dla "list of insights" prose blocks
+   (e.g. "Why it works", "What you get", "Anti-patterns", definicje).
+   Variants:
+   - positive = green accent (gains, benefits, things that work)
+   - negative = burgundy accent (anti-patterns, warnings, things to avoid)
+   - neutral  = text-tertiary accent (definicje, typologie, observations)
+   Wspiera <ol> (custom counter) i <ul> (bez markera). Używaj z `not-prose`
+   wrapper żeby opt-out z @tailwindcss/typography list defaults. */
+.callout-list ol,
+.callout-list ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 1.5rem 0;
+}
+.callout-list ol {
+  counter-reset: cl;
+}
+.callout-list ol > li,
+.callout-list ul > li {
+  background: var(--color-bg-secondary);
+  border-radius: 0 0.375rem 0.375rem 0;
+  margin: 0.5rem 0;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  position: relative;
+}
+.callout-list ol > li {
+  padding: 0.875rem 1rem 0.875rem 2.75rem;
+  counter-increment: cl;
+}
+.callout-list ul > li {
+  padding: 0.875rem 1rem;
+}
+.callout-list ol > li::before {
+  content: counter(cl) ".";
+  position: absolute;
+  left: 1rem;
+  top: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.callout-list ol > li strong,
+.callout-list ul > li strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+.callout-list ol > li p,
+.callout-list ul > li p {
+  margin: 0;
+}
+.callout-list ol > li p ~ p,
+.callout-list ul > li p ~ p {
+  margin-top: 0.6rem;
+}
+.callout-list[data-variant="positive"] ol > li,
+.callout-list[data-variant="positive"] ul > li {
+  border-left: 3px solid var(--color-green);
+}
+.callout-list[data-variant="negative"] ol > li,
+.callout-list[data-variant="negative"] ul > li {
+  border-left: 3px solid var(--color-burgundy);
+}
+.callout-list[data-variant="neutral"] ol > li,
+.callout-list[data-variant="neutral"] ul > li {
+  border-left: 3px solid var(--color-text-tertiary);
+}
