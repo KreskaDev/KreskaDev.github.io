@@ -598,3 +598,80 @@ ScaleOnFretboard ring follow synchronously. C-dur skala 3× wizualizacja).
 
 (D18 = backward-compat gate: D9-D10 z v5-16 NotationScaleLink renderują się identycznie
 post-refactor — zero-break invariant. D19-D21 ceiling deferred per plan §10.2.)
+
+## v5-19 CSP tab generator — pitch-only → optimized positions
+
+`generateTabPositions(notes, options)` to czysta funkcja TS która bierze `Note[]`
+z pitch-only info i zwraca `Note[]` z dodanym `position` field — Constraint Satisfaction
+Problem solver na pełnym Viterbi DP z heurystykami: minimize hand movement, prefer pozycji
+(default `[0, 5, 7]`), prefer open strings, soft hand-stretch penalty (default 4 fretów).
+Per ADR-063. Wrapper `<GeneratedTablature/>` aplikuje generator inline w MDX — autor
+pisze pitch-only, wrapper uruchamia CSP solver przy render i deleguje do shipped
+`<Tablature/>` (kontrakt unchanged: explicit position wygrywa, idempotency invariant).
+
+**Before vs After — A minor pentatonic.** Bez generator'a Tablature używa naive
+`getPositions(pitch).at(0)` (lowest-fret bias per ADR-058) → pozycje rozsiane (open string
++ low fret cluster). Z generator'em Viterbi optymalizuje multi-note context → klastrify
+do preferowanych pozycji + smooth transitions.
+
+**D19a — Naive (Tablature standalone):**
+
+<Tablature
+  id="tab-d19a-pent-naive"
+  notes={[
+    { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+    { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  ]}
+/>
+
+**D19b — Generator (default `[0, 5, 7]` preferred):**
+
+<GeneratedTablature
+  id="tab-d19b-pent-generated"
+  notes={[
+    { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+    { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  ]}
+/>
+
+**D20 — 1st-position bias.** Override `preferredPositions={[0, 1, 2, 3]}` → solver pcha
+do low-fret region. C-dur skala C4→C5 z 1st-position fingering.
+
+<GeneratedTablature
+  id="tab-d20-cmajor-1pos"
+  notes={[
+    { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'B', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'C', octave: 5 }, duration: '1/4' },
+  ]}
+  generatorOptions={{ preferredPositions: [0, 1, 2, 3] }}
+/>
+
+**D21 — Mixed explicit + auto (idempotency).** Pierwsza nuta C4 z explicit position
+`{ string: 4, fret: 1 }` (1st-pos anchor); pozostałe pitch-only — generator preserve
+explicit verbatim, fill positions dla reszty respektując anchor effect (sąsiednie
+positions ciągną się do tej samej hand zone).
+
+<GeneratedTablature
+  id="tab-d21-mixed-anchor"
+  notes={[
+    { pitch: { letter: 'C', octave: 4 }, position: { string: 4, fret: 1 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  ]}
+/>
