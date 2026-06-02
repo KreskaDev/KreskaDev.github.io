@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { AboutIdentity } from '@/components/about/AboutIdentity'
 import LazyNotation from '@/components/lazy/LazyNotation'
 import LazyScaleOnFretboard from '@/components/lazy/LazyScaleOnFretboard'
+import LazyNotationScaleLink from '@/components/lazy/LazyNotationScaleLink'
 
 // rehype-slug + rehype-autolink-headings dodają id + anchor link icons w pipeline,
 // tutaj tylko styling przez className.
@@ -104,6 +105,7 @@ const mdxComponents: MDXComponents = {
   AboutIdentity,
   Notation: LazyNotation,
   ScaleOnFretboard: LazyScaleOnFretboard,
+  NotationScaleLink: LazyNotationScaleLink,
 }
 
 export default mdxComponents

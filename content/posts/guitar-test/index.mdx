@@ -428,3 +428,39 @@ oktawie z dodatkową b5 (B♭) między 4 i 5 stopniem.
   { pitch: { letter: 'B', octave: 3 }, duration: '1/4' },
   { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
 ]} rootNote="E" />
+
+## v5-16 NotationScaleLink — Pattern C cross-widget cursor
+
+Wrapper `<NotationScaleLink/>` łączy `<Notation/>` + `<ScaleOnFretboard/>` współdzielonym
+state przez React Context (per ADR-059). Klik ▶ Play w Notation → cursor highlight śledzi
+rytm staffu, ScaleOnFretboard pokazuje pierścień na aktualnie granej pozycji na gryfie.
+Notation = master kontroler (Play widoczny + BPM control); ScaleOnFretboard = passive
+listener (Play ukryte, BPM context-driven, audio infrastructure NIE własne). Pattern C
+edukacyjny — synchronizuje rytm staffu z pozycją fretboardu w czasie rzeczywistym.
+
+**D9 — C major linked** (8 ćwierćnut C-D-E-F-G-A-B-C). Te same nuty zasila staff i
+fretboard; klik Play uruchamia kursor cross-widget synchronously.
+
+<NotationScaleLink id="d9-c-major-linked" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 5 }, duration: '1/4' },
+]} rootNote="C" />
+
+**D10 — A pentatonika minor 5th position linked** (explicit `position` per nuta —
+wymusza fingering w 5th position area). Demonstruje Pattern C z autorskim wymuszonym
+fingeringiem; sekwencja A-C-D-E-G-A pentatonika minor.
+
+<NotationScaleLink id="d10-a-pent-minor-5th-linked" notes={[
+  { pitch: { letter: 'A', octave: 3 }, position: { string: 1, fret: 12 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 4 }, position: { string: 2, fret: 10 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, position: { string: 2, fret: 12 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, position: { string: 3, fret: 9 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, position: { string: 3, fret: 12 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, position: { string: 4, fret: 10 }, duration: '1/4' },
+]} rootNote="A" />
