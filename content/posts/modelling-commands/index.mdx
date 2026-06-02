@@ -1,0 +1,425 @@
+---
+title: "Modelling commands — name, validate, retry, dispatch"
+subtitle: "A deep-dive on Command in DDD and CQS lineage (and not GoF)"
+date: 2026-06-02
+author: KreskaDev
+slug: modelling-commands
+summary: "Five engineering questions for the first Command you write: how to name it, how to model it, how to validate it, when to make it idempotent, and how to structure its handler. The DDD/CQS lineage Command — not the GoF behavioral pattern that shares its name. The first deep-dive in the Patterns Untangled series, following the v6-04 disambiguation primer."
+tags:
+  - patterns
+  - ddd
+  - command
+  - dotnet
+  - v6-series
+---
+
+## 1. Five questions, one keystroke away
+
+You finished v6-04 knowing that CQS is a method-level rule, CQRS is a model-level architecture, and MediatR is a dispatcher whose name collides with a GoF pattern it has nothing in common with. Now you open the IDE on a quiet morning and type `public record ReserveBook`. The cursor blinks. Before you press Enter, five engineering decisions queue up: what to call this type, how to shape its payload, where validation belongs, whether the command needs to survive a network retry, and how the handler on the other end actually executes it. None of them are visible in the file you're about to write, and getting any one of them wrong costs hours of refactor a sprint later. This post answers the five, in order, on a single running domain — a public library — and uses the same .NET stack the v6-04 examples did. By the end you should be able to type that first command line and know what the next four hours look like.
+
+## 2. Command — lineage, scale, and the GoF naming collision
+
+The word **Command** travels under two unrelated banners. The one this post is about comes from Domain-Driven Design — introduced by Eric Evans in *Domain-Driven Design* (2004) and developed further by Vaughn Vernon in *Implementing Domain-Driven Design* (2013, §10 "Command Model"). In that lineage a Command is an **intent-bearing message**: a small, immutable object whose name announces, in imperative present, what the caller is asking the domain to do. `ReserveBook(memberId, bookId)` is a Command. The aggregate on the receiving end inspects it and either accepts the request (mutating its state and emitting an event) or rejects it (returning a failure result, or throwing if the violation is unexpected). Commands also inherit Bertrand Meyer's CQS discipline — the [v6-04 §3 method-level rule](/posts/cqs-cqrs-mediator-map/) that mutators don't return values — so a Command shape stays a mutator by intention, even when wrapped in a request/response dispatcher like MediatR.
+
+The other Command lives in *Design Patterns* (1994) by Gamma, Helm, Johnson, and Vlissides. That one is a **behavioral pattern**: an object that encapsulates a request so callers can be parameterized, requests queued, undo/redo supported, or macro recordings built. Structurally it has nothing in common with the DDD Command — same word, different lineage — and it is precisely the same shape of naming collision as the MediatR-vs-Mediator-GoF case covered in [v6-04 §5 and §7](/posts/cqs-cqrs-mediator-map/). The rest of this post is about the DDD Command only; if you're ever unsure in a refinement meeting, ask which lineage and watch the conversation slow down to honest speed.
+
+<Callouts variant="neutral">
+
+1. **DDD Command** — Evans, *Domain-Driven Design* (2004) §6; Vernon, *Implementing Domain-Driven Design* (2013) §10 Command Model. An **intent-bearing message** sent to the domain: "do this thing." The aggregate decides whether to accept it. Immutable, named in the imperative present.
+2. **GoF Command** — Gamma, Helm, Johnson, Vlissides, *Design Patterns* (1994). A **behavioral pattern** that encapsulates a request as an object so you can parameterize callers, queue requests, support undo/redo, or build macro-recording UIs. Structurally unrelated to the DDD Command — same word, different lineage. The same naming-collision shape as MediatR-vs-Mediator-GoF covered in [v6-04 §5 + §7](/posts/cqs-cqrs-mediator-map/).
+
+This post is about the **DDD Command** only. When someone in a refinement meeting says "Command pattern," ask which lineage — the ambiguity is real.
+
+</Callouts>
+
+## 3. Modelling — naming and immutability
+
+The naming rule is the easiest of the five to follow and the one most teams break first. A Command's type name should read as **imperative present tense** at the call site: `mediator.Send(new ReserveBook(...))`, `mediator.Send(new PayFine(...))`, `mediator.Send(new RegisterMember(...))`. Each one reads as a sentence — *reserve a book*, *pay a fine*, *register a member* — which is the test. If your call site reads as a noun phrase ("new BookReservation") it is no longer announcing intent; it is announcing a thing. Things are DTOs, things are aggregates, things are read models. A Command is not a thing — it is a request to do something — and the type name should not invite a different reading.
+
+The immutability rule is two rules in one. The first is mechanical: a Command must not be mutable between dispatch and execute, because a handler that retries, a pipeline behavior that inspects the payload for logging or validation, or an audit log that records the request all assume the bytes never change. The second is conceptual: a Command represents a single atomic intent. Once you've handed it off, you are no longer the author of that request — you cannot edit the past. C# 9+ records make both rules cheap. The positional record form gives you immutability, value equality, and a `with` expression for evolving a copy — without writing a constructor or `Equals`. On older targets, a class with `{ get; }`-only properties and a constructor that copies arguments achieves the same shape; the type system is doing the work either way.
+
+<CodeTabs
+  caption="ReserveBook as a C# record with imperative naming — and three counter-examples showing what Command is not. The MediatR interface (: IRequest<Result<ReservationId>>) is elided here for shape clarity; see Snippet 4 in §6 for the full handler routing."
+  snippets={[
+    {
+      lang: 'csharp',
+      filename: 'ReserveBook.cs',
+      code: `// Command: an immutable record. Imperative present tense names the intent.
+// Per Evans (Blue Book §6) and Vernon (Red Book §10 Command Model).
+// MediatR interface omitted for clarity — full form: ': IRequest<Result<ReservationId>>'
+public record ReserveBook(Guid MemberId, Guid BookId);
+
+// Evolution via 'with' expression preserves immutability.
+var cmd = new ReserveBook(memberId, bookId);
+var rescheduled = cmd with { BookId = otherBookId };
+
+// Counter-examples — NOT a Command:
+
+// (1) Noun phrase reads like a DTO or aggregate, not a request to do something.
+public record BookReservation(Guid MemberId, Guid BookId);   // ✗ DTO confusion
+
+// (2) Past tense is the verb form an event would use after the fact.
+public record BookReserved(Guid MemberId, Guid BookId);      // ✗ that's an event
+
+// (3) Settable properties break the audit and retry contracts —
+// the handler could be handed a mutated payload between dispatch and execute.
+public class ReserveBookMutable
+{
+    public Guid MemberId { get; set; }                       // ✗ settable
+    public Guid BookId   { get; set; }                       // ✗ trust broken
+}`,
+    },
+  ]}
+></CodeTabs>
+
+<Callouts variant="positive">
+
+**Use this Command shape when:**
+
+- You're on C# 9+ and can use `record` types — built-in immutability, value equality, and `with` expression for evolution come for free.
+- The command's name reads as **imperative present tense** at the call site: `mediator.Send(new ReserveBook(...))` describes what the caller is asking the domain to do.
+- The command carries **one business intent**. "Reserve a book" is one intent; "reserve a book and pay the late fee" is two — split them.
+
+</Callouts>
+
+<Callouts variant="negative">
+
+**Avoid this Command shape when:**
+
+- Properties have public setters. A handler can be handed a mutated payload between dispatch and execute, which silently invalidates retry semantics and the audit log.
+- The type name is a noun phrase (`BookReservation`, `MemberRegistration`). It reads like a DTO or an aggregate, and refinement conversations slide from "the request to reserve" into "the reservation row."
+- The type name is past tense (`BookReserved`, `MemberRegistered`). That's the event the aggregate emits *after* the command succeeds — modelling it as the input collapses cause and effect.
+
+</Callouts>
+
+## 4. Validation — three layers, three rule types
+
+The instinct most .NET teams reach for first is to validate in the controller. `if (request.MemberId == Guid.Empty) return BadRequest(...);` `if (!await _members.ExistsAsync(...)) return NotFound(...);` `if (member.ActiveReservations.Count >= 5) return Conflict(...);` Three rules, all in the same `if` chain, all in the controller method. It works for one endpoint. By the third endpoint you have copy-pasted half of those rules into a second method, by the sixth endpoint you are reaching for a `protected ValidationResult ValidateMember()` helper, and somewhere around the tenth a background job written by a different teammate calls into the same domain method without any of the checks. The aggregate's invariants have quietly become advisory.
+
+The fix is to recognize that not all rules are the same rule type. There are three layers, and each layer has a different cost, a different scope, and a different blast radius. **Layer A — constructor guards** belong in the Command's own constructor. They cover cheap structural invariants — argument-not-null, value-in-range, well-formed identifier — that should fail before the handler is ever reached. **Layer B — the handler pipeline**, expressed in .NET as a FluentValidation `AbstractValidator<TCommand>` registered in DI and run by a MediatR pipeline behavior, covers cross-field rules and rules that need a database lookup. *Does this member exist?* *Is this book on the shelf?* This layer can be async, can be DI-resolved, and lives in one declarative place per command type. **Layer C — aggregate invariants** belong inside the aggregate method itself. "A member cannot hold more than five active reservations" is a business rule about Member's internal state, and the only honest place to enforce it is inside `Member.Reserve(bookId)`. No background job, no test, no new endpoint can bypass it, because the rule lives next to the data it protects.
+
+<Mermaid
+  diagramKind="sequence"
+  caption="Three-layer validation — constructor guards run before the handler is reached, the pipeline runs before the aggregate is touched, and the aggregate is the only place business invariants live."
+  chart={`sequenceDiagram
+    participant Ctl as Controller
+    participant Cmd as ReserveBook (record)
+    participant Med as IMediator
+    participant Hdl as ReserveBookHandler
+    participant Val as ReserveBookValidator
+    participant Mem as Member (aggregate)
+
+    Note over Ctl,Cmd: Layer A — constructor guards (cheap, sync, no DB)
+    Ctl->>Cmd: new ReserveBook(memberId, bookId)
+    alt invalid (BookId <= 0)
+        Cmd-->>Ctl: ArgumentException
+    end
+
+    Ctl->>Med: Send(cmd)
+    Med->>Hdl: Handle(cmd, ct)
+
+    Note over Hdl,Val: Layer B — handler pipeline (cross-field, DB lookup)
+    Hdl->>Val: ValidateAsync(cmd)
+    alt member not found
+        Val-->>Hdl: ValidationResult.Failure
+        Hdl-->>Ctl: Result.Failure
+    end
+
+    Note over Hdl,Mem: Layer C — aggregate invariants (business rules)
+    Hdl->>Mem: member.Reserve(bookId)
+    alt activeReservations >= 5
+        Mem-->>Hdl: MemberQuotaExceeded
+        Hdl-->>Ctl: Result.Failure
+    end
+
+    Mem-->>Hdl: ReservationId
+    Hdl-->>Ctl: Result.Success`}
+></Mermaid>
+
+<CodeTabs
+  caption="Three layers of validation — constructor guards (A), FluentValidation pipeline (B), and aggregate invariants (C). Each layer rejects a different class of rule. ReserveBook is shown in its expanded form (the positional record from Snippet 1, rewritten with explicit body so Layer A guards can be illustrated)."
+  snippets={[
+    {
+      lang: 'csharp',
+      filename: 'ReserveBookValidation.cs',
+      code: `// ────────────────────────────────────────────────────────────────
+// Layer A — constructor guards. Cheap, synchronous, no DB access.
+// Fires before the handler even sees the command.
+// ────────────────────────────────────────────────────────────────
+public record ReserveBook
+{
+    public Guid MemberId { get; }
+    public Guid BookId   { get; }
+
+    public ReserveBook(Guid memberId, Guid bookId)
+    {
+        if (memberId == Guid.Empty) throw new ArgumentException(nameof(memberId));
+        if (bookId   == Guid.Empty) throw new ArgumentException(nameof(bookId));
+        MemberId = memberId;
+        BookId   = bookId;
+    }
+}
+
+// ────────────────────────────────────────────────────────────────
+// Layer B — handler pipeline. Cross-field rules and DB lookups.
+// Registered in DI as IValidator<ReserveBook>; runs in a MediatR
+// pipeline behavior or via explicit ValidateAsync in the handler.
+// ────────────────────────────────────────────────────────────────
+public class ReserveBookValidator : AbstractValidator<ReserveBook>
+{
+    public ReserveBookValidator(IMemberRepository members, IBookRepository books)
+    {
+        RuleFor(c => c.MemberId)
+            .MustAsync(async (id, ct) => await members.ExistsAsync(id, ct))
+            .WithMessage("Member not found.");
+
+        RuleFor(c => c.BookId)
+            .MustAsync(async (id, ct) => await books.IsOnShelfAsync(id, ct))
+            .WithMessage("Book is not currently on the shelf.");
+    }
+}
+
+// ────────────────────────────────────────────────────────────────
+// Layer C — aggregate invariants. Domain rules that protect the
+// aggregate's consistency. Cannot be bypassed by a clever handler.
+// ────────────────────────────────────────────────────────────────
+public class Member
+{
+    private readonly List<Reservation> _active = new();
+
+    public ReservationId Reserve(Guid bookId)
+    {
+        if (_active.Count >= 5)
+            throw new MemberQuotaExceeded(Id, _active.Count);
+
+        var reservation = new Reservation(ReservationId.New(), bookId);
+        _active.Add(reservation);
+        return reservation.Id;
+    }
+}`,
+    },
+  ]}
+></CodeTabs>
+
+<Callouts variant="positive">
+
+**Validate at the right layer when:**
+
+- The rule is a **cheap structural invariant** (not null, in range, well-formed id) — put it in Layer A (the command's constructor). It fails before the handler ever runs.
+- The rule needs **cross-field logic or a DB lookup** ("does this member exist?", "is this book on the shelf?") — put it in Layer B (handler pipeline, e.g. FluentValidation). It can be async and DI-resolved.
+- The rule is a **business invariant** ("a member cannot hold more than 5 active reservations") — put it in Layer C (the aggregate method). It lives closest to the state it protects and cannot be bypassed by a clever handler.
+
+</Callouts>
+
+<Callouts variant="negative">
+
+**Avoid validation patterns where:**
+
+- All three layers collapse into the controller (`if (...) return BadRequest(...)` chains). The aggregate's invariants become advisory, and any other entry point — a background job, a test, a new endpoint — bypasses them.
+- Layer B exists only ad-hoc in each handler (`if (await _repo.ExistsAsync(...)) ...`). The pipeline behavior pattern (`IValidator<TCommand>`) exists precisely so this logic lives in one declarative place per command type.
+- Aggregate invariants leak into the command type's constructor ("a member cannot have 5 reservations" enforced in Layer A). The command doesn't know about other aggregates' state — Layer C is the only honest place for this rule.
+
+</Callouts>
+
+## 5. Idempotency — when it matters and how to carry it
+
+Idempotency is the property that **executing a command twice yields the same observable result as executing it once**. Most teams reach for it too late, after a payment got double-charged in production, or too early, sprinkling idempotency keys onto every command "to be safe". Both directions are wrong. The right question is: does this command ride on a transport where the same payload can arrive more than once, and does it have a side effect whose duplication actually costs something? If both answers are yes, idempotency is a real concern and the way to address it is the **idempotency key** — a UUID generated once per logical request by the caller, attached to the command, and used by the handler to dedupe.
+
+The mechanism is uniform across implementations and trivial in shape. The Command type carries an `IdempotencyKey` field. The handler, before doing anything that costs money or sends a third-party API call, asks a dedup store ("have I already executed a command with this key?") and either returns the cached result (replay path) or runs the operation and stores the result keyed by the UUID (first-time path). The dedup store is just an abstraction in your code — back it with Redis, with a DynamoDB table, with a Postgres unique index, or with anything that gives you read-your-write semantics. What matters is the discipline of the key, not the storage technology behind it. The library domain's `PayFine` command is the canonical motivator: a member pays a fine, the message bus retries on timeout, and without dedup their account ends up charged twice for one payment.
+
+When **not** to reach for a key matters as much. If your command runs synchronously inside a single-instance request/response loop and the caller controls the HTTP retry policy, that's the right place for the dedup decision — not at the command layer. If the operation is naturally commutative (`AddTagToBook` called twice with the same tag is a no-op the second time without any key), don't pay the dedup-store roundtrip for free idempotency. And if the team is sprinkling keys onto every command "in case we go distributed later" — push back. Idempotency keys are real cost: storage, eviction, cache invalidation correctness. Reach for them when at-least-once delivery or distributed topology actually forces your hand.
+
+<CodeTabs
+  caption="PayFine carries an idempotency key — the handler dedupes against a key store before charging, then caches the result for replay. IIdempotencyStore is a domain abstraction; back it with Redis, DynamoDB, or a DB unique index."
+  snippets={[
+    {
+      lang: 'csharp',
+      filename: 'PayFineHandler.cs',
+      code: `// Idempotency key is a UUID per LOGICAL request, not per retry.
+// Same caller, same intent, same key — even if the network retries.
+public record PayFine(
+    Guid MemberId,
+    Guid FineId,
+    decimal Amount,
+    Guid IdempotencyKey)
+    : IRequest<Result<PaymentReceipt>>;
+
+public class PayFineHandler : IRequestHandler<PayFine, Result<PaymentReceipt>>
+{
+    private readonly IIdempotencyStore _store;
+    private readonly IPaymentGateway   _gateway;
+    private readonly IFineRepository   _fines;
+
+    public PayFineHandler(
+        IIdempotencyStore store,
+        IPaymentGateway gateway,
+        IFineRepository fines)
+    {
+        _store = store; _gateway = gateway; _fines = fines;
+    }
+
+    public async Task<Result<PaymentReceipt>> Handle(PayFine cmd, CancellationToken ct)
+    {
+        // Replay path — same key seen before, return the cached receipt.
+        if (await _store.TryGetAsync<PaymentReceipt>(cmd.IdempotencyKey, ct) is { } cached)
+            return Result.Success(cached);
+
+        // First-time path — execute, persist, store the result keyed by IdempotencyKey.
+        var receipt = await _gateway.ChargeAsync(cmd.MemberId, cmd.Amount, ct);
+        var fine    = await _fines.GetAsync(cmd.FineId, ct);
+        fine.MarkPaid(receipt.TransactionId);
+        await _fines.SaveAsync(fine, ct);
+
+        await _store.StoreAsync(cmd.IdempotencyKey, receipt, ct);
+        return Result.Success(receipt);
+    }
+}`,
+    },
+  ]}
+></CodeTabs>
+
+<Callouts variant="positive">
+
+**Use an idempotency key when:**
+
+- The command rides on **at-least-once delivery** — message bus retries, network timeout retries with the same payload, HTTP client retries on 5xx. Without dedup, every redelivery executes the side effect again.
+- The handler runs in a **distributed multi-instance topology**. Two instances picking up the same message in a race window will both execute; the key + dedup store turns the second into a no-op with the cached result.
+- The side effect has a **non-trivial cost or visibility** — payments, billing, sending an email to a customer, calling a third-party API with quota. The cost of a duplicate is greater than the cost of carrying a UUID.
+
+</Callouts>
+
+<Callouts variant="negative">
+
+**Avoid putting an idempotency key on every command when:**
+
+- The command runs **synchronously in a single-instance request/response** loop and the caller controls retries explicitly. The HTTP-level retry policy is the right place for that decision.
+- The operation is **naturally commutative** — `AddTagToBook` called twice with the same tag is harmless without any key. Don't pay the dedup-store roundtrip for free idempotency.
+- The team is cargo-culting the key onto every command "to be safe." Idempotency keys carry real cost (storage, eviction, cache invalidation correctness); reach for them when at-least-once delivery or distribution forces your hand.
+
+</Callouts>
+
+## 6. Handler structure — single intent, thin orchestrator
+
+A handler in the .NET dispatcher style implements `IRequestHandler<TCommand, TResult>` for exactly one command type. That single-class single-command rule is doing more work than it appears to. DI auto-discovers the handler by its request type; tests can instantiate it with constructor-injected fakes without any framework ceremony; a refactor that splits or merges commands touches one class at a time. The opposite — a "god handler" that switches on a request enum or dispatches across multiple types — collapses all of that. Test fixtures balloon, every new command edits a shared file, and the boundary that justified the handler pattern in the first place dissolves into a method router.
+
+The return type is where two communities disagree, and the disagreement is worth presenting honestly rather than prescribing. The CQS-purist tradition — Meyer's original rule, MediatR-classic guidance, and a strand of DDD writing — keeps commands strictly void: `Task` (no payload), because a command mutates and a query reads, and mixing the two violates the rule. The functional-pragmatist tradition — Khorikov's *Unit Testing* book, the "railway-oriented programming" school, and most production .NET shops the author has worked with — returns `Task<Result<T>>` instead, where `Result<T>` is a tiny success/failure wrapper. The argument is that "the member already returned this book" is an *expected* outcome, not an exceptional one, and surfacing it as a return value lets the caller branch on it without try/catch noise. For most production .NET applications the `Result<T>` style is the more useful default; for codebases that treat CQS purity as a load-bearing invariant the void style remains valid and the position is principled. Snippet 4 below uses `Result<ReservationId>` to make the recommendation concrete, but neither answer is wrong.
+
+The handler body itself is a thin orchestrator with four steps in order: **load** the aggregate via a repository, **invoke** the domain method (which enforces Layer C from §4), **persist** the updated aggregate, and **emit** any domain events the aggregate produced. None of those steps contains business logic — the logic lives in the aggregate method. The handler decides only the orchestration; the aggregate decides the rule. If you find yourself writing `if (member.Reservations.Count >= 5) return Result.Failure(...)` inside the handler, that check belongs inside `Member.Reserve(bookId)` instead.
+
+<Mermaid
+  diagramKind="sequence"
+  caption="Command handler flow — Controller dispatches the command, Handler loads the aggregate, invokes the domain method, persists, and emits a domain event. Event mechanics deep-dive in v6-07."
+  chart={`sequenceDiagram
+    participant Ctl as Controller
+    participant Med as IMediator
+    participant Hdl as ReserveBookHandler
+    participant Repo as IMemberRepository
+    participant Mem as Member (aggregate)
+    participant Bus as IEventBus
+
+    Ctl->>Med: Send(new ReserveBook(memberId, bookId))
+    Med->>Hdl: Handle(cmd, ct)
+
+    Note over Hdl,Repo: Load aggregate
+    Hdl->>Repo: GetByIdAsync(memberId)
+    Repo-->>Hdl: Member aggregate
+
+    Note over Hdl,Mem: Invoke domain method
+    Hdl->>Mem: member.Reserve(bookId)
+    Mem-->>Hdl: ReservationId
+
+    Note over Hdl,Repo: Persist
+    Hdl->>Repo: SaveAsync(member)
+    Repo-->>Hdl: ack
+
+    Note over Hdl,Bus: Emit (preview — full mechanics v6-07)
+    Hdl->>Bus: Publish(BookReserved event)
+
+    Hdl-->>Med: Result.Success(reservationId)
+    Med-->>Ctl: Result<ReservationId>`}
+></Mermaid>
+
+<CodeTabs
+  caption="ReserveBookHandler — load the aggregate, invoke the domain method, persist, then emit. Returning Result<T> surfaces business failures explicitly instead of throwing for expected outcomes."
+  snippets={[
+    {
+      lang: 'csharp',
+      filename: 'ReserveBookHandler.cs',
+      code: `public class ReserveBookHandler
+    : IRequestHandler<ReserveBook, Result<ReservationId>>
+{
+    private readonly IMemberRepository _members;
+    private readonly IEventBus         _bus;
+
+    public ReserveBookHandler(IMemberRepository members, IEventBus bus)
+    {
+        _members = members;
+        _bus     = bus;
+    }
+
+    public async Task<Result<ReservationId>> Handle(
+        ReserveBook cmd, CancellationToken ct)
+    {
+        // 1. Load aggregate via repository.
+        var member = await _members.GetByIdAsync(cmd.MemberId, ct);
+        if (member is null)
+            return Result.Failure<ReservationId>("Member not found.");
+
+        // 2. Invoke domain method — aggregate enforces its invariants
+        //    (Layer C from §4); business failures surface as a Result, not an exception.
+        ReservationId reservationId;
+        try
+        {
+            reservationId = member.Reserve(cmd.BookId);
+        }
+        catch (MemberQuotaExceeded ex)
+        {
+            return Result.Failure<ReservationId>(ex.Message);
+        }
+
+        // 3. Persist the updated aggregate.
+        await _members.SaveAsync(member, ct);
+
+        // 4. Emit domain event — full mechanics in v6-07.
+        await _bus.PublishAsync(new BookReserved(cmd.MemberId, cmd.BookId, reservationId), ct);
+
+        return Result.Success(reservationId);
+    }
+}`,
+    },
+  ]}
+></CodeTabs>
+
+<Callouts variant="positive">
+
+**Structure handlers so that:**
+
+- **One handler class implements `IRequestHandler<TCommand, TResult>` for exactly one command type.** DI discovers it by the request type; tests instantiate it directly; refactors stay localized.
+- The return type is **`Result<T>` for surfaced business failures** in most production apps — exceptions are reserved for genuinely exceptional conditions (DB unreachable, deserialization corruption), not for "the member already returned this book." Void-style return remains a valid CQS-purist choice when commands truly are pure side effects.
+- The handler stays a **thin orchestrator**: load the aggregate via a repository, invoke a domain method, persist, emit events. Business logic lives in the aggregate, not in the handler.
+
+</Callouts>
+
+<Callouts variant="negative">
+
+**Avoid handlers that:**
+
+- Dispatch **multiple command types** from one class ("god handler"). Tests need fixtures for all branches; new commands force edits to a shared file; the boundary that justifies the handler pattern dissolves.
+- Reimplement domain logic that should live in the aggregate (`if (member.Reservations.Count >= 5) ...` in the handler body). The aggregate is the only honest authority on its own invariants.
+- Use **exceptions for expected business failures** ("the book is not on the shelf" thrown and caught two stack frames up). Reserve exceptions for the unexpected; surface expected failures as `Result.Failure(...)` so callers can branch without try/catch noise.
+
+</Callouts>
+
+## 7. Synthesis — and where the series goes next
+
+Five questions, five answers in one line each. **Name** a command in imperative present tense, never as a noun and never in past tense. **Model** it as an immutable record (or class with read-only properties) so the bytes the handler receives are the bytes the caller dispatched. **Validate** in three layers and learn which rule type belongs in which: constructor guards for cheap invariants, a pipeline validator for cross-field and database checks, the aggregate method for business invariants that protect state. **Idempotency** is a transport concern, not a discipline you apply to every command — reach for an idempotency key only when at-least-once delivery or distributed dispatch forces the issue, and pair it with a dedup store sized to the side effect's cost. **Structure** the handler as a thin orchestrator: one class per command type, `Result<T>` (or void if your shop is CQS-purist), and four steps in order — load, invoke, persist, emit. That last step opens the door to the next post.
+
+<Callouts variant="neutral">
+
+**Next in this series:**
+
+1. **v6-06 — Query deep-dive** — the read side. Projections, DTOs, why CQS pairs Command with Query, and when separating read/write models stays at the method level vs. escalates to CQRS architecture.
+2. **v6-07 — Event deep-dive** — what the handler emits *after* the command succeeds. Domain Event vs Integration Event, transactional outbox, the v6-05 `BookReserved` preview filled in.
+3. **v6-08 — Mediator implementation** — how `mediator.Send(cmd)` actually resolves to a handler. MediatR-style in-process bus code in detail, the implementation of the dispatching layer this post assumed.
+
+</Callouts>
