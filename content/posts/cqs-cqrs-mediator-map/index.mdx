@@ -1,0 +1,515 @@
+---
+title: "CQS, CQRS, Mediator, Event Bus, MediatR — five concepts, one disambiguation"
+subtitle: "A map for terms .NET teams routinely conflate"
+date: 2026-06-02
+author: KreskaDev
+slug: cqs-cqrs-mediator-map
+summary: "Five concepts share three words and one .NET library name. CQS is a method-level rule, CQRS is a model-level architecture, Mediator (GoF) is a peer-object pattern, Event Bus is a pub/sub mechanism, and MediatR is a .NET in-process dispatcher that — despite the name — is structurally unrelated to GoF Mediator. This post is the vocabulary primer for the Patterns Untangled series."
+tags:
+  - patterns
+  - cqrs
+  - ddd
+  - dotnet
+  - mediator
+  - v6-series
+---
+
+## 1. The PR everyone agreed on, until the architect asked one question
+
+PR review on a Tuesday morning. A .NET team has just landed a 600-line change titled *"introduce CQRS via MediatR"*. The diff is clean: every controller endpoint now calls `mediator.Send(new SomethingCommand(...))` or `mediator.Send(new SomethingQuery(...))`. Three reviewers approved. The architect joins late, scrolls for a minute, then asks: *"where is the read model?"*. Silence. Someone says: *"we use the same DbContext, but the handlers are split by command/query"*. The architect: *"so this is CQS, not CQRS. And MediatR is a dispatcher, not the Mediator pattern. What are we actually buying here?"*. The room goes quiet. The PR gets merged anyway, because nobody wants to redo a week of work over **vocabulary**.
+
+This post is the vocabulary. Five concepts — **CQS**, **CQRS**, **Mediator (GoF)**, **Event Bus**, and **MediatR** — share three words and one .NET library name between them. They are routinely treated as synonyms in refinement meetings, code reviews, and conference talks. They are not synonyms. They live at different scales, were introduced by different people for different problems, and the cost of conflating them is the kind of architectural debt that nobody knows how to write a ticket for. The goal of the next 3000 words is to give you the language to tell them apart, and to know — for each one — when to reach for it and when to walk away.
+
+## 2. The cast of five — who introduced what, and at what scale
+
+Each concept has an author, a year, and a level at which it lives. Surface treatment first; details and pictures from §3 onward. Read this section as a glossary card to come back to — when §8's decision grid asks "which of these do I actually need?", these five definitions are the ground truth.
+
+<Callouts variant="neutral">
+
+1. **CQS** — Bertrand Meyer, *Object-Oriented Software Construction* (1988). A discipline at the **method level**: every method is either a Command (mutates, returns void) or a Query (returns a value, no side effects), never both.
+2. **CQRS** — Greg Young, *"CQRS, Task Based UIs, Event Sourcing agh!"* essay (2010). An architecture at the **model level**: separate read and write models, often with separate stores and eventual consistency.
+3. **Mediator (GoF)** — Gamma, Helm, Johnson, Vlissides, *Design Patterns* (1994). A behavioral pattern at the **object level**: an object that encapsulates how a set of peer objects interact, so peers never reference each other directly.
+4. **Event Bus** — generic infrastructure pattern with no single author (lineage: PoEAA Gateway + GoF Observer). A pub/sub **mechanism**: publisher emits an event, bus fans out to subscribers, publisher does not know who subscribed.
+5. **MediatR** — Jimmy Bogard, .NET NuGet library, first release 2015. An **in-process message dispatcher** with two primitives: `IRequest<TResponse>` (single-handler request/response) and `INotification` (zero-or-more-handler fan-out). **Despite the name, structurally unrelated to Mediator GoF.**
+
+</Callouts>
+
+Notice the **scale column** is the disambiguator. CQS is a rule you apply to one method. CQRS is a decision you make about a whole subsystem. Mediator GoF is a pattern you apply to a cluster of peer objects. Event Bus is a transport mechanism. MediatR is a library you install from NuGet. None of those sentences would be a meaningful answer to "what is X?" for any of the *other* four. That is the test — if a definition is interchangeable across these five, it is the wrong definition.
+
+## 3. CQS — Meyer's method-level rule
+
+Bertrand Meyer introduced **Command–Query Separation** in *Object-Oriented Software Construction* (1988). The rule is one sentence: *"Asking a question should not change the answer"*. Translated into method-level discipline: every method is either a **Command** (mutates state, returns nothing — `void` or `Task` in C#) or a **Query** (returns a value, does not mutate any observable state), and never both at once. The pay-off is that, after CQS, **side effects are greppable**. Every mutator is marked by a `void` return. Every read is safe to call repeatedly without surprise. Refactors get easier; code review gets faster; the cognitive cost of "what does this method actually do" drops to "what does its return type say".
+
+<Mermaid
+  diagramKind="sequence"
+  caption="CQS at method level — each method is either a Command (mutates, returns void) or a Query (returns value, no mutation). Never both."
+  chart={`sequenceDiagram
+    participant Client
+    participant UserService
+    participant State as User Store
+
+    Note over Client,State: Command — void, mutates state
+    Client->>UserService: DisableUser(id)
+    UserService->>State: update User.IsDisabled = true
+    UserService-->>Client: void
+
+    Note over Client,State: Query — returns value, no side effects
+    Client->>UserService: GetUser(id)
+    UserService->>State: read User by id
+    State-->>UserService: User row
+    UserService-->>Client: UserDto`}
+></Mermaid>
+
+In code, CQS shows up as a `UserService` whose two methods read like a CQS textbook page — one mutator, one reader, no overlap.
+
+<CodeTabs
+  caption="CQS at method level — UserService exposes one Command (void, mutates) and one Query (returns DTO, no side effects)"
+  snippets={[
+    {
+      lang: 'csharp',
+      filename: 'UserService.cs',
+      code: `public class UserService
+{
+    private readonly IUserRepository _repo;
+
+    public UserService(IUserRepository repo) => _repo = repo;
+
+    // Command — mutates state, returns void.
+    // CQS rule: no return value besides void/Task, no return DTO from a mutator.
+    public void DisableUser(int id)
+    {
+        var user = _repo.GetById(id);
+        user.IsDisabled = true;
+        _repo.Save(user);
+    }
+
+    // Query — returns a value, no side effects.
+    // CQS rule: never mutate any observable state, only project read data.
+    public UserDto GetUser(int id)
+    {
+        var user = _repo.GetById(id);
+        return new UserDto(user.Id, user.Email, user.IsDisabled);
+    }
+}`
+    }
+  ]}
+></CodeTabs>
+
+The single most common error around CQS is reading the words "Command" and "Query" and thinking the rule must mean separate **stores**. It does not. CQS lives entirely inside one class. The split is in method shape, not in infrastructure. Separate stores is CQRS — a different concept at a different scale, covered in the next section.
+
+<Callouts variant="positive">
+
+**Use CQS when:**
+
+- A class accumulates methods that both mutate state and return data, and audit reviewers keep flagging it as "doing too much". CQS gives you a vocabulary for the split *at the method level* — without escalating to architecture-level CQRS.
+- You want side effects to be greppable. After CQS, `void` returns mark every mutator; everything that returns a value is a safe read. This makes refactors and code review faster.
+- You are teaching juniors. CQS is a one-rule discipline that produces visibly cleaner classes within a single sprint, with zero infrastructure changes.
+
+</Callouts>
+
+<Callouts variant="negative">
+
+**Avoid (or relax) CQS when:**
+
+- The operation is *intrinsically* command-and-query — e.g., `Stack.Pop()` returns the popped element and mutates the stack. Forcing CQS here (`Peek()` + `Pop()` as separate calls) creates race conditions in concurrent code. Meyer himself notes this exception.
+- You are reading "Command" and "Query" and thinking "this must mean separate stores" — that's CQRS, a different concept at a different scale. CQS lives inside one class; CQRS lives across two storage engines.
+
+</Callouts>
+
+## 4. CQRS — Young's model-level architecture
+
+Greg Young introduced **Command Query Responsibility Segregation** in 2010, most famously in the essay *"CQRS, Task Based UIs, Event Sourcing agh!"*. The name takes CQS and lifts it a full level: the split is no longer between two methods on one class, it is between two **models** of the same domain — one optimized for writes, one optimized for reads. In its strongest form the two models live in **separate stores**, connected by a projection mechanism, with eventual consistency between the write store and the read store.
+
+<Mermaid
+  diagramKind="sequence"
+  caption="CQRS at model level — write and read stores are physically distinct, connected by eventual projection. Compare with CQS (Sample 1) where the split lives inside a single class."
+  chart={`sequenceDiagram
+    participant Controller
+    participant CmdHandler as CommandHandler
+    participant WriteDB as Write Store
+    participant ReadDB as Read Store (projection)
+    participant QryHandler as QueryHandler
+
+    Note over Controller,WriteDB: Write side — Command flow
+    Controller->>CmdHandler: Handle(RequestLoanCommand)
+    CmdHandler->>WriteDB: persist Loan aggregate
+    WriteDB-->>CmdHandler: ack
+    WriteDB-->>ReadDB: event projection (eventual)
+
+    Note over Controller,ReadDB: Read side — Query flow
+    Controller->>QryHandler: Handle(GetMemberLoansQuery)
+    QryHandler->>ReadDB: SELECT * FROM member_loans_view
+    ReadDB-->>QryHandler: rows
+    QryHandler-->>Controller: List<LoanDto>`}
+></Mermaid>
+
+In the type system the split is just as physical: the write side has its own `ICommand<TResult>` + `ICommandHandler<TCmd, TRes>` hierarchy, the read side has its own `IQuery<TResult>` + `IQueryHandler<TQry, TRes>` hierarchy, and a single handler **never** implements both. Two parallel families, two parallel pipelines, no leakage.
+
+<Mermaid
+  diagramKind="class"
+  caption="CQRS handler families — Commands and Queries live in separate type hierarchies. A handler implements one or the other, never both."
+  chart={`classDiagram
+    class ICommand~TResult~ {
+        <<interface>>
+    }
+    class ICommandHandler~TCmd, TRes~ {
+        <<interface>>
+        +Handle(TCmd command) TRes
+    }
+    class RequestLoanCommand {
+        +int MemberId
+        +int BookId
+    }
+    class RequestLoanHandler {
+        +Handle(RequestLoanCommand) LoanResult
+    }
+
+    class IQuery~TResult~ {
+        <<interface>>
+    }
+    class IQueryHandler~TQry, TRes~ {
+        <<interface>>
+        +Handle(TQry query) TRes
+    }
+    class GetMemberLoansQuery {
+        +int MemberId
+    }
+    class GetMemberLoansHandler {
+        +Handle(GetMemberLoansQuery) List~LoanDto~
+    }
+
+    ICommand <|.. RequestLoanCommand
+    ICommandHandler <|.. RequestLoanHandler
+    IQuery <|.. GetMemberLoansQuery
+    IQueryHandler <|.. GetMemberLoansHandler`}
+></Mermaid>
+
+A common confusion: CQRS and Event Sourcing are often paired (Greg Young's 2010 essay introduced both in one breath). They are **orthogonal decisions**. CQRS splits read and write models; Event Sourcing stores state as an append-only event sequence. CQRS without ES is the common (and often correct) starting point. ES without CQRS is rare but possible. We defer ES deep-dive to a future post — for this post, just remember the two decisions can be made independently.
+
+The other confusion is harder to dislodge: *"we added MediatR, so we're doing CQRS"*. MediatR is a dispatcher (covered in §7); it does not split your model, it does not give you a read store, it does not produce projections. Routing every call through `mediator.Send(...)` gives you indirection — at best, a tidier pipeline for cross-cutting concerns. It does **not** give you CQRS. CQRS is a payoff for a deliberate **read-model design decision**: that the read side and the write side have materially different shapes and benefit from being stored, scaled, and evolved independently. Without that decision, the split is premature.
+
+<Callouts variant="positive">
+
+**Use CQRS when:**
+
+- Read traffic and write traffic have materially different shapes — e.g., reads need denormalized projections joined across 5 tables; writes need normalized aggregates. CQRS lets each side optimize independently (different schema, different DB, different scaling).
+- You already have domain events (or are introducing them) and read models can be rebuilt from the event stream. The projection update mechanism gives you "rewindable" read state — useful for new read views without write-model migrations.
+- The team accepts **eventual consistency** between write and read sides. CQRS without this acceptance becomes a synchronous-projection trap that loses every architectural advantage.
+
+</Callouts>
+
+<Callouts variant="negative">
+
+**Avoid CQRS when:**
+
+- The motivation is "we added MediatR, so we're doing CQRS". MediatR is an in-process dispatcher (see §7); CQRS is a read/write storage split. Routing commands through `IMediator.Send` does not give you CQRS — it gives you indirection. You still have one model and one store.
+- Read and write traffic are similar in shape and volume. The cost of maintaining two models, the projection layer, and the eventual-consistency story will dwarf the win.
+- You have not yet articulated what "read model" means in your domain. CQRS is a payoff for a read-model design decision; without that decision, the split is premature.
+
+</Callouts>
+
+## 5. Mediator (GoF) — peer object pattern
+
+The Gang of Four introduced **Mediator** in *Design Patterns* (1994) as one of the eleven behavioral patterns. The single-sentence intent: *"Define an object that encapsulates how a set of objects interact. Mediator promotes loose coupling by keeping objects from referring to each other explicitly."* The shape is specific — a cluster of **peer objects**, called Colleagues, each of which holds a reference to a single Mediator object. When a Colleague needs to act on another Colleague, it does not call the other Colleague directly. It notifies the Mediator, which decides what to route where. The N × N coupling between peers collapses into N × 1 coupling toward the Mediator.
+
+<Mermaid
+  diagramKind="class"
+  caption="Mediator (GoF) — Colleagues hold a reference to the Mediator, never to each other. All inter-colleague interaction routes through the Mediator. Compare with MediatR (Sample 7): MediatR has no Colleague concept at all."
+  chart={`classDiagram
+    class IMediator {
+        <<interface>>
+        +Notify(sender, event)
+    }
+    class ConcreteMediator {
+        -ColleagueA a
+        -ColleagueB b
+        +Notify(sender, event)
+    }
+    class Colleague {
+        <<abstract>>
+        #IMediator mediator
+    }
+    class ColleagueA {
+        +Send(event)
+        +Receive(event)
+    }
+    class ColleagueB {
+        +Send(event)
+        +Receive(event)
+    }
+
+    IMediator <|.. ConcreteMediator
+    Colleague <|-- ColleagueA
+    Colleague <|-- ColleagueB
+    Colleague --> IMediator : holds
+    ConcreteMediator --> ColleagueA : routes to
+    ConcreteMediator --> ColleagueB : routes to`}
+></Mermaid>
+
+The canonical textbook example is a dialog form with interdependent fields — a country dropdown enables a state dropdown, which constrains a city dropdown, which validates a postal-code input. Without a Mediator, each field needs a reference to every other field, and every field's logic mutates the validity of every other. With a Mediator (the dialog itself, usually), each field only reports change events to the Mediator, and the Mediator decides what to enable, disable, or revalidate. The point of the pattern is the **peer graph** — N actors that must coordinate, where the cost of all-to-all references would dominate.
+
+In modern .NET application code, this kind of peer-graph problem is rare. Most coordination is between a controller and a handler, or between a service and a repository — direct dependencies, not peer mediation. Almost every time you read "Mediator pattern" in a contemporary .NET context, the author means **MediatR**, the library, not Mediator GoF. The naming collision is unfortunate; the structural difference is real (see §7).
+
+<Callouts variant="positive">
+
+**Use Mediator (GoF) when:**
+
+- You have a concrete cluster of **peer objects** that need to coordinate — the canonical example is form-field dialogs (changing one dropdown enables/disables sibling fields, each field would otherwise need references to every other field). The N×N peer coupling reduces to N×1 via the Mediator.
+- The peers genuinely exist as objects in your runtime (not as services in a DI container). GoF Mediator is an object-level pattern; if your "peers" are stateless services, you almost certainly want a dispatcher (MediatR) or a bus, not GoF Mediator.
+
+</Callouts>
+
+<Callouts variant="negative">
+
+**Avoid Mediator (GoF) when:**
+
+- You read "Mediator" in a .NET context and reach for MediatR. Almost every "Mediator pattern" usage you will see in modern .NET is **not** GoF Mediator — it is MediatR (§7), which is structurally a dispatcher, not a peer-mediation pattern. The name overlap is historical accident.
+- You are tempted to make every coordination problem a Mediator. Most coordination in modern apps is service-to-service or controller-to-handler; that is dispatching, not peer mediation. Reserve GoF Mediator for genuine N-peer-graph problems (rare in backend code, more common in legacy UI codebases).
+
+</Callouts>
+
+## 6. Event Bus — pub/sub decoupling mechanism
+
+Event Bus does not have a single author. It is a generic infrastructure pattern with lineage in PoEAA's *Gateway* and GoF's *Observer*, and it lives at the **mechanism level** — not a class-design pattern, but a piece of plumbing you stand up between producers and consumers of events. The shape: a **Publisher** raises an event, hands it to the **Bus**, and is done. The Bus knows which **Subscribers** have registered interest in that event type, and delivers a copy to each one. The Publisher does not know how many Subscribers exist, who they are, or whether any of them succeeded. That ignorance is the entire point.
+
+<Mermaid
+  diagramKind="sequence"
+  caption="Event Bus — Publisher and Subscribers are decoupled in time and identity. Subscribers can be added or removed without touching Publisher code."
+  chart={`sequenceDiagram
+    participant Pub as Publisher
+    participant Bus as Event Bus
+    participant SubA as Subscriber A
+    participant SubB as Subscriber B
+    participant SubC as Subscriber C
+
+    Note over Pub,SubC: Subscribers register independently
+    SubA->>Bus: Subscribe("OrderPlaced")
+    SubB->>Bus: Subscribe("OrderPlaced")
+    SubC->>Bus: Subscribe("OrderPlaced")
+
+    Note over Pub,SubC: Publisher emits without knowing subscribers
+    Pub->>Bus: Publish(OrderPlaced event)
+    Bus->>SubA: deliver(OrderPlaced)
+    Bus->>SubB: deliver(OrderPlaced)
+    Bus->>SubC: deliver(OrderPlaced)`}
+></Mermaid>
+
+An Event Bus can be in-process (a single-application pub/sub library) or cross-process (Kafka, RabbitMQ, Azure Service Bus, Amazon SNS/SQS). The semantics are the same in the abstract — **fan-out from one Publisher to N Subscribers** — but the operational concerns scale up enormously when the Bus crosses process boundaries: serialization, transport, delivery guarantees, ordering, replay, dead-letter queues, schema versioning. The pattern is the same; the engineering bill is not.
+
+The most common confusion is between an Event Bus and MediatR's `Publish()` notifications. They look similar from the call site (`publish(event)` either way), but the semantics differ. MediatR `Publish` is in-process, synchronous, fans out to compile-time-registered handlers in the same process. An Event Bus, especially a cross-process one, is asynchronous, fans out to subscribers possibly in other deployments, and tolerates publisher–subscriber lifecycle independence. If you need the latter, you do not want MediatR — you want a real bus (MassTransit on top of RabbitMQ, NServiceBus on a broker, or a raw broker client). The distinction matters in §8's decision grid.
+
+<Callouts variant="positive">
+
+**Use an Event Bus when:**
+
+- You need **decoupled fan-out** — one event has many independent reactions (analytics logging + email notification + cache invalidation + search-index update) and the publisher should not know any of them.
+- Subscribers will be added or removed independently from the publisher's lifecycle, possibly in different deployments. Cross-process buses (Kafka, RabbitMQ, Azure Service Bus) extend this across services.
+- The team explicitly wants **fire-and-forget** semantics — publisher does not block waiting for subscribers, does not see their results, and tolerates subscriber failures asynchronously.
+
+</Callouts>
+
+<Callouts variant="negative">
+
+**Avoid an Event Bus when:**
+
+- You have exactly one consumer and the publisher needs the consumer's result. That is request/response — use a dispatcher (MediatR `Send`, §7) or a direct method call. Wrapping it in pub/sub adds latency, hides the dependency, and breaks the call graph for debuggers.
+- Ordering and exactly-once delivery matter for the use case. Generic bus semantics are at-least-once and best-effort ordered; achieving stricter guarantees pushes you into outbox patterns, idempotency keys, and consumer-side sequencing — none of which the bus itself provides.
+
+</Callouts>
+
+## 7. MediatR — .NET in-process dispatcher (not GoF Mediator)
+
+MediatR is a .NET NuGet library, first released by **Jimmy Bogard in 2015**. Despite the name, MediatR is structurally **unrelated to Mediator GoF** (§5). It does not have Colleagues. It does not coordinate a peer graph. It is an **in-process message dispatcher** built around two primitives: `IRequest<TResponse>` for single-handler request/response, and `INotification` for zero-or-more-handler fan-out. If you know C# generics and dependency injection, the type system *is* the API; if you do not, the sample code below the class diagram shows the concrete shape — read the two together.
+
+A quick historical aside on the name, because it is the source of so much confusion: Bogard did not set out to implement GoF Mediator. He set out to remove the boilerplate of writing per-request handler-resolution glue, in a style that resembled in-process dispatchers like the ones bundled with RhinoCommons and similar mid-2000s .NET tooling. The name "MediatR" reflected that the library *mediates* between a caller and a handler — a verb-sense of mediation. The collision with the GoF pattern name was unintentional. By the time the .NET community noticed, the library had won.
+
+<Mermaid
+  diagramKind="sequence"
+  caption="MediatR.Send — single sender, single handler, request-response in process. Compare with Event Bus (Sample 5): one handler vs many subscribers; sender awaits result vs fire-and-forget."
+  chart={`sequenceDiagram
+    participant Ctrl as Controller
+    participant Med as IMediator
+    participant DI as DI Container
+    participant Hdl as RequestLoanHandler
+
+    Ctrl->>Med: Send(new RequestLoanCommand(memberId, bookId))
+    Med->>DI: Resolve IRequestHandler<RequestLoanCommand, LoanResult>
+    DI-->>Med: RequestLoanHandler instance
+    Med->>Hdl: Handle(command, ct)
+    Hdl-->>Med: LoanResult
+    Med-->>Ctrl: LoanResult`}
+></Mermaid>
+
+The dispatch has two flavors, and the type system enforces the distinction. **`Send`** takes an `IRequest<TResponse>` and routes it to **exactly one** `IRequestHandler<TRequest, TResponse>` — a request/response. **`Publish`** takes an `INotification` and fans out to **zero or more** `INotificationHandler<TNotification>` instances — a fire-and-forget. The class diagram makes the contrast explicit.
+
+<Mermaid
+  diagramKind="class"
+  caption="MediatR primitives — IRequest dispatches to exactly one handler (Send); INotification fans out to zero or more (Publish). Side by side with Mediator GoF (Sample 4) the structural difference is visible: MediatR has no peer Colleagues, no peer references — it's a dispatcher, not a mediator in the GoF sense."
+  chart={`classDiagram
+    class IRequest~TResponse~ {
+        <<interface>>
+    }
+    class IRequestHandler~TRequest, TResponse~ {
+        <<interface>>
+        +Handle(TRequest, CancellationToken) Task~TResponse~
+    }
+    class INotification {
+        <<interface>>
+    }
+    class INotificationHandler~TNotification~ {
+        <<interface>>
+        +Handle(TNotification, CancellationToken) Task
+    }
+    class IMediator {
+        <<interface>>
+        +Send~TRes~(IRequest~TRes~) Task~TRes~
+        +Publish(INotification) Task
+    }
+
+    class RequestLoanCommand {
+        +int MemberId
+        +int BookId
+    }
+    class RequestLoanHandler {
+    }
+    class LoanGrantedNotification {
+        +int LoanId
+    }
+    class EmailNotificationHandler {
+    }
+    class StatsNotificationHandler {
+    }
+
+    IRequest <|.. RequestLoanCommand
+    IRequestHandler <|.. RequestLoanHandler
+    INotification <|.. LoanGrantedNotification
+    INotificationHandler <|.. EmailNotificationHandler
+    INotificationHandler <|.. StatsNotificationHandler`}
+></Mermaid>
+
+In code, the type system collapses into a tight three-piece shape: a command record (immutable input + declared response type), a handler class (one `Handle` method, dependencies via constructor injection), and a controller call site that does nothing more than `mediator.Send(cmd, ct)`. No service location, no string keys, no reflection magic at the call site.
+
+<CodeTabs
+  caption="MediatR — RequestLoanCommand record, RequestLoanHandler, controller dispatching via IMediator.Send"
+  snippets={[
+    {
+      lang: 'csharp',
+      filename: 'RequestLoan.cs',
+      code: `// Command: an immutable record that implements IRequest<TResponse>.
+public record RequestLoanCommand(int MemberId, int BookId)
+    : IRequest<LoanResult>;
+
+// Handler: registered in DI; MediatR resolves it by the IRequest<T> type.
+public class RequestLoanHandler
+    : IRequestHandler<RequestLoanCommand, LoanResult>
+{
+    private readonly ILoanRepository _loans;
+    private readonly IMediator _mediator;
+
+    public RequestLoanHandler(ILoanRepository loans, IMediator mediator)
+    {
+        _loans = loans;
+        _mediator = mediator;
+    }
+
+    public async Task<LoanResult> Handle(
+        RequestLoanCommand request,
+        CancellationToken ct)
+    {
+        var loan = Loan.Open(request.MemberId, request.BookId);
+        await _loans.SaveAsync(loan, ct);
+
+        // Publish notification: zero, one, or many handlers may react.
+        await _mediator.Publish(new LoanGrantedNotification(loan.Id), ct);
+
+        return LoanResult.Ok(loan.Id);
+    }
+}
+
+// Controller call site — one line, no direct handler reference.
+[HttpPost("loans")]
+public async Task<IActionResult> RequestLoan(
+    RequestLoanCommand cmd, CancellationToken ct)
+{
+    var result = await _mediator.Send(cmd, ct);
+    return Ok(result);
+}`
+    }
+  ]}
+></CodeTabs>
+
+Once the code is on the page, the **domain placement** becomes legible. The same `RequestLoanCommand` from the snippet is exactly the **blue Command sticky** in a Brandolini EventStorming flow; the `RequestLoanHandler` is the **yellow Aggregate** that decides what to do; the `LoanGrantedNotification` it publishes is the **orange Event** that the rest of the system reacts to. MediatR is the **dispatch mechanism** that plugs into this flow — it does not invent the flow, and it does not replace it.
+
+<EventStorming
+  layout="timeline"
+  caption="Library domain — RequestLoanCommand dispatches via IMediator.Send to RequestLoanHandler; handler persists Loan aggregate and Publishes LoanGrantedNotification, which fans out to EmailService and the MemberDashboard read model. The dispatcher mechanism (MediatR) plugs into the same Brandolini flow shown in the v6-03 EventStorming Big Picture post."
+  notes={[
+    { type: 'actor',     label: 'Member' },
+    { type: 'command',   label: 'Request loan' },
+    { type: 'policy',    label: 'Reservation check (available + member quota OK)' },
+    { type: 'aggregate', label: 'Loan' },
+    { type: 'event',     label: 'Loan granted' },
+    { type: 'external',  label: 'Email service' },
+    { type: 'readmodel', label: 'Member dashboard' },
+  ]}
+></EventStorming>
+
+<Callouts variant="positive">
+
+**Use MediatR when:**
+
+- You want a thin in-process dispatcher to decouple controllers (or any caller) from handlers, without writing the dispatch glue yourself. The `IRequest<TResponse>` contract is compile-time-discoverable — no runtime string keys, no service-locator anti-pattern.
+- You are organizing code in vertical slices (one request → one handler per feature folder). MediatR's per-request handler resolution makes the slice boundary visible at the type level.
+- You want pipeline behaviors (logging, validation, transactions) as a cross-cutting middleware layer above handlers. MediatR's `IPipelineBehavior<TReq, TRes>` is the idiomatic place.
+
+</Callouts>
+
+<Callouts variant="negative">
+
+**Avoid MediatR when:**
+
+- You need cross-process distribution. MediatR is **in-process only** — no transport, no serialization, no remote handler discovery. For cross-service messaging, reach for MassTransit, NServiceBus, Wolverine, or a raw broker client. (Background on the EventStorming flow MediatR plugs into: see the v6-03 EventStorming Big Picture post.)
+- You wanted Mediator GoF (§5). You almost certainly did not — that is a peer-mediation pattern for object graphs, rare in modern .NET. But if you do, MediatR will not give it to you: it has no Colleague concept, no peer routing, just dispatch.
+- You think "we need MediatR to do CQRS" (§4). You do not — CQRS is a read/write model split decision, independent of any dispatcher. MediatR is a dispatch *mechanism* you can use *if* you happen to like the per-request handler shape, with or without CQRS.
+
+</Callouts>
+
+## 8. The disambiguation grid
+
+The previous five sections answered "what is X?" one concept at a time. This section answers the harder question: "**which of the other four is X being confused with right now, and what is the actual difference?**" Each row of the grid below names a specific conflation — by the *other* concept's name — and explains the difference in operational terms (where the patterns live, what they decide, what they buy). Read the grid as the disambiguation payoff of this whole post: when a teammate uses one of these five words in a refinement meeting, you should be able to point at the relevant row and say *"that's the conflation we are about to make, here is the difference we should agree on first"*.
+
+| Concept | Conflated with | Real difference |
+|---------|---------------|-----------------|
+| **CQS** | CQRS (same words "command/query") | Scale: CQS = method-level discipline (one method, void OR return). CQRS = model-level architecture (separate read/write **stores** + handlers). You can do CQS without CQRS. CQRS implies CQS at handler boundary. |
+| **CQRS** | Event Sourcing (literature pairs them) | Orthogonal decisions. CQRS = split read/write models. ES = store state as event sequence. Greg Young paired them in 2010 essay; community ossified the pairing. CQRS without ES is common (and often correct). ES without CQRS is possible but rare. |
+| **Mediator GoF** | MediatR (.NET) (naming collision) | Structurally unrelated. GoF Mediator = **N peer colleagues** routed through 1 mediator object, mediator knows about colleagues, eliminates N×N coupling. MediatR = **1 sender → 1 handler** dispatch (or 0..N notification handlers), sender doesn't know handlers, no peer graph. Pattern: GoF eliminates peer references; MediatR eliminates direct service references. Confusingly named for a reason that's lost to history. |
+| **Event Bus** | MediatR `Publish()` notifications (overlapping behavior) | Intent + scope. Event Bus = generic pub/sub infrastructure, often cross-process (Kafka, RabbitMQ); subscribers can be unknown at publish time, dynamic subscription common. MediatR `Publish` = in-process **synchronous fan-out** to compile-time-registered handlers, single-process scope, no transport. If you want cross-process — you don't want MediatR. |
+| **MediatR** | Mediator GoF (name), Event Bus (Publish-feature), Service Locator (anti-pattern accusation) | Each conflation has different vector. Vs GoF: see row above. Vs Event Bus: see row above. Vs Service Locator: MediatR resolves handlers via DI container = some argue this is hidden service location. Counter-argument: explicit `IRequest<T>` contract = compile-time discoverable, not runtime string-keyed. Disputed; mention both sides, don't take side. |
+
+A few words on each cell, because the table is dense and the differences are easy to miss on a first read.
+
+The **CQS-vs-CQRS** row is the one you will hit most often, because the names look identical (one extra letter) and the pay-off scales are different by two orders of magnitude. The litmus test is concrete: count the stores. If the system has **one** store and you split methods inside one class, that is CQS. If the system has **two** stores connected by a projection mechanism, that is CQRS. Anything that calls itself CQRS but writes to one store is, at best, CQS-via-handlers — a useful organizational pattern, but not the architectural decision the word "CQRS" implies.
+
+The **CQRS-vs-ES** row is the second-most-common confusion, driven by Greg Young's 2010 essay pairing both ideas in the same paragraph. They are orthogonal: each decision can be made independently of the other, and most production CQRS systems do not use Event Sourcing.
+
+The **Mediator-GoF-vs-MediatR** row is the naming-collision row. The structural difference is real and visible in the class diagrams of §5 and §7 side by side: GoF has Colleagues, MediatR does not. The cells in the right-hand column of the grid use the structural words ("peer colleagues" vs "sender → handler") because they are the only words that survive the naming collision.
+
+The **Event-Bus-vs-MediatR-Publish** row exists because MediatR's `Publish` looks deceptively like a pub/sub call from the outside. The two-axis distinction — *transport scope* (in-process vs cross-process) and *registration time* (compile-time vs run-time) — is what separates them in practice.
+
+The last row — **MediatR vs everything that gets thrown at it** — is the meta-row. It collects the three most common arguments-against (it's GoF, it's a bus, it's a Service Locator) and gives the structural counter-argument for each. The Service-Locator critique is the most defensible; whether you find it compelling is a team-style judgment, not a binary right/wrong.
+
+## 9. What comes next
+
+This post is the **vocabulary primer** for a longer series on the patterns that orbit Domain-Driven Design. The five concepts above are introduced here at definition depth; each one earns a deep-dive post of its own, where the surface treatment becomes implementation, edge cases, and team-level decision rules.
+
+<Callouts variant="neutral">
+
+**Coming next in the Patterns Untangled thread:**
+
+- **Command deep-dive (v6-05)** — what a Command really is in Domain-Driven Design, beyond "method that mutates": validation, idempotency, command versioning, transactional boundary.
+- **Query deep-dive (v6-06)** — read models, projections, denormalization, the read-side schema decisions CQRS forces you to make.
+- **Event deep-dive (v6-07)** — Domain Event vs Integration Event vs Notification: which one fires when, who owns the schema, what crosses the bounded context.
+- **Mediator implementation (v6-08)** — building a minimal MediatR-like dispatcher from scratch, plus the real GoF Mediator pattern in a UI-coordination example.
+- **Mini-series consolidation (v6-09)** — when **none** of these patterns is the right answer, and how to recognize that situation early.
+
+</Callouts>
