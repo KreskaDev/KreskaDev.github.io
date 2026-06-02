@@ -464,3 +464,137 @@ fingeringiem; sekwencja A-C-D-E-G-A pentatonika minor.
   { pitch: { letter: 'G', octave: 4 }, position: { string: 3, fret: 12 }, duration: '1/4' },
   { pitch: { letter: 'A', octave: 4 }, position: { string: 4, fret: 10 }, duration: '1/4' },
 ]} rootNote="A" />
+
+## v5-17 Tablature — tab notation read-only
+
+Tablature `<Tablature/>` renderuje VexFlow TabStave SVG dla nut gitarowych w klasycznym
+sześciostrunowym zapisie tabowym (`str: 1` = high E, `str: 6` = low E). Read-only:
+przyjmuje shipped `Note[]` z v5-15 verbatim — explicit `Note.position` wygrywa, fallback
+przez `getPositions(pitch, { tuning, maxFret })` z lowest-fret bias (ADR-058). Multi-tuning
+aware: prop `tuning?: "Drop D" | "DADGAD" | Tuning` per-instance (ADR-062, 8 shipped
+tunings). Chord-on-tab supported natywnie via `pitch: NotePitch[]` → per-pitch independent
+position derivation (multi-fret stack). Standalone mode = own BPM + Play; linked mode
+(wewnątrz `<NotationLink/>`) = passive cursor listener (Pattern C, ADR-061).
+
+`<NotationLink/>` to generic multi-slot wrapper supersedujący `<NotationScaleLink/>` z
+v5-16.2 — pozwala kombinować dowolne combinacje Notation + Tablature + ScaleOnFretboard
+jako children z wspólnym cursor sync. Master (Notation) fires onNoteStart → wrapper context
+dispatch → passive children (Tablature highlight + Fretboard ring) follow synchronously.
+
+**D11 — C-dur skala 1st position** (8 ćwierćnut C4→C5 z explicit positions zachowującymi
+1st position fingering). Test priorytetu explicit position.
+
+<Tablature
+  id="tab-d11-cmajor-1pos"
+  notes={[
+    { pitch: { letter: 'C', octave: 4 }, position: { string: 4, fret: 3 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, position: { string: 3, fret: 0 }, duration: '1/4' },
+    { pitch: { letter: 'E', octave: 4 }, position: { string: 3, fret: 2 }, duration: '1/4' },
+    { pitch: { letter: 'F', octave: 4 }, position: { string: 2, fret: 0 }, duration: '1/4' },
+    { pitch: { letter: 'G', octave: 4 }, position: { string: 2, fret: 3 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 4 }, position: { string: 1, fret: 1 }, duration: '1/4' },
+    { pitch: { letter: 'B', octave: 4 }, position: { string: 1, fret: 3 }, duration: '1/4' },
+    { pitch: { letter: 'C', octave: 5 }, position: { string: 0, fret: 8 }, duration: '1/4' },
+  ]}
+/>
+
+**D12 — A pentatonika minor (auto-derive position)** (A-C-D-E-G-A bez explicit position —
+fallback przez `getPositions` first-position lowest-fret bias).
+
+<Tablature
+  id="tab-d12-aminor-pent-auto"
+  notes={[
+    { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+    { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  ]}
+/>
+
+**D13 — Otwarte C-dur trójdźwięk** (G3-C4-E4 top-3-string voicing, multi-fret stack —
+chord-on-tab via `pitch: NotePitch[]` array). 3 distinct vexStr values per-pitch
+independent first-position derivation; brak string-collision.
+
+<Tablature
+  id="tab-d13-c-triad-chord"
+  notes={[
+    { pitch: [
+        { letter: 'G', octave: 3 },
+        { letter: 'C', octave: 4 },
+        { letter: 'E', octave: 4 },
+      ], duration: '1/2' },
+    { pitch: [
+        { letter: 'G', octave: 3 },
+        { letter: 'C', octave: 4 },
+        { letter: 'E', octave: 4 },
+      ], duration: '1/2' },
+  ]}
+/>
+
+**D14 — Drop-D rock riff** (D2-D2-A2-D2 power chord pulse, `tuning="Drop D"`). Test
+multi-tuning prop — D2 playable jako otwarta dolna struna w DROP_D.
+
+<Tablature
+  id="tab-d14-drop-d-riff"
+  tuning="Drop D"
+  notes={[
+    { pitch: { letter: 'D', octave: 2 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 2 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 2 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 2 }, duration: '1/4' },
+  ]}
+/>
+
+**D15 — DADGAD melodic phrase** (D3-A3-D4-A4 drone-fifth-octave pattern, `tuning="DADGAD"`).
+Test alternate open tuning propagation przez `getPositions(pitch, { tuning })`.
+
+<Tablature
+  id="tab-d15-dadgad-melody"
+  tuning="DADGAD"
+  notes={[
+    { pitch: { letter: 'D', octave: 3 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  ]}
+/>
+
+**D16 — Linked Notation + Tablature** (Pattern C — te same nuty zasilają staff i tab;
+klik Play w Notation → cursor highlight śledzi rytm staffu i fret number jednocześnie).
+
+<NotationLink id="link-d16-notation-tab" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 5 }, duration: '1/4' },
+]}>
+  <Notation/>
+  <Tablature/>
+</NotationLink>
+
+**D17 — Triple-passive linked** (Notation master fires cursor → Tablature highlight +
+ScaleOnFretboard ring follow synchronously. C-dur skala 3× wizualizacja).
+
+<NotationLink id="link-d17-triple" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 5 }, duration: '1/4' },
+]}>
+  <Notation/>
+  <Tablature/>
+  <ScaleOnFretboard rootNote="C"/>
+</NotationLink>
+
+(D18 = backward-compat gate: D9-D10 z v5-16 NotationScaleLink renderują się identycznie
+post-refactor — zero-break invariant. D19-D21 ceiling deferred per plan §10.2.)
