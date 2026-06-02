@@ -236,19 +236,19 @@ Tabela podsumowująca wartości $P(H=1 \mid E=1)$ przy kombinacjach skrajnych w 
 
 **Obserwacje:**
 
-<div className="callout-list not-prose" data-variant="neutral">
+<Callouts>
 
 1. **Rzadkość zaburzenia + łatwość oszustwa** to combo śmiertelne — posteriori praktycznie nie odbiega od priori. To opisuje case ADHD i niepoczytalność.
 2. **Pathological 2** ($s_1 = f_1 = 1$) — test daje pozytyw wszystkim, więc $LR^+ = 1$, czyli odds nie zmieniają się. Posteriori = priori. Test jest formalnością.
 3. **Pathological 1** ($f_1 > s_1$) — model nadal daje sensowny wynik, ale niższy $P$ dla pozytywnego wyniku niż priori. Test jest *anty-informatywny*.
 
-</div>
+</Callouts>
 
 ## 13. Założenia upraszczające
 
 Lista założeń, które ten model **przyjmuje** i które mogą się rozejść z realnym światem:
 
-<div className="callout-list not-prose" data-variant="neutral">
+<Callouts>
 
 - **Niezależność klinik warunkowo na $(H, D)$.** W praktyce kliniki używają nakładających się narzędzi (DSM-5, [ICD-11](../#glos-icd)) i podobnych kryteriów; błędy są skorelowane przez wspólny system pojęciowy. Realistyczny model wymagałby latentnego "stanu testowego" wspólnego dla klinik.
 - **Trwałość $D$.** Zakładamy, że osoba albo oszukuje przez całą procedurę, albo nie. W realiach $D$ może być zmienne per test, zależeć od stresu, zmęczenia, świadomości danego pytania.
@@ -258,7 +258,7 @@ Lista założeń, które ten model **przyjmuje** i które mogą się rozejść z
 - **Selekcja populacji.** $\pi$ powinno być warunkowane na fakcie zgłoszenia się do oceny. W populacji ogólnej $\pi$ jest niższe; selekcja podnosi (kto się zgłasza po test ADHD? Już ktoś, kto podejrzewa). Ale to nie eliminuje problemu — wciąż często niska liczba.
 - **Diagnoza binarna.** W zdrowiu psychicznym diagnozy są kategorialne i często współwystępujące (ADHD + depresja + lęk). Model używa $H \in \{0, 1\}$.
 
-</div>
+</Callouts>
 
 Każde z tych założeń **upraszcza model** i sprawia, że *realny świat* może być jeszcze bardziej skomplikowany. Ale podstawowa teza — *naiwny Bayes systematycznie zawyża pewność pod presją oszustwa* — jest robustna w prawie każdym rozsądnym rozszerzeniu modelu.
 

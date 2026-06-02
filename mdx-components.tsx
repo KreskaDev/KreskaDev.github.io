@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { AboutIdentity } from '@/components/about/AboutIdentity'
 import LazyMermaid from '@/components/lazy/LazyMermaid'
+import Callouts from '@/components/post/Callouts'
 import CodeTabs from '@/components/post/CodeTabs'
 import EventStorming from '@/components/post/EventStorming'
 
@@ -122,6 +123,7 @@ const mdxComponents: MDXComponents = {
   Mermaid: LazyMermaid,
   CodeTabs,
   EventStorming,
+  Callouts,
 }
 
 export default mdxComponents
