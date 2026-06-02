@@ -28,7 +28,7 @@ import { notesToDurations, notesToScheduledTimes } from './notation-timing'
 import { STANDARD_TUNING, intervalBetween } from './music-theory'
 import { getPositions } from './note-positions'
 import Fretboard from './Fretboard'
-import { NotationScaleLinkCursorContext } from './NotationScaleLinkContext'
+import { NotationCursorContext } from './NotationCursorContext'
 
 export type ScaleOnFretboardProps = {
   id: string
@@ -329,7 +329,7 @@ export default function ScaleOnFretboard(props: ScaleOnFretboardProps) {
   }
 
   // Linked mode detection (Pattern C per ADR-059). Non-null cursor context → linked.
-  const linkedCtx = useContext(NotationScaleLinkCursorContext)
+  const linkedCtx = useContext(NotationCursorContext)
   const isLinked = linkedCtx !== null
 
   // Derived FretboardNote[] dla base Fretboard render. useMemo bo notes/tuning/rootNote

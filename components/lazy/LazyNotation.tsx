@@ -20,3 +20,7 @@ export default function LazyNotation(props: ComponentProps<typeof NotationType>)
     </div>
   )
 }
+
+// displayName fallback dla NotationLink children walking (ADR-061 §6.1). Reference
+// equality primary; displayName fires gdy author bypass'uje LazyNotation HOC.
+LazyNotation.displayName = 'Notation'

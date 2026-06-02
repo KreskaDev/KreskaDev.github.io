@@ -22,3 +22,6 @@ export default function LazyScaleOnFretboard(
     </div>
   )
 }
+
+// displayName fallback dla NotationLink children walking (ADR-061 §6.1).
+LazyScaleOnFretboard.displayName = 'ScaleOnFretboard'
