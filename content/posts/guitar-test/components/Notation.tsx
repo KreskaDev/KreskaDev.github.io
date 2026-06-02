@@ -40,6 +40,19 @@ export type NotationProps = {
   defaultBpm?: number
   enableAudio?: boolean
   showBpmControl?: boolean
+  /**
+   * v5-16 NEW (additive). Optional external callback fired per-note start. Signature
+   * mirrors SequenceOptions.onNoteStart per ADR-054, ALE `index` = `entry.origIdx`
+   * (original notes[] index post-buildPlaybackSchedule sort), NIE raw playSequence
+   * playIdx. Internal cursor highlight (data-current-note attribute) fires
+   * INDEPENDENTLY — external prop = additive listener, NIE replacement. Default
+   * undefined = v5-15 standalone behavior intact. v5-16 consumer: NotationScaleLink
+   * Pattern C wrapper wiring external context dispatch.
+   *
+   * @param index - original notes[] index of currently playing note (entry.origIdx)
+   * @param scheduledTime - ms relative to playSequence call start (forward verbatim)
+   */
+  onNoteStart?: (index: number, scheduledTime: number) => void
 }
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
@@ -184,6 +197,7 @@ export default function Notation({
   defaultBpm,
   enableAudio,
   showBpmControl,
+  onNoteStart,
 }: NotationProps) {
   const reactId = useId()
   const hostRef = useRef<HTMLDivElement>(null)
@@ -533,14 +547,17 @@ export default function Notation({
       durations: sustainDurations,
       startTimes,
       signal: controller.signal,
-      onNoteStart: (playIdx, scheduledMs) => {
-        // scheduledMs unused obecnie — przyszli konsumenci (v5-18+ cross-widget cursor)
-        // mogą używać dla precision sync. void-suppress per Mermaid Sesja 22 pattern.
-        void scheduledMs
+      onNoteStart: (playIdx, scheduledMsCb) => {
         try {
           const entry = schedule[playIdx]
           if (!entry) return
           setCurrentNoteIdx(entry.origIdx)
+          // v5-16 external prop forward — receives entry.origIdx (NIE playIdx) bo
+          // Pattern C consumer (NotationScaleLink wrapper) expects original notes[]
+          // index dla notes[idx].position lookup. Defensive try/catch — external
+          // throw NIE breaks internal cursor lub playback (analog audio-sequence.ts:149).
+          try { onNoteStart?.(entry.origIdx, scheduledMsCb) }
+          catch (extErr) { console.error('[Notation] external onNoteStart threw:', extErr) }
           // Chord-on-staff extras fire SYNCHRONOUSLY z pre-resolved ctx — primary
           // pitch via playSequence melodic line + extras via direct playPitchedNote.
           const extras = entry.pitches.slice(1)

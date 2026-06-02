@@ -280,3 +280,74 @@ describe('Notation widget — error fallback', () => {
     consoleErrorSpy.mockRestore()
   })
 })
+
+// === v5-16.2 NEW: external onNoteStart additive prop (per ADR-059 Notation extension) ===
+
+describe('Notation widget — v5-16.2 external onNoteStart prop', () => {
+  it('external onNoteStart fires per-note synchronously z internal cursor (entry.origIdx semantyka)', async () => {
+    const external = vi.fn<(idx: number, scheduled: number) => void>()
+    let capturedOnNoteStart: ((idx: number, scheduled: number) => void) | undefined
+    playSequenceSpy.mockImplementationOnce((_notes, opts) => {
+      capturedOnNoteStart = (opts as { onNoteStart: (i: number, s: number) => void }).onNoteStart
+      return Promise.resolve()
+    })
+    let result: ReturnType<typeof render> | undefined
+    await act(async () => {
+      result = render(
+        <Notation id="ext-fire" notes={[Q('C'), Q('D'), Q('E')]} onNoteStart={external} />,
+      )
+    })
+    await act(async () => { fireEvent.click(result!.getByTestId('play-button')) })
+    expect(capturedOnNoteStart).toBeDefined()
+
+    // Fire internal playSequence onNoteStart manually (simulates audio-sequence per-note tick)
+    await act(async () => { capturedOnNoteStart!(0, 0) })
+    await act(async () => { capturedOnNoteStart!(1, 500) })
+    await act(async () => { capturedOnNoteStart!(2, 1000) })
+
+    // External called z entry.origIdx (= original notes[] index post-buildPlaybackSchedule).
+    // Dla single-voice melodic Note[] origIdx === playIdx, ale assertion sprawdza forward.
+    expect(external).toHaveBeenCalledTimes(3)
+    expect(external).toHaveBeenNthCalledWith(1, 0, 0)
+    expect(external).toHaveBeenNthCalledWith(2, 1, 500)
+    expect(external).toHaveBeenNthCalledWith(3, 2, 1000)
+
+    // Internal cursor STILL fires (data-current-note updates niezależnie)
+    const hostDiv = result!.container.querySelector('.notation-host') as HTMLElement
+    expect(hostDiv.getAttribute('data-current-note')).toBe('2')
+  })
+
+  it('external onNoteStart throw NIE breaks internal cursor lub playback (defensive try/catch)', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const external = vi.fn<(idx: number, scheduled: number) => void>(() => {
+      throw new Error('external-throw-test')
+    })
+    let capturedOnNoteStart: ((idx: number, scheduled: number) => void) | undefined
+    playSequenceSpy.mockImplementationOnce((_notes, opts) => {
+      capturedOnNoteStart = (opts as { onNoteStart: (i: number, s: number) => void }).onNoteStart
+      return Promise.resolve()
+    })
+    let result: ReturnType<typeof render> | undefined
+    await act(async () => {
+      result = render(
+        <Notation id="ext-throw" notes={[Q('C'), Q('D')]} onNoteStart={external} />,
+      )
+    })
+    await act(async () => { fireEvent.click(result!.getByTestId('play-button')) })
+
+    // Fire onNoteStart — external throw'uje ale NIE propaguje
+    await act(async () => { capturedOnNoteStart!(0, 0) })
+    await act(async () => { capturedOnNoteStart!(1, 500) })
+
+    expect(external).toHaveBeenCalledTimes(2)
+    // Internal cursor updates intact mimo external throws
+    const hostDiv = result!.container.querySelector('.notation-host') as HTMLElement
+    expect(hostDiv.getAttribute('data-current-note')).toBe('1')
+    // console.error logged dla external throw (Notation defensive wrapper)
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[Notation] external onNoteStart threw:'),
+      expect.any(Error),
+    )
+    consoleErrorSpy.mockRestore()
+  })
+})
