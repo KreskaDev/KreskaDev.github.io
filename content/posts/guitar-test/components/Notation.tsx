@@ -572,10 +572,16 @@ export default function Notation({
       },
     })
       .then(() => {
-        if (!controller.signal.aborted) {
+        if (controller.signal.aborted) return
+        // playSequence resolves po wszystkich notach scheduled, NIE po sustain (audio-sequence.ts:77).
+        // Hold cursor + isPlaying do końca sustain ostatniej nuty — inaczej highlight ostatniej
+        // nuty blinkuje na ~1 frame przed clearem. Abort path (handlePlay above) clearuje natychmiast.
+        const lastSustainMs = (sustainDurations[sustainDurations.length - 1] ?? 0) * 1000
+        setTimeout(() => {
+          if (controller.signal.aborted) return
           setIsPlaying(false)
           setCurrentNoteIdx(null)
-        }
+        }, lastSustainMs)
       })
       .catch((err: unknown) => {
         console.error('[Notation] playback failed:', err)

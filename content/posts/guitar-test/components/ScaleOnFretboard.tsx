@@ -400,10 +400,15 @@ export default function ScaleOnFretboard(props: ScaleOnFretboardProps) {
       },
     })
       .then(() => {
-        if (!controller.signal.aborted) {
+        if (controller.signal.aborted) return
+        // playSequence resolves po notach scheduled, NIE po sustain. Hold cursor + isPlaying
+        // do końca sustain ostatniej nuty (mirror Notation.tsx — last-note blink fix).
+        const lastSustainMs = (schedule.durations[schedule.durations.length - 1] ?? 0) * 1000
+        setTimeout(() => {
+          if (controller.signal.aborted) return
           setIsPlaying(false)
           setCurrentNoteIdx(null)
-        }
+        }, lastSustainMs)
       })
       .catch((err: unknown) => {
         console.error('[ScaleOnFretboard] playback failed:', err)
