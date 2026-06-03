@@ -1,6 +1,6 @@
 // Typy fretboard widget'u — data model invariants per design doc sekcja 4 + 5.
 // Stałe MIN/MAX/DEFAULT_FRET_COUNT kolokowane z typami (Decyzja D11.1) bo opisują
-// dozwolony range pola `fretCount` w `FretboardProps` / `FretboardState`.
+// dozwolony range pola `fretCount` w `FretboardProps`.
 
 export const MIN_FRET_COUNT = 5 as const
 export const MAX_FRET_COUNT = 24 as const
@@ -62,15 +62,6 @@ export type FretboardNote = FretPosition & {
 
 export type ChordSpec = { root: NoteName; type: ChordType }
 export type ScaleSpec = { root: NoteName; type: ScaleType }
-
-export type FretboardState = {
-  id: string
-  tuning: Tuning
-  fretCount: number
-  notes: FretboardNote[]
-  rootNote?: NoteName
-  enharmonicPreference?: 'sharps' | 'flats' | 'auto'
-}
 
 export type ChordShape = {
   frets: (number | null)[]    // null = muted; length === tuning.strings.length

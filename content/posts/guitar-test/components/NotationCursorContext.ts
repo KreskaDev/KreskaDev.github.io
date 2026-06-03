@@ -8,7 +8,7 @@
 // only; notes consumer subscribes do stable notes only (Fretboard base zero rerender per
 // cursor change).
 
-import { createContext, useContext } from 'react'
+import { createContext } from 'react'
 import type { Note } from './types'
 
 export type NotationCursorContextValue = {
@@ -24,9 +24,6 @@ export type NotationNotesContextValue = {
 
 export const NotationCursorContext = createContext<NotationCursorContextValue>(null)
 export const NotationNotesContext = createContext<NotationNotesContextValue>(null)
-
-export const useNotationCursor = () => useContext(NotationCursorContext)
-export const useNotationNotes = () => useContext(NotationNotesContext)
 
 // === Backward compat aliases (ADR-061 supersedes ADR-059; zero-break v5-16.2 demos) ===
 
