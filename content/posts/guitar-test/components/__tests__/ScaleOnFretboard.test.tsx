@@ -45,7 +45,6 @@ vi.mock('../audio-sequence', () => ({
 
 const ensureAudioSpy = vi.fn(() => Promise.resolve({ currentTime: 0 } as unknown as AudioContext))
 vi.mock('../audio', () => ({
-  SAMPLE_INSTRUMENT: 'acoustic_guitar_nylon',
   ensureAudio: () => ensureAudioSpy(),
   playPitchedNote: vi.fn(() => Promise.resolve()),
 }))

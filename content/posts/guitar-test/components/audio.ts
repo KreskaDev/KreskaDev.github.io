@@ -7,7 +7,7 @@
 import type { PitchedNote, NoteName } from './types'
 
 // === Sample source metadata (matches ADR-042) ===
-export const SAMPLE_INSTRUMENT = 'acoustic_guitar_nylon' as const
+const SAMPLE_INSTRUMENT = 'acoustic_guitar_nylon' as const
 const SAMPLE_KIT = 'FatBoy' as const
 // Gleitzman CDN URL. Kit pivoted FluidR3_GM → FatBoy 2026-05-31 post user A/B test
 // (sonic preference). Alternatywne kity (FluidR3_GM CC-BY 3.0, MusyngKite CC-BY-SA 3.0)

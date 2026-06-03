@@ -11,7 +11,6 @@ import FretboardVisualizer from '../FretboardVisualizer'
 // Mock audio.ts — jsdom NIE ma Web Audio API. Mock asserts wrapper integration,
 // nie custom mini-player code path. AudioContext shape unused przez mock playPitchedNote.
 vi.mock('../audio', () => ({
-  SAMPLE_INSTRUMENT: 'acoustic_guitar_nylon',
   ensureAudio: vi.fn(() => Promise.resolve({} as AudioContext)),
   playPitchedNote: vi.fn(() => Promise.resolve()),
 }))
