@@ -78,7 +78,6 @@ type PlayPitchedNoteFn = (ctx: AudioContext, note: unknown, dur: number) => Prom
 const ensureAudioSpy = vi.fn(() => Promise.resolve({ currentTime: 0 } as unknown as AudioContext))
 const playPitchedNoteSpy = vi.fn<PlayPitchedNoteFn>(() => Promise.resolve())
 vi.mock('../audio', () => ({
-  SAMPLE_INSTRUMENT: 'acoustic_guitar_nylon',
   ensureAudio: () => ensureAudioSpy(),
   playPitchedNote: (ctx: AudioContext, note: unknown, dur: number) => playPitchedNoteSpy(ctx, note, dur),
 }))
