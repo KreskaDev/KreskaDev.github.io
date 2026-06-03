@@ -426,10 +426,15 @@ export default function Tablature(props: TablatureProps) {
       },
     })
       .then(() => {
-        if (!controller.signal.aborted) {
+        if (controller.signal.aborted) return
+        // playSequence resolves po notach scheduled, NIE po sustain. Hold cursor + isPlaying
+        // do końca sustain ostatniej nuty (mirror Notation.tsx — last-note blink fix).
+        const lastSustainMs = (sustainDurations[sustainDurations.length - 1] ?? 0) * 1000
+        setTimeout(() => {
+          if (controller.signal.aborted) return
           setIsPlaying(false)
           setInternalCurrentNoteIdx(null)
-        }
+        }, lastSustainMs)
       })
       .catch((err: unknown) => {
         console.error('[Tablature] playback failed:', err)
