@@ -40,5 +40,3 @@ export const PRESETS: Record<PresetId, PresetData> = {
   whiplash:         { name: 'Whiplash powypadkowy',              pi: 0.25, s0: 0.78, s1: 0.92, f0: 0.15, f1: 0.70 },
   niepoczytalnosc:  { name: 'Niepoczytalność w procesie karnym', pi: 0.04, s0: 0.95, s1: 0.97, f0: 0.05, f1: 0.20 },
 } as const
-
-export const PRESET_IDS: PresetId[] = Object.keys(PRESETS) as PresetId[]
