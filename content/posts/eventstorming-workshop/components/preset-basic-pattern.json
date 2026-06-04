@@ -1,0 +1,20 @@
+{
+  "contexts": [
+    { "id": "cart", "label": "Cart", "startStep": 0, "endStep": 1 }
+  ],
+  "nodes": [
+    { "id": "act-customer",     "kind": "actor",     "timelineStep": 0.5, "label": "Customer" },
+
+    { "id": "cmd-add-cart",     "kind": "command",   "timelineStep": 0,   "label": "AddToCart" },
+    { "id": "cmd-remove-cart",  "kind": "command",   "timelineStep": 1,   "label": "RemoveFromCart" },
+
+    { "id": "evt-item-added",   "kind": "event",     "timelineStep": 0,   "label": "ItemAddedToCart" },
+    { "id": "evt-cart-updated", "kind": "event",     "timelineStep": 1,   "label": "CartUpdated" },
+
+    { "id": "agg-cart",         "kind": "aggregate", "timelineStep": 0.5, "label": "Cart" },
+
+    { "id": "rule-cart-item",   "kind": "rule",      "timelineStep": 0.3, "label": "Item must exist in catalog" },
+    { "id": "rule-cart-qty",    "kind": "rule",      "timelineStep": 0.7, "label": "Quantity > 0" }
+  ],
+  "edges": []
+}

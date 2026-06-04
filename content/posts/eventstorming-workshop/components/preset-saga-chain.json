@@ -1,0 +1,55 @@
+{
+  "contexts": [
+    { "id": "order",     "label": "Order",        "startStep": 0, "endStep": 0 },
+    { "id": "payment",   "label": "Payment",      "startStep": 1, "endStep": 2 },
+    { "id": "inventory", "label": "Inventory",    "startStep": 3, "endStep": 3 },
+    { "id": "warehouse", "label": "Warehouse",    "startStep": 4, "endStep": 5 },
+    { "id": "shipping",  "label": "Shipping",     "startStep": 6, "endStep": 6 },
+    { "id": "notify",    "label": "Notification", "startStep": 7, "endStep": 7 }
+  ],
+  "sagas": [
+    { "id": "checkout-saga", "label": "Checkout Saga (long-running)", "startStep": 0, "endStep": 7, "hueClass": "bg-purple-500/8" }
+  ],
+  "nodes": [
+    { "id": "cmd-process-pmt",  "kind": "command", "timelineStep": 1, "label": "ProcessPayment" },
+    { "id": "cmd-capture-pmt",  "kind": "command", "timelineStep": 2, "label": "CapturePayment" },
+    { "id": "cmd-allocate",     "kind": "command", "timelineStep": 3, "label": "AllocateStock" },
+    { "id": "cmd-pick",         "kind": "command", "timelineStep": 4, "label": "PickItems" },
+    { "id": "cmd-pack",         "kind": "command", "timelineStep": 5, "label": "PackOrder" },
+    { "id": "cmd-ship",         "kind": "command", "timelineStep": 6, "label": "ShipOrder" },
+    { "id": "cmd-confirm",      "kind": "command", "timelineStep": 7, "label": "SendConfirmation" },
+
+    { "id": "evt-order",        "kind": "event", "timelineStep": 0, "label": "OrderPlaced" },
+    { "id": "evt-pmt-auth",     "kind": "event", "timelineStep": 1, "label": "PaymentAuthorized" },
+    { "id": "evt-pmt-captured", "kind": "event", "timelineStep": 2, "label": "PaymentCaptured" },
+    { "id": "evt-stock-alloc",  "kind": "event", "timelineStep": 3, "label": "StockAllocated" },
+    { "id": "evt-items-picked", "kind": "event", "timelineStep": 4, "label": "ItemsPicked" },
+    { "id": "evt-packed",       "kind": "event", "timelineStep": 5, "label": "OrderPacked" },
+    { "id": "evt-shipped",      "kind": "event", "timelineStep": 6, "label": "OrderShipped" },
+    { "id": "evt-confirm-sent", "kind": "event", "timelineStep": 7, "label": "ConfirmationSent" },
+
+    { "id": "pol-pay-on-order", "kind": "policy", "timelineStep": 0.5, "label": "When OrderPlaced → ProcessPayment" },
+    { "id": "pol-capture",      "kind": "policy", "timelineStep": 1.5, "label": "When PaymentAuthorized → Capture" },
+    { "id": "pol-allocate",     "kind": "policy", "timelineStep": 2.5, "label": "When PaymentCaptured → AllocateStock" },
+    { "id": "pol-pick",         "kind": "policy", "timelineStep": 3.5, "label": "When StockAllocated → PickItems" },
+    { "id": "pol-pack",         "kind": "policy", "timelineStep": 4.5, "label": "When ItemsPicked → PackOrder" },
+    { "id": "pol-ship",         "kind": "policy", "timelineStep": 5.5, "label": "When OrderPacked → ShipOrder" },
+    { "id": "pol-confirm",      "kind": "policy", "timelineStep": 6.5, "label": "When OrderShipped → SendConfirmation" }
+  ],
+  "edges": [
+    { "source": "evt-order",        "target": "pol-pay-on-order" },
+    { "source": "pol-pay-on-order", "target": "cmd-process-pmt" },
+    { "source": "evt-pmt-auth",     "target": "pol-capture" },
+    { "source": "pol-capture",      "target": "cmd-capture-pmt" },
+    { "source": "evt-pmt-captured", "target": "pol-allocate" },
+    { "source": "pol-allocate",     "target": "cmd-allocate" },
+    { "source": "evt-stock-alloc",  "target": "pol-pick" },
+    { "source": "pol-pick",         "target": "cmd-pick" },
+    { "source": "evt-items-picked", "target": "pol-pack" },
+    { "source": "pol-pack",         "target": "cmd-pack" },
+    { "source": "evt-packed",       "target": "pol-ship" },
+    { "source": "pol-ship",         "target": "cmd-ship" },
+    { "source": "evt-shipped",      "target": "pol-confirm" },
+    { "source": "pol-confirm",      "target": "cmd-confirm" }
+  ]
+}
