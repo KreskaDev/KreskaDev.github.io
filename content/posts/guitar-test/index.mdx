@@ -194,3 +194,484 @@ brzmienie.
   <ChordAnalyzer id="shc-e7-opt2"  shape={[0, 2, 2, 1, 3, 0]} />
   <ChordAnalyzer id="shc-a7-opt2"  shape={[null, 0, 2, 2, 2, 3]} />
 </div>
+
+## v5-15 — Notation widget (VexFlow)
+
+Drugi widget w music vertical: read-only renderowanie nutacji muzycznej (pięciolinia +
+nuty z rytmem, key signature, time signature). Pod nutami slider BPM (40-240, default 90
+*moderato*) + przycisk ▶ Play który odtwarza ciąg nut sekwencyjnie z timing wynikającym
+z notation durations. Podczas odtwarzania aktualnie grana nuta jest podświetlana —
+edukacyjny mapping rytmu ↔ pozycji wizualnej. Notation jest **data-driven**: autor wpisuje
+JSON `Note[]` bezpośrednio w MDX (struktura: pitch, duration, dotted, rest, tied, voice,
+articulation, ornament, tuplet). Forward-compat: kolejna iteracja doda scale-on-fretboard
+konsumujący ten sam `Note[]` jako dwie projekcje (notation + fretboard graph). Poniższe
+demo pokazują wprowadzone rytmy + features.
+
+**D1 — Gama C-dur** (8 ćwierćnut C-D-E-F-G-A-B-C). Baseline: brak alteracji, 4/4, C major. Test sequential audio + per-note highlight.
+
+<Notation id="d1-c-major-scale" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 5 }, duration: '1/4' },
+]} />
+
+**D2 — Gama D-dur** (8 ćwierćnut, key signature 2 krzyżyki F♯/C♯). Test key signature rendering + explicit accidentals na F♯ + C♯.
+
+<Notation id="d2-d-major-scale" keySignature="D" notes={[
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', accidental: '#', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'C', accidental: '#', octave: 5 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 5 }, duration: '1/4' },
+]} />
+
+**D3 — Rytm punktowany** (ćwierćnuta z kropką + ósemka × 2). Test dotted notation + 1.5× duration math.
+
+<Notation id="d3-dotted-rhythm" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4', dotted: true },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/8' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4', dotted: true },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/8' },
+]} />
+
+**D4 — Pauzy** (ćwierć C → ćwierć pauza → ćwierć E → ćwierć pauza). Test rest glyph + audio skip rests + scheduled time offset preserved.
+
+<Notation id="d4-rests" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { duration: '1/4', rest: true },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { duration: '1/4', rest: true },
+]} />
+
+**D5 — Triola** (3 ósemki C-D-E w czasie 2 ósemek, ratio [3,2] + zwykła ćwierć F). Test tuplet bracket + tuplet ratio math + audio ~333ms per ósemka.
+
+<Notation id="d5-triplet" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/8', tuplet: { ratio: [3, 2], group: 't1' } },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/8', tuplet: { ratio: [3, 2], group: 't1' } },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/8', tuplet: { ratio: [3, 2], group: 't1' } },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+]} />
+
+**D6 — Łuk legato (tie)** (półnuta C tied + półnuta C = 4-beat sustained). Test tie merge w audio (single 4-beat note zamiast 2× half).
+
+<Notation id="d6-tie-cross-bar" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/2', tied: true },
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/2' },
+]} />
+
+**D7 — Akord na pięciolinii** (C-E-G stacked jako ćwierć + 3× melodyczne ćwierć D-E-F). Test chord render (stacked noteheads) + audio chord (3 nuty simultaneously z pre-resolved ctx, NO flam).
+
+<Notation id="d7-chord-on-staff" notes={[
+  { pitch: [{ letter: 'C', octave: 4 }, { letter: 'E', octave: 4 }, { letter: 'G', octave: 4 }], duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+]} />
+
+**D8 — Multi-voice** (voice 1: 4× półnuta C5-D5-E5-F5 melody + voice 2: 2× cała nuta C3-G3 bass; oba voices po 8 beat = 2 takty 4/4). Test parallel voice playback (voice 1 melody + voice 2 bass simultaneously, NIE sequential).
+
+<Notation id="d8-multi-voice" notes={[
+  { pitch: { letter: 'C', octave: 5 }, duration: '1/2', voice: 1 },
+  { pitch: { letter: 'D', octave: 5 }, duration: '1/2', voice: 1 },
+  { pitch: { letter: 'E', octave: 5 }, duration: '1/2', voice: 1 },
+  { pitch: { letter: 'F', octave: 5 }, duration: '1/2', voice: 1 },
+  { pitch: { letter: 'C', octave: 3 }, duration: '1', voice: 2 },
+  { pitch: { letter: 'G', octave: 3 }, duration: '1', voice: 2 },
+]} />
+
+**D9 — Ornament trill** (ćwierć C z `tr` symbolem + ćwierć D + półnuta E). Test ornament modifier (mała "tr" glyph nad nutą).
+
+<Notation id="d9-ornament-trill" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4', ornament: 'trill' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/2' },
+]} />
+
+**D10 — Metrum złożone 6/8** (6 ósemek C-D-E-F-G-A w 6/8). Test compound metre time signature + 6 nut w jednym takcie.
+
+<Notation id="d10-compound-metre-6-8" timeSignature={{ numerator: 6, denominator: 8 }} notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/8' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/8' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/8' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/8' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/8' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/8' },
+]} />
+
+## v5-16 ScaleOnFretboard — wizualizacja skal na gryfie
+
+Widget `<ScaleOnFretboard/>` mapuje sekwencję nut (`Note[]`, ten sam shape co `<Notation/>`)
+na pozycje fretboardu. Strzałki łączą kolejne pozycje (default `showArrows=true`); Play
+odgrywa skalę z BPM-driven timing reuse'ując shipped `notation-timing` + `audio-sequence`
+(ADR-049 + ADR-054 third consumer chain). Gdy `Note.position` jest pominięte, widget
+używa `note-positions.ts` naïve first-match (lowest fret); explicit `position` w MDX
+nadpisuje auto-pick (D7 demo). Per-instance state (ADR-011) — wiele widgetów na stronie
+ma osobne BPM, playback i highlight.
+
+Mobile: fretboard >10 fretów wymaga horizontal scroll na 360px viewport (analog v5-09
+Fretboard); overlay strzałek + highlight ring scroll'ują razem z base SVG (single
+overflow container).
+
+**D1 — Gama C-dur 1 oktawa** (8 ćwierćnut C3→C4, naïve auto-positions). Root note C
+podświetlone burgundy (ADR-037 root token), pozostałe scale tones w neutral palette.
+Klik Play uruchamia sekwencję ~5.3s @BPM=90.
+
+<ScaleOnFretboard id="d1-c-major" notes={[
+  { pitch: { letter: 'C', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+]} rootNote="C" />
+
+**D2 — Gama A-moll naturalna** (8 ćwierćnut A3→A4, relative-major = C). Brak alteracji;
+root A.
+
+<ScaleOnFretboard id="d2-a-natural-minor" notes={[
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+]} rootNote="A" />
+
+**D3 — E moll harmoniczna** (raised 7th = D♯). Test enharmonic accidental
+(D♯ canonical pc=3 sharps spelling) + naïve position derivation.
+
+<ScaleOnFretboard id="d3-e-harmonic-minor" notes={[
+  { pitch: { letter: 'E', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'F', accidental: '#', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', accidental: '#', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+]} rootNote="E" />
+
+**D4 — D moll melodyczna (ascending)** (raised 6th i 7th = B + C♯). Demonstruje
+"melodic minor up = major except b3" pattern.
+
+<ScaleOnFretboard id="d4-d-melodic-minor" notes={[
+  { pitch: { letter: 'D', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'C', accidental: '#', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+]} rootNote="D" />
+
+**D5 — G dorian** (mode od F-dur od II stopnia: G A B♭ C D E F G). Demonstruje dorian
+b3 + major 6th charakter.
+
+<ScaleOnFretboard id="d5-g-dorian" notes={[
+  { pitch: { letter: 'G', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', accidental: 'b', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+]} rootNote="G" />
+
+**D6 — F mixolydian** (mode od B♭-dur od V stopnia: F G A B♭ C D E♭ F). Demonstruje
+mixolydian b7 (E♭) — bluesy major scale character.
+
+<ScaleOnFretboard id="d6-f-mixolydian" notes={[
+  { pitch: { letter: 'F', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', accidental: 'b', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', accidental: 'b', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+]} rootNote="F" />
+
+**D7 — A pentatonika durowa, 5th position** (explicit `position` na każdej nucie —
+wymusza fingering w 5th position zamiast naïve lowest-fret). Demonstruje override
+naïve auto-pick.
+
+<ScaleOnFretboard id="d7-a-pent-major-5th" notes={[
+  { pitch: { letter: 'A', octave: 3 }, position: { string: 2, fret: 7 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 3 }, position: { string: 2, fret: 9 }, duration: '1/4' },
+  { pitch: { letter: 'C', accidental: '#', octave: 4 }, position: { string: 3, fret: 6 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, position: { string: 3, fret: 9 }, duration: '1/4' },
+  { pitch: { letter: 'F', accidental: '#', octave: 4 }, position: { string: 4, fret: 7 }, duration: '1/4' },
+]} rootNote="A" />
+
+**D8 — E blues minor** (pentatonika minor + b5 "blue note": E G A B♭ B D). 6 nut w 1
+oktawie z dodatkową b5 (B♭) między 4 i 5 stopniem.
+
+<ScaleOnFretboard id="d8-e-blues-minor" notes={[
+  { pitch: { letter: 'E', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', accidental: 'b', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 3 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+]} rootNote="E" />
+
+## v5-16 NotationScaleLink — Pattern C cross-widget cursor
+
+Wrapper `<NotationScaleLink/>` łączy `<Notation/>` + `<ScaleOnFretboard/>` współdzielonym
+state przez React Context (per ADR-059). Klik ▶ Play w Notation → cursor highlight śledzi
+rytm staffu, ScaleOnFretboard pokazuje pierścień na aktualnie granej pozycji na gryfie.
+Notation = master kontroler (Play widoczny + BPM control); ScaleOnFretboard = passive
+listener (Play ukryte, BPM context-driven, audio infrastructure NIE własne). Pattern C
+edukacyjny — synchronizuje rytm staffu z pozycją fretboardu w czasie rzeczywistym.
+
+**D9 — C major linked** (8 ćwierćnut C-D-E-F-G-A-B-C). Te same nuty zasila staff i
+fretboard; klik Play uruchamia kursor cross-widget synchronously.
+
+<NotationScaleLink id="d9-c-major-linked" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 5 }, duration: '1/4' },
+]} rootNote="C" />
+
+**D10 — A pentatonika minor 5th position linked** (explicit `position` per nuta —
+wymusza fingering w 5th position area). Demonstruje Pattern C z autorskim wymuszonym
+fingeringiem; sekwencja A-C-D-E-G-A pentatonika minor.
+
+<NotationScaleLink id="d10-a-pent-minor-5th-linked" notes={[
+  { pitch: { letter: 'A', octave: 3 }, position: { string: 1, fret: 12 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 4 }, position: { string: 2, fret: 10 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, position: { string: 2, fret: 12 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, position: { string: 3, fret: 9 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, position: { string: 3, fret: 12 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, position: { string: 4, fret: 10 }, duration: '1/4' },
+]} rootNote="A" />
+
+## v5-17 Tablature — tab notation read-only
+
+Tablature `<Tablature/>` renderuje VexFlow TabStave SVG dla nut gitarowych w klasycznym
+sześciostrunowym zapisie tabowym (`str: 1` = high E, `str: 6` = low E). Read-only:
+przyjmuje shipped `Note[]` z v5-15 verbatim — explicit `Note.position` wygrywa, fallback
+przez `getPositions(pitch, { tuning, maxFret })` z lowest-fret bias (ADR-058). Multi-tuning
+aware: prop `tuning?: "Drop D" | "DADGAD" | Tuning` per-instance (ADR-062, 8 shipped
+tunings). Chord-on-tab supported natywnie via `pitch: NotePitch[]` → per-pitch independent
+position derivation (multi-fret stack). Standalone mode = own BPM + Play; linked mode
+(wewnątrz `<NotationLink/>`) = passive cursor listener (Pattern C, ADR-061).
+
+`<NotationLink/>` to generic multi-slot wrapper supersedujący `<NotationScaleLink/>` z
+v5-16.2 — pozwala kombinować dowolne combinacje Notation + Tablature + ScaleOnFretboard
+jako children z wspólnym cursor sync. Master (Notation) fires onNoteStart → wrapper context
+dispatch → passive children (Tablature highlight + Fretboard ring) follow synchronously.
+
+**D11 — C-dur skala 1st position** (8 ćwierćnut C4→C5 z explicit positions zachowującymi
+1st position fingering). Test priorytetu explicit position.
+
+<Tablature
+  id="tab-d11-cmajor-1pos"
+  notes={[
+    { pitch: { letter: 'C', octave: 4 }, position: { string: 4, fret: 3 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, position: { string: 3, fret: 0 }, duration: '1/4' },
+    { pitch: { letter: 'E', octave: 4 }, position: { string: 3, fret: 2 }, duration: '1/4' },
+    { pitch: { letter: 'F', octave: 4 }, position: { string: 2, fret: 0 }, duration: '1/4' },
+    { pitch: { letter: 'G', octave: 4 }, position: { string: 2, fret: 3 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 4 }, position: { string: 1, fret: 1 }, duration: '1/4' },
+    { pitch: { letter: 'B', octave: 4 }, position: { string: 1, fret: 3 }, duration: '1/4' },
+    { pitch: { letter: 'C', octave: 5 }, position: { string: 0, fret: 8 }, duration: '1/4' },
+  ]}
+/>
+
+**D12 — A pentatonika minor (auto-derive position)** (A-C-D-E-G-A bez explicit position —
+fallback przez `getPositions` first-position lowest-fret bias).
+
+<Tablature
+  id="tab-d12-aminor-pent-auto"
+  notes={[
+    { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+    { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  ]}
+/>
+
+**D13 — Otwarte C-dur trójdźwięk** (G3-C4-E4 top-3-string voicing, multi-fret stack —
+chord-on-tab via `pitch: NotePitch[]` array). 3 distinct vexStr values per-pitch
+independent first-position derivation; brak string-collision.
+
+<Tablature
+  id="tab-d13-c-triad-chord"
+  notes={[
+    { pitch: [
+        { letter: 'G', octave: 3 },
+        { letter: 'C', octave: 4 },
+        { letter: 'E', octave: 4 },
+      ], duration: '1/2' },
+    { pitch: [
+        { letter: 'G', octave: 3 },
+        { letter: 'C', octave: 4 },
+        { letter: 'E', octave: 4 },
+      ], duration: '1/2' },
+  ]}
+/>
+
+**D14 — Drop-D rock riff** (D2-D2-A2-D2 power chord pulse, `tuning="Drop D"`). Test
+multi-tuning prop — D2 playable jako otwarta dolna struna w DROP_D.
+
+<Tablature
+  id="tab-d14-drop-d-riff"
+  tuning="Drop D"
+  notes={[
+    { pitch: { letter: 'D', octave: 2 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 2 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 2 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 2 }, duration: '1/4' },
+  ]}
+/>
+
+**D15 — DADGAD melodic phrase** (D3-A3-D4-A4 drone-fifth-octave pattern, `tuning="DADGAD"`).
+Test alternate open tuning propagation przez `getPositions(pitch, { tuning })`.
+
+<Tablature
+  id="tab-d15-dadgad-melody"
+  tuning="DADGAD"
+  notes={[
+    { pitch: { letter: 'D', octave: 3 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  ]}
+/>
+
+**D16 — Linked Notation + Tablature** (Pattern C — te same nuty zasilają staff i tab;
+klik Play w Notation → cursor highlight śledzi rytm staffu i fret number jednocześnie).
+
+<NotationLink id="link-d16-notation-tab" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 5 }, duration: '1/4' },
+]}>
+  <Notation/>
+  <Tablature/>
+</NotationLink>
+
+**D17 — Triple-passive linked** (Notation master fires cursor → Tablature highlight +
+ScaleOnFretboard ring follow synchronously. C-dur skala 3× wizualizacja).
+
+<NotationLink id="link-d17-triple" notes={[
+  { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'B', octave: 4 }, duration: '1/4' },
+  { pitch: { letter: 'C', octave: 5 }, duration: '1/4' },
+]}>
+  <Notation/>
+  <Tablature/>
+  <ScaleOnFretboard rootNote="C"/>
+</NotationLink>
+
+(D18 = backward-compat gate: D9-D10 z v5-16 NotationScaleLink renderują się identycznie
+post-refactor — zero-break invariant. D19-D21 ceiling deferred per plan §10.2.)
+
+## v5-19 CSP tab generator — pitch-only → optimized positions
+
+`generateTabPositions(notes, options)` to czysta funkcja TS która bierze `Note[]`
+z pitch-only info i zwraca `Note[]` z dodanym `position` field — Constraint Satisfaction
+Problem solver na pełnym Viterbi DP z heurystykami: minimize hand movement, prefer pozycji
+(default `[0, 5, 7]`), prefer open strings, soft hand-stretch penalty (default 4 fretów).
+Per ADR-063. Wrapper `<GeneratedTablature/>` aplikuje generator inline w MDX — autor
+pisze pitch-only, wrapper uruchamia CSP solver przy render i deleguje do shipped
+`<Tablature/>` (kontrakt unchanged: explicit position wygrywa, idempotency invariant).
+
+**Before vs After — A minor pentatonic.** Bez generator'a Tablature używa naive
+`getPositions(pitch).at(0)` (lowest-fret bias per ADR-058) → pozycje rozsiane (open string
++ low fret cluster). Z generator'em Viterbi optymalizuje multi-note context → klastrify
+do preferowanych pozycji + smooth transitions.
+
+**D19a — Naive (Tablature standalone):**
+
+<Tablature
+  id="tab-d19a-pent-naive"
+  notes={[
+    { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+    { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  ]}
+/>
+
+**D19b — Generator (default `[0, 5, 7]` preferred):**
+
+<GeneratedTablature
+  id="tab-d19b-pent-generated"
+  notes={[
+    { pitch: { letter: 'A', octave: 3 }, duration: '1/4' },
+    { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+  ]}
+/>
+
+**D20 — 1st-position bias.** Override `preferredPositions={[0, 1, 2, 3]}` → solver pcha
+do low-fret region. C-dur skala C4→C5 z 1st-position fingering.
+
+<GeneratedTablature
+  id="tab-d20-cmajor-1pos"
+  notes={[
+    { pitch: { letter: 'C', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'A', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'B', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'C', octave: 5 }, duration: '1/4' },
+  ]}
+  generatorOptions={{ preferredPositions: [0, 1, 2, 3] }}
+/>
+
+**D21 — Mixed explicit + auto (idempotency).** Pierwsza nuta C4 z explicit position
+`{ string: 4, fret: 1 }` (1st-pos anchor); pozostałe pitch-only — generator preserve
+explicit verbatim, fill positions dla reszty respektując anchor effect (sąsiednie
+positions ciągną się do tej samej hand zone).
+
+<GeneratedTablature
+  id="tab-d21-mixed-anchor"
+  notes={[
+    { pitch: { letter: 'C', octave: 4 }, position: { string: 4, fret: 1 }, duration: '1/4' },
+    { pitch: { letter: 'D', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'E', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'F', octave: 4 }, duration: '1/4' },
+    { pitch: { letter: 'G', octave: 4 }, duration: '1/4' },
+  ]}
+/>

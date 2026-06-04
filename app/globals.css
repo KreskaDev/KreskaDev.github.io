@@ -450,3 +450,97 @@ h4:hover .heading-anchor { opacity: 1; }
 .callout-list[data-variant="neutral"] ul > li {
   border-left: 3px solid var(--color-text-tertiary);
 }
+
+/* Notation widget current-note highlight (v5-15 per ADR-053 + ADR-054). Selector matches
+   na host div data-current-note attribute (set z React state) → SVG g.vf-stavenote group
+   z data-vf-note-index === current-note → fill via --color-accent. Theme reactivity via
+   CSS var (dual-palette per ADR-041 — accent flips per palette/mode bez JS re-render).
+   Static rule list 0..31 covers typowy demo (largest D8 multi-voice = 6 notes; D-future
+   may push higher). Beyond 31 → bump rules block.
+
+   VexFlow 5 renderuje noteheads jako `<text>` SMuFL glyphs (NIE jako `<path>`), więc fill
+   ustawiamy na samym `g.vf-stavenote` — SVG `fill` jest inherited property → kaskaduje
+   na notehead text, stem path, ornament, accidental glyphs etc. (Wcześniejszy selector
+   `g.vf-stavenote[...] path` pokrywał tylko stems/ledger lines z fill=none i visually
+   nic nie kolorował — bug ujawniony 2026-06-03.) */
+.notation-host g.vf-stavenote[data-vf-note-index] {
+  transition: fill 80ms ease-in-out;
+}
+.notation-host[data-current-note="0"] g.vf-stavenote[data-vf-note-index="0"],
+.notation-host[data-current-note="1"] g.vf-stavenote[data-vf-note-index="1"],
+.notation-host[data-current-note="2"] g.vf-stavenote[data-vf-note-index="2"],
+.notation-host[data-current-note="3"] g.vf-stavenote[data-vf-note-index="3"],
+.notation-host[data-current-note="4"] g.vf-stavenote[data-vf-note-index="4"],
+.notation-host[data-current-note="5"] g.vf-stavenote[data-vf-note-index="5"],
+.notation-host[data-current-note="6"] g.vf-stavenote[data-vf-note-index="6"],
+.notation-host[data-current-note="7"] g.vf-stavenote[data-vf-note-index="7"],
+.notation-host[data-current-note="8"] g.vf-stavenote[data-vf-note-index="8"],
+.notation-host[data-current-note="9"] g.vf-stavenote[data-vf-note-index="9"],
+.notation-host[data-current-note="10"] g.vf-stavenote[data-vf-note-index="10"],
+.notation-host[data-current-note="11"] g.vf-stavenote[data-vf-note-index="11"],
+.notation-host[data-current-note="12"] g.vf-stavenote[data-vf-note-index="12"],
+.notation-host[data-current-note="13"] g.vf-stavenote[data-vf-note-index="13"],
+.notation-host[data-current-note="14"] g.vf-stavenote[data-vf-note-index="14"],
+.notation-host[data-current-note="15"] g.vf-stavenote[data-vf-note-index="15"],
+.notation-host[data-current-note="16"] g.vf-stavenote[data-vf-note-index="16"],
+.notation-host[data-current-note="17"] g.vf-stavenote[data-vf-note-index="17"],
+.notation-host[data-current-note="18"] g.vf-stavenote[data-vf-note-index="18"],
+.notation-host[data-current-note="19"] g.vf-stavenote[data-vf-note-index="19"],
+.notation-host[data-current-note="20"] g.vf-stavenote[data-vf-note-index="20"],
+.notation-host[data-current-note="21"] g.vf-stavenote[data-vf-note-index="21"],
+.notation-host[data-current-note="22"] g.vf-stavenote[data-vf-note-index="22"],
+.notation-host[data-current-note="23"] g.vf-stavenote[data-vf-note-index="23"],
+.notation-host[data-current-note="24"] g.vf-stavenote[data-vf-note-index="24"],
+.notation-host[data-current-note="25"] g.vf-stavenote[data-vf-note-index="25"],
+.notation-host[data-current-note="26"] g.vf-stavenote[data-vf-note-index="26"],
+.notation-host[data-current-note="27"] g.vf-stavenote[data-vf-note-index="27"],
+.notation-host[data-current-note="28"] g.vf-stavenote[data-vf-note-index="28"],
+.notation-host[data-current-note="29"] g.vf-stavenote[data-vf-note-index="29"],
+.notation-host[data-current-note="30"] g.vf-stavenote[data-vf-note-index="30"],
+.notation-host[data-current-note="31"] g.vf-stavenote[data-vf-note-index="31"] {
+  fill: var(--color-accent);
+}
+
+/* v5-17 Tablature widget current-note highlight (per ADR-060). Mirror notation pattern,
+   ALE target `text` element (fret number) zamiast `path` glyph — TabNote renders fret
+   numbers jako SVG <text>, NIE path glyphs jak StaveNote. Base color = textPrimary
+   (theme reactive via CSS var); accent fill nadpisuje gdy data-current-note matches
+   data-vf-note-index. Static rule list 0..31 mirror notation extent. Beyond 31 → bump. */
+.tablature-host g.vf-tabnote text {
+  fill: var(--color-text-primary);
+  transition: fill 80ms ease-in-out;
+}
+.tablature-host[data-current-note="0"] g.vf-tabnote[data-vf-note-index="0"] text,
+.tablature-host[data-current-note="1"] g.vf-tabnote[data-vf-note-index="1"] text,
+.tablature-host[data-current-note="2"] g.vf-tabnote[data-vf-note-index="2"] text,
+.tablature-host[data-current-note="3"] g.vf-tabnote[data-vf-note-index="3"] text,
+.tablature-host[data-current-note="4"] g.vf-tabnote[data-vf-note-index="4"] text,
+.tablature-host[data-current-note="5"] g.vf-tabnote[data-vf-note-index="5"] text,
+.tablature-host[data-current-note="6"] g.vf-tabnote[data-vf-note-index="6"] text,
+.tablature-host[data-current-note="7"] g.vf-tabnote[data-vf-note-index="7"] text,
+.tablature-host[data-current-note="8"] g.vf-tabnote[data-vf-note-index="8"] text,
+.tablature-host[data-current-note="9"] g.vf-tabnote[data-vf-note-index="9"] text,
+.tablature-host[data-current-note="10"] g.vf-tabnote[data-vf-note-index="10"] text,
+.tablature-host[data-current-note="11"] g.vf-tabnote[data-vf-note-index="11"] text,
+.tablature-host[data-current-note="12"] g.vf-tabnote[data-vf-note-index="12"] text,
+.tablature-host[data-current-note="13"] g.vf-tabnote[data-vf-note-index="13"] text,
+.tablature-host[data-current-note="14"] g.vf-tabnote[data-vf-note-index="14"] text,
+.tablature-host[data-current-note="15"] g.vf-tabnote[data-vf-note-index="15"] text,
+.tablature-host[data-current-note="16"] g.vf-tabnote[data-vf-note-index="16"] text,
+.tablature-host[data-current-note="17"] g.vf-tabnote[data-vf-note-index="17"] text,
+.tablature-host[data-current-note="18"] g.vf-tabnote[data-vf-note-index="18"] text,
+.tablature-host[data-current-note="19"] g.vf-tabnote[data-vf-note-index="19"] text,
+.tablature-host[data-current-note="20"] g.vf-tabnote[data-vf-note-index="20"] text,
+.tablature-host[data-current-note="21"] g.vf-tabnote[data-vf-note-index="21"] text,
+.tablature-host[data-current-note="22"] g.vf-tabnote[data-vf-note-index="22"] text,
+.tablature-host[data-current-note="23"] g.vf-tabnote[data-vf-note-index="23"] text,
+.tablature-host[data-current-note="24"] g.vf-tabnote[data-vf-note-index="24"] text,
+.tablature-host[data-current-note="25"] g.vf-tabnote[data-vf-note-index="25"] text,
+.tablature-host[data-current-note="26"] g.vf-tabnote[data-vf-note-index="26"] text,
+.tablature-host[data-current-note="27"] g.vf-tabnote[data-vf-note-index="27"] text,
+.tablature-host[data-current-note="28"] g.vf-tabnote[data-vf-note-index="28"] text,
+.tablature-host[data-current-note="29"] g.vf-tabnote[data-vf-note-index="29"] text,
+.tablature-host[data-current-note="30"] g.vf-tabnote[data-vf-note-index="30"] text,
+.tablature-host[data-current-note="31"] g.vf-tabnote[data-vf-note-index="31"] text {
+  fill: var(--color-accent);
+}

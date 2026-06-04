@@ -55,3 +55,34 @@ export const FULL_STEP_DOWN: Tuning = {
 export const ALL_TUNINGS: readonly Tuning[] = [
   STANDARD_TUNING, DROP_D, DADGAD, OPEN_G, OPEN_D, OPEN_C, HALF_STEP_DOWN, FULL_STEP_DOWN,
 ] as const
+
+// === v5-17 extension (ADR-062 multi-tuning consumer convention) ===
+// MDX-friendly union: TuningName string lookup OR Tuning object pass-through. Bo
+// compileMDX w shipped pipeline (app/posts/[slug]/page.tsx) NIE accepts scope arg →
+// bare identifier `tuning={DROP_D}` w MDX = undefined ref. String name = pragmatic
+// path dla MDX authors; TS callers (NotationLink composition w .tsx) pass Tuning literal.
+
+export type TuningName =
+  | 'Standard'
+  | 'Drop D'
+  | 'DADGAD'
+  | 'Open G'
+  | 'Open D'
+  | 'Open C'
+  | 'Half-step down (Eb)'
+  | 'Full-step down (D)'
+
+export function resolveTuning(input: Tuning | TuningName | undefined): Tuning {
+  if (!input) return STANDARD_TUNING
+  if (typeof input === 'string') {
+    const found = ALL_TUNINGS.find((t) => t.name === input)
+    if (!found) {
+      throw new Error(
+        `resolveTuning: unknown tuning name "${input}". ` +
+          `Valid: ${ALL_TUNINGS.map((t) => t.name).join(', ')}.`,
+      )
+    }
+    return found
+  }
+  return input
+}

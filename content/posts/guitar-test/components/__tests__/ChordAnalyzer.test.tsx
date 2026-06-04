@@ -18,7 +18,6 @@ import type { ReactNode } from 'react'
 import ChordAnalyzer from '../ChordAnalyzer'
 
 vi.mock('../audio', () => ({
-  SAMPLE_INSTRUMENT: 'acoustic_guitar_nylon',
   ensureAudio: vi.fn(() => Promise.resolve({} as unknown as AudioContext)),
   playPitchedNote: vi.fn(() => Promise.resolve()),
 }))
