@@ -114,73 +114,115 @@
 /* === EventStorming tokens — palette-agnostic, mode-aware (Brandolini methodology).
    8 sticky types × bg/fg/border. Te same kolory w warm i cool palette: orange-event
    musi być orange w obu (methodology correctness — cross-reference do
-   Brandolini *Introducing EventStorming* ch. 3). Patrz plan v6-03 §4.3 + ADR-052. === */
-:root,
-:root.light-cool,
-:root.light-warm {
+   Brandolini *Introducing EventStorming* ch. 3). Patrz plan v6-03 §4.3 + ADR-052.
+
+   NOTE: cztery osobne rules zamiast comma-list bo Tailwind v4 dedup'uje całe rules
+   gdy ich selector list zawiera selector już użyty w innym rule (tu :root.X), co
+   resultowało w pustych --es-* CSS vars w runtime na każdej stronie używającej
+   <EventStorming> widget (regression na 2026-06-04). === */
+:root.light-cool {
   --es-event-bg: #f0a85a;
   --es-event-fg: #2a1a0a;
   --es-event-border: #c87a3a;
-
   --es-command-bg: #5290bd;
   --es-command-fg: #ffffff;
   --es-command-border: #356d97;
-
   --es-aggregate-bg: #fae57a;
   --es-aggregate-fg: #2a2410;
   --es-aggregate-border: #c9b850;
-
   --es-actor-bg: #fff5a0;
   --es-actor-fg: #2a2410;
   --es-actor-border: #c9b850;
-
   --es-policy-bg: #c8a8e0;
   --es-policy-fg: #1f1530;
   --es-policy-border: #9a7ab4;
-
   --es-readmodel-bg: #9adba0;
   --es-readmodel-fg: #0e2a14;
   --es-readmodel-border: #6aa572;
-
   --es-external-bg: #f5b5d4;
   --es-external-fg: #2a0e1f;
   --es-external-border: #c785a8;
-
   --es-hotspot-bg: #e85a5a;
   --es-hotspot-fg: #ffffff;
   --es-hotspot-border: #b53a3a;
 }
 
-:root.dark-cool,
+:root.light-warm {
+  --es-event-bg: #f0a85a;
+  --es-event-fg: #2a1a0a;
+  --es-event-border: #c87a3a;
+  --es-command-bg: #5290bd;
+  --es-command-fg: #ffffff;
+  --es-command-border: #356d97;
+  --es-aggregate-bg: #fae57a;
+  --es-aggregate-fg: #2a2410;
+  --es-aggregate-border: #c9b850;
+  --es-actor-bg: #fff5a0;
+  --es-actor-fg: #2a2410;
+  --es-actor-border: #c9b850;
+  --es-policy-bg: #c8a8e0;
+  --es-policy-fg: #1f1530;
+  --es-policy-border: #9a7ab4;
+  --es-readmodel-bg: #9adba0;
+  --es-readmodel-fg: #0e2a14;
+  --es-readmodel-border: #6aa572;
+  --es-external-bg: #f5b5d4;
+  --es-external-fg: #2a0e1f;
+  --es-external-border: #c785a8;
+  --es-hotspot-bg: #e85a5a;
+  --es-hotspot-fg: #ffffff;
+  --es-hotspot-border: #b53a3a;
+}
+
+:root.dark-cool {
+  --es-event-bg: #c87a3a;
+  --es-event-fg: #fef0e0;
+  --es-event-border: #f0a85a;
+  --es-command-bg: #356d97;
+  --es-command-fg: #e6f0f8;
+  --es-command-border: #5290bd;
+  --es-aggregate-bg: #c9b850;
+  --es-aggregate-fg: #fff8d0;
+  --es-aggregate-border: #fae57a;
+  --es-actor-bg: #a89640;
+  --es-actor-fg: #fef4c2;
+  --es-actor-border: #fff5a0;
+  --es-policy-bg: #9a7ab4;
+  --es-policy-fg: #f0e0ff;
+  --es-policy-border: #c8a8e0;
+  --es-readmodel-bg: #6aa572;
+  --es-readmodel-fg: #e0f5e0;
+  --es-readmodel-border: #9adba0;
+  --es-external-bg: #c785a8;
+  --es-external-fg: #ffe0f0;
+  --es-external-border: #f5b5d4;
+  --es-hotspot-bg: #b53a3a;
+  --es-hotspot-fg: #ffe0e0;
+  --es-hotspot-border: #e85a5a;
+}
+
 :root.dark-warm {
   --es-event-bg: #c87a3a;
   --es-event-fg: #fef0e0;
   --es-event-border: #f0a85a;
-
   --es-command-bg: #356d97;
   --es-command-fg: #e6f0f8;
   --es-command-border: #5290bd;
-
   --es-aggregate-bg: #c9b850;
   --es-aggregate-fg: #fff8d0;
   --es-aggregate-border: #fae57a;
-
   --es-actor-bg: #a89640;
   --es-actor-fg: #fef4c2;
   --es-actor-border: #fff5a0;
-
   --es-policy-bg: #9a7ab4;
   --es-policy-fg: #f0e0ff;
   --es-policy-border: #c8a8e0;
-
   --es-readmodel-bg: #6aa572;
   --es-readmodel-fg: #e0f5e0;
   --es-readmodel-border: #9adba0;
-
   --es-external-bg: #c785a8;
   --es-external-fg: #ffe0f0;
   --es-external-border: #f5b5d4;
-
   --es-hotspot-bg: #b53a3a;
   --es-hotspot-fg: #ffe0e0;
   --es-hotspot-border: #e85a5a;
