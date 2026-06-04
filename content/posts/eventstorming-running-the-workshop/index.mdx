@@ -1,0 +1,255 @@
+---
+title: "EventStorming as a workshop — running the wall"
+subtitle: "What happens in the room that produces a Big Picture, with Mermaid for the visuals"
+date: 2026-06-04
+author: KreskaDev
+slug: eventstorming-running-the-workshop
+summary: "The companion to my Big Picture post. That one taught you how to read a wall — this one teaches you how to run the session that produces one. Timeline of the workshop's five phases, the arranged-stickies output as a Mermaid flowchart with bounded contexts, and concrete facilitation guidance for your first storming. Same library-lending domain as the rest of the v6 series — Reservation, Loan, Member Fines."
+tags:
+  - ddd
+  - eventstorming
+  - methodology
+  - v6-series
+---
+
+## 1. You've seen the wall. Now run the session.
+
+The [Big Picture post](/posts/eventstorming-big-picture/) showed you what a finished
+EventStorming wall looks like and how to read it. The wall doesn't appear by magic.
+It comes out of a workshop — three to four hours, six to ten people in a room,
+brown paper and Sharpies. The deliverable isn't a document; it's the shared mental
+model now living inside everyone's head.
+
+This post answers a different question: **what actually happens in the room?**
+
+## 2. The format at a glance
+
+EventStorming is **timeboxed**. Brandolini's recommendation, refined across hundreds
+of public workshops, breaks one session into five distinct phases. The diagram
+below is the canonical structure I run for new teams.
+
+<Mermaid
+  diagramKind="flow"
+  caption="One EventStorming workshop, end to end — five phases, ~5.5 hours including breaks."
+  chart={`timeline
+    title An EventStorming Workshop — one morning, one wall
+
+    section Pre-flight · 15 min
+        Pick the slice : Library lending end-to-end
+        Recruit the room : Facilitator
+                        : Two domain experts (librarian, head of acquisitions)
+                        : Three engineers
+                        : One product analyst
+        Prepare the wall : Eight metres of brown paper
+                        : Six colours of sticky notes
+                        : Sharpies for everyone
+
+    section Big Picture · 90 min
+        Chaotic storming : Everyone writes orange events in past tense
+                        : Stickies go on the wall in any order
+                        : "BookReserved", "LoanReturned", "FineIssued"
+        Enforce the timeline : Facilitator nudges the wall left-to-right
+                            : Duplicates merged, synonyms reconciled
+        Mark hot spots : Red stickies on every "what if...?"
+                      : Hot spots get owners, not answers
+
+    section Process Modeling · 120 min
+        Pick one slice : "Reservation to pickup"
+        Add commands : Blue stickies above events
+        Add policies and reads : Purple for whenever-then rules
+                              : Green for projections people see
+        Spot aggregates : Yellow boundary around invariants
+
+    section Design Level · 90 min
+        Zoom into one aggregate : "Loan"
+        Decision tables : What inputs change state
+                       : What invariants must hold
+        Hand off to code : Wall becomes type sketches
+
+    section Close · 15 min
+        Photograph the wall : Photo into team wiki
+        Park hot spots : Each red sticky becomes a follow-up
+        Schedule re-storm : Big Picture iterates; book another in 4 weeks
+  `}
+/>
+
+The thing newcomers underestimate is how much real elapsed time the first two
+phases need. **Big Picture is 90 minutes of focused chaos.** You will be tempted
+to compress it. Don't. The discoveries that make the workshop worth running
+happen during chaotic storming, not after.
+
+## 3. Roles in the room
+
+A storming session is not a meeting. It's a collaborative authoring session
+where six to ten people physically write the model on a wall. Each role brings
+something different.
+
+<Callouts items={[
+  {
+    variant: "positive",
+    title: "Facilitator",
+    body: "Keeps the timeline moving left-to-right. Refuses to let one voice dominate. Calls out hot spots and parks them. Doesn't pretend to know the domain — that's not their job."
+  },
+  {
+    variant: "positive",
+    title: "Domain experts",
+    body: "The librarian who's worked the desk for ten years. The head of acquisitions who knows why the budget cycle matters. They write events; engineers translate."
+  },
+  {
+    variant: "positive",
+    title: "Engineers",
+    body: "Listen first, write second. Translate domain language into commands and aggregates. Flag invariants the domain experts assume but never state. Never say 'in the database' — the wall is pre-storage."
+  },
+  {
+    variant: "positive",
+    title: "Product analyst",
+    body: "Watches for events that connect to KPIs. Asks 'who would care if this happened?' Spots the read models the dashboard team needs months before they're requested."
+  }
+]} />
+
+## 4. What the wall looks like at the end
+
+After three to five hours, the wall has structure. Events are timeline-ordered,
+commands sit above them, aggregates are grouped, policies bridge contexts,
+hot spots are marked. The diagram below is a stylized version of the **output**
+of one morning of work on the lending slice of a public library.
+
+Two bounded contexts emerged from this session: **Lending** (everything to do
+with reservations, pickups, and returns) and **Billing** (member fines, which
+have a different vocabulary and a different team behind them). The split itself
+was a workshop discovery — it wasn't on the agenda.
+
+<Mermaid
+  diagramKind="flow"
+  caption="The arranged stickies after one morning of EventStorming on library lending. Two bounded contexts emerged: Lending and Billing."
+  chart={`flowchart LR
+    classDef event    fill:#f0a85a,stroke:#c87a3a,color:#2a1a0a,stroke-width:2px
+    classDef command  fill:#5290bd,stroke:#356d97,color:#ffffff,stroke-width:2px
+    classDef aggregate fill:#fae57a,stroke:#c9b850,color:#2a2410,stroke-width:3px
+    classDef actor    fill:#fff5a0,stroke:#c9b850,color:#2a2410,stroke-width:2px
+    classDef policy   fill:#c8a8e0,stroke:#9a7ab4,color:#1f1530,stroke-width:2px
+    classDef readmodel fill:#9adba0,stroke:#6aa572,color:#0e2a14,stroke-width:2px
+    classDef external fill:#f5b5d4,stroke:#c785a8,color:#2a0e1f,stroke-width:2px
+    classDef hotspot  fill:#e85a5a,stroke:#b53a3a,color:#ffffff,stroke-width:2px,stroke-dasharray:5 3
+
+    A1([Member]):::actor
+    A2([Librarian]):::actor
+
+    subgraph LEND[Lending Context]
+        direction LR
+        C1[Reserve book]:::command
+        E1((Reservation placed)):::event
+        C2[Pick up book]:::command
+        E2((Book picked up)):::event
+        AGG1[/Reservation/]:::aggregate
+        AGG2[/Loan/]:::aggregate
+        C3[Return book]:::command
+        E3((Book returned)):::event
+        P1{{When return is overdue, charge fee}}:::policy
+        RM1[(My active loans)]:::readmodel
+    end
+
+    subgraph BILL[Billing Context]
+        direction LR
+        AGG3[/Member Fines/]:::aggregate
+        E4((Late fee charged)):::event
+        RM2[(Overdue fines list)]:::readmodel
+    end
+
+    EXT1[\\Email Service\\]:::external
+    P2{{When reservation placed, notify member}}:::policy
+    HS1>What if Email Service is down?]:::hotspot
+
+    A1 --> C1 --> E1 --> C2 --> E2 --> C3 --> E3
+    A2 -.-> C1
+
+    E1 -.-> AGG1
+    E2 -.-> AGG2
+    E3 -.-> AGG2
+
+    E1 --> P2 --> EXT1
+    E3 --> P1 --> AGG3
+    AGG3 --> E4
+
+    E2 -.-> RM1
+    E4 -.-> RM2
+
+    P2 -.-> HS1
+    EXT1 -.-> HS1
+  `}
+/>
+
+A few things to notice that the diagram makes obvious but a finished document
+would hide:
+
+- **The Lending context owns the timeline.** Events flow left-to-right; commands
+  arrive from actors above; aggregates squat below the events they protect.
+- **The Billing context speaks a different language.** "Late fee charged" is
+  an event there, not a command. The Lending side fires the policy; Billing
+  reacts.
+- **The hot spot is real.** A reservation triggers an email. Email service is
+  external. What if it's down? The workshop noticed this; it didn't solve it.
+  The red sticky is the artifact of a parked question.
+
+## 5. Run your first workshop tomorrow
+
+If you've never facilitated, here's the smallest checklist that survives contact
+with reality.
+
+| Item | Note |
+| --- | --- |
+| Wall | 8m × 1.2m of brown paper or whiteboard. Bigger than you think. |
+| Sticky notes | 6 colors × 100 notes each. Buy more orange than anything. |
+| Sharpies | One per person. Black, medium tip. Pencils don't work. |
+| Timer | Visible to the whole room. Phone is fine. |
+| Facilitator | Not the most senior engineer — that's the dominant-voice problem. Someone who can say "park it" without flinching. |
+| First slice | Pick one end-to-end flow. "Member reserves book and picks it up" is good. "All of acquisitions" is not. |
+| Pre-read | None. Walking in cold is the point. |
+
+## 6. What can go wrong inside the room
+
+<Callouts items={[
+  {
+    variant: "negative",
+    title: "Note-takers instead of writers",
+    body: "Someone hangs back and watches. They aren't writing stickies. Every silent person is a missing perspective. Hand them a Sharpie. Don't proceed until they're at the wall."
+  },
+  {
+    variant: "negative",
+    title: "The loud architect",
+    body: "One engineer explains the system to the room. Domain experts go quiet. Stickies stop appearing because everyone is listening to one voice. Facilitator must intervene: 'Quiet for two minutes. Everyone writes.'"
+  },
+  {
+    variant: "negative",
+    title: "Jumping to code mid-storm",
+    body: "Someone says 'OK so we'd have a Reservation table with a foreign key to...'. Stop. Storage decisions belong nowhere on this wall. The wall is pre-storage. Pre-API. Pre-anything."
+  },
+  {
+    variant: "negative",
+    title: "Compressing chaotic storming",
+    body: "The room runs out of orange events after 20 minutes and the facilitator says 'OK let's move on.' Don't. The next 70 minutes are where edge cases surface. Sit with the silence; new stickies will appear."
+  }
+]} />
+
+## 7. Tooling — physical first, remote second
+
+I default to a physical wall. Reasons: tactile writing is faster than typing,
+peripheral vision shows the whole timeline, and the room reads each other's
+body language. Miro and Mural work — I've run remote stormings — but the
+facilitation discipline must be harder, breaks must be more frequent, and the
+output diverges measurably for first-time teams.
+
+If you have to run it remote: shorter sessions (60 minutes max), more of them,
+and one person dedicated to keeping the canvas tidy in real time. Otherwise
+you finish with a Mural board no one revisits.
+
+## 8. Where this connects
+
+- **Reading the wall** — covered in [EventStorming Big Picture](/posts/eventstorming-big-picture/).
+- **Running the session** — this post.
+- **Process Modeling Level** — coming next in the v6 series. Takes one slice from the Big Picture and drives it into command/event/aggregate detail.
+- **Aggregate Design Level** — after that. Turns one yellow sticky into invariant rules and decision tables.
+
+The library domain runs through all four posts. By the end of the series you'll
+have seen the same wall from four different altitudes — methodology, workshop,
+process, and code.
