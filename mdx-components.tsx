@@ -8,6 +8,7 @@ import LazyScaleOnFretboard from '@/components/lazy/LazyScaleOnFretboard'
 import LazyNotationScaleLink from '@/components/lazy/LazyNotationScaleLink'
 import LazyTablature from '@/components/lazy/LazyTablature'
 import LazyGeneratedTablature from '@/components/lazy/LazyGeneratedTablature'
+import LazyEventStormingCanvas from '@/components/lazy/LazyEventStormingCanvas'
 import Callouts from '@/components/post/Callouts'
 import CodeTabs from '@/components/post/CodeTabs'
 import EventStorming from '@/components/post/EventStorming'
@@ -142,6 +143,9 @@ const mdxComponents: MDXComponents = {
   // dobiera positions wg heurystyki CSP solver.
   GeneratedTablature: LazyGeneratedTablature,
   NotationLink,
+  // v6 sandbox (ADR-064 Proposed). Eksperymentalny widget React Flow — promocja
+  // do v6-NN iteracji jeżeli sandbox potwierdza fit.
+  EventStormingCanvas: LazyEventStormingCanvas,
 }
 
 export default mdxComponents

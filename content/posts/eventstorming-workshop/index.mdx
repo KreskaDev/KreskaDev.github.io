@@ -1,0 +1,114 @@
+---
+title: "EventStorming Workshop — sandbox"
+subtitle: "React Flow PoC — three focused examples building up to a full Big Picture wall"
+date: 2026-06-04
+author: KreskaDev
+slug: eventstorming-workshop
+summary: "Experimental prototype sandbox for a future v6 iteration. Instead of one mega-canvas, we break the EventStorming Big Picture into three focused examples — the basic actor→command→aggregate→event pattern in the Cart context, the cross-context Checkout Saga as a long-running process, and finally the full e-commerce wall tying everything together. Each canvas is independently draggable, connectable, resettable, and exportable to JSON."
+tags:
+  - ddd
+  - eventstorming
+  - react-flow
+  - sandbox
+  - v6-series
+---
+
+## Prototype status
+
+This is a **sandbox prototype**, not a polished post. Three iterations in (see `ADR-064`),
+the goal is to validate whether React Flow can carry interactive EventStorming widgets
+before we commit to a formal `v6-NN` iteration. Each canvas below ships preloaded
+with a different focused model so you can compare scales.
+
+Things to try across all three: **drag** any sticky, **connect** edges from any handle,
+**Reset** to baseline, **Copy JSON** of current state.
+
+## The color convention (Brandolini, six colors)
+
+- 🟠 **Orange** — Domain Events (past tense: `OrderPlaced`)
+- 🔵 **Blue** — Commands (imperative: `PlaceOrder`)
+- 🟨 **Big Amber** — Aggregates — the DDD "nouns" (`Cart`, `Order`, `Payment`)
+- 📜 **Pale Yellow chip** — Business rules / invariants (`§ Auth before Capture`)
+- 🟪 **Purple** — Policies — *"When X → do Y"*. Sagas show up as chains of these.
+- ⬜ **Beige** — Actors / Users
+
+**Everything else is positional** — vertical dashed lines are bounded context boundaries
+(timeline crosses them mid-flow), and the purple ribbon spans the long-running saga.
+
+---
+
+## Example 1 — The basic pattern (Cart context)
+
+The smallest unit of an EventStorming wall: **actor invokes command, command targets
+an aggregate, aggregate enforces rules and emits events**. The Cart context has two
+commands (`AddToCart`, `RemoveFromCart`), one aggregate (`Cart`), two invariants
+(`Item must exist in catalog`, `Quantity > 0`), and two resulting events.
+
+Read it top-to-bottom: Customer → command → aggregate (with its rules) → event.
+**No edges are drawn** — every relationship is implied by spatial proximity.
+
+<EventStormingCanvas preset="basic-pattern" presetLabel="basic-pattern" />
+
+This is the pattern you'll spot in every context on the full wall (Example 3). The whole
+methodology scales by repeating this unit and **chaining the events across contexts via
+policies** (Example 2).
+
+---
+
+## Example 2 — The Checkout Saga (cross-context long-running process)
+
+Here we strip everything down to the **saga skeleton**: events on the timeline,
+**policies between them**, and the bounded contexts they cross. No aggregates, no
+rules, no actors — just the *flow*.
+
+The purple ribbon labelled **"Checkout Saga (long-running)"** spans the full eight
+events. The seven purple policy stickies marching across it **are the saga's steps**.
+Read left to right: every policy hands off to a command in the next context, which
+produces the next event, which triggers the next policy.
+
+<EventStormingCanvas preset="saga-chain" presetLabel="saga-chain" />
+
+This is what "long-running process" means in EventStorming — not one sticky, but a
+**visible chain crossing multiple bounded contexts**, each hop stitched by a policy
+sitting on the seam. Delete any purple sticky and the chain breaks; the saga
+cannot complete.
+
+---
+
+## Example 3 — The full wall
+
+Combining everything: actors, commands, aggregates, invariants, events, policies,
+bounded context dividers, and the saga ribbon. **11 events** on the timeline,
+**7 bounded contexts** as dashed overlays, the Checkout Saga marching across
+8 of them.
+
+<EventStormingCanvas preset="full-wall" presetLabel="full-wall" />
+
+### Things to try on the full wall
+
+- **Trace the saga left-to-right** — start at `When OrderPlaced → ProcessPayment` and follow the seven purples to `When OrderShipped → SendConfirmation`. Seven cross-boundary hops, one process.
+- **Read a context end-to-end** — pick `Payment`. Two commands, one aggregate, two invariants, two events, two boundary-straddling policies. Compact, complete.
+- **Break an invariant** — click `§ Auth before Capture` and press Delete. What stops the system from capturing money on an unauthorized card? In a real workshop, deleted invariants become **hot spots** (red stickies) and get rewritten more precisely.
+- **Drag a sticky across a context divider** — what does it mean to move `EmailQueue` into `Shipment`? Does the chain still tell a coherent story?
+
+---
+
+## What this sandbox is testing
+
+Three open questions before promoting `experiment/v6-eventstorming-reactflow` to a
+formal `v6-NN` iteration:
+
+1. **Bundle weight** (~100kB gz for React Flow) — justified per post? Check dev tools.
+2. **Layout scaling** — Example 3 has ~50 stickies. A real Big Picture session produces 200+ across many parallel flows (see the [`ddd-by-examples/library`](https://github.com/ddd-by-examples/library) design-level wall for reference). At that scale **one canvas is the wrong unit** — we'd split by use case into separate small canvases like Examples 1-2.
+3. **Mobile UX** (≥360px per ADR-035) — drag, pan, zoom, minimap. Currently untested on touch.
+
+## Open prototype debt
+
+- `as unknown as StickyNode['data']` casts in `layout.ts` for decoration nodes (spine, ribbon, divider, label) — works visually, but type model is fudged. Pre-promotion task: split `StickyNode` and `DecorationNode` into a discriminated union.
+- No edge validation on `onConnect` — user can drag any handle to any handle. Acceptable for sandbox, would warrant rules for a teaching tool.
+- Single hardcoded viewport `{x: 0, y: 60, zoom: 0.85}` per canvas — adapts to height but not width. Wide examples will clip on narrow viewports until user pans.
+
+## Reference reading
+
+- [Mariusz Gil — awesome-eventstorming](https://github.com/mariuszgil/awesome-eventstorming) — curated resource list
+- [`ddd-by-examples/library` design-level wall](https://github.com/ddd-by-examples/library/blob/master/docs/images/eventstorming-design-level.jpg) — what a real production-grade EventStorming wall looks like (the inspiration for splitting examples into focused mini-canvases instead of one mega-wall)
